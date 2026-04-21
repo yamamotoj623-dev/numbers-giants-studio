@@ -1,0 +1,60 @@
+/**
+ * 投手サンプルデータ（v5.0.0 スキーマ）
+ */
+
+export const defaultPitcherData = {
+  schemaVersion: '5.0.0',
+  layoutType: 'radar_compare',
+  pattern: 'awakening',
+  aspectRatio: '9:16',
+  playerType: 'pitcher',
+  presentationMode: 'dialogue',
+  theme: 'orange',
+  period: '2026.04.13時点',
+  audio: { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.0, seVolume: 0.6 },
+  mainPlayer: {
+    name: '則本 昂大', number: '43', label: '26年(今季)',
+    stats: { g: '1', ip: '7.0', era: '2.57', win: '0', lose: '0', sv: '0', hld: '0', so: '5', whip: '0.71' }
+  },
+  subPlayer: {
+    name: '則本 昂大', number: '14', label: '25年(昨季)',
+    stats: { g: '56', ip: '56.0', era: '3.05', win: '3', lose: '2', sv: '32', hld: '5', so: '43', whip: '1.43' }
+  },
+  radarStats: {
+    fip:  { main: 55,  sub: 65, label: 'DIPS(内容)' },
+    hr_9: { main: 40,  sub: 70, label: '本塁打回避' },
+    bb_9: { main: 100, sub: 80, label: '制球力' },
+    k_bb: { main: 100, sub: 85, label: '制圧力(K/BB)' },
+    k_9:  { main: 55,  sub: 60, label: '奪三振力' },
+  },
+  layoutData: {},
+  comparisons: [
+    { id: 'fip',  label: 'DIPS', kana: 'ディップス',        desc: '守備から独立した防御率', formula: '本塁打・四死球・三振で評価',     criteria: 'エース級: 3.00以下',    radarMatch: 'DIPS(内容)',    valMain: '3.55', valSub: '3.31', unit: '', winner: 'sub' },
+    { id: 'hr_9', label: 'HR/9', kana: 'エイチアールナイン', desc: '被本塁打率',              formula: '9イニングあたりの被本塁打',     criteria: '優秀: 0.80以下',         radarMatch: '本塁打回避',   valMain: '1.29', valSub: '0.96', unit: '本', winner: 'sub' },
+    { id: 'bb_9', label: 'BB/9', kana: 'ビービーナイン',    desc: '与四球率',                formula: '9イニングあたりの与四球',       criteria: '非常に優秀: 2.00以下',   radarMatch: '制球力',       valMain: '0.00', valSub: '1.45', unit: '', winner: 'main' },
+    { id: 'k_bb', label: 'K/BB', kana: 'ケービービー',      desc: '奪三振と与四球の比率',     formula: '奪三振 ÷ 与四球',               criteria: '優秀: 3.50以上',         radarMatch: '制圧力(K/BB)', valMain: 'MAX',  valSub: '4.78', unit: '', winner: 'main' },
+    { id: 'k_9',  label: 'K/9',  kana: 'ケーナイン',        desc: '奪三振率',                formula: '9イニングあたりの奪三振',       criteria: '優秀: 8.0以上',          radarMatch: '奪三振力',     valMain: '6.43', valSub: '6.91', unit: '', winner: 'sub' },
+  ],
+  scripts: [
+    { id: 1, speaker: 'A', emoji: '👨‍🏫', text: '則本昂大\n昨季とは\n完全に別人', speech: '則本昂大昨季とは完全に別人です。', highlight: null, isCatchy: true, se: 'hook_impact' },
+    { id: 2, speaker: 'B', emoji: '🤩', text: '先発初登板\n7回無四球\n圧巻でした', speech: '先発転向初登板で7回無四球は圧巻でしたね。', highlight: null, textSize: 'm', se: null },
+    { id: 3, speaker: 'A', emoji: '👨‍🏫', text: '昨季リリーフと\nスタイル激変', speech: '昨季のリリーフ時代とはスタイルが激変しています。', highlight: null, textSize: 'l', se: null },
+    { id: 4, speaker: 'B', emoji: '🤔', text: 'どう\n変わったん\nですか？', speech: 'どう変わったんですか。', highlight: null, textSize: 'l', se: null },
+    { id: 5, speaker: 'A', emoji: '👨‍🏫', text: '奪三振率の\n「K/9」を\n見てください', speech: '奪三振率を示すケーナインを見てください。', highlight: 'k_9', textSize: 'm', se: 'highlight_ping' },
+    { id: 6, speaker: 'B', emoji: '😯', text: 'むしろ昨季より\n下がってる', speech: 'むしろ昨季より下がってますね。', highlight: 'k_9', textSize: 'l', se: null },
+    { id: 7, speaker: 'A', emoji: '👨‍🏫', text: '最大の変化は\n制球力\n「BB/9」', speech: '最大の変化は圧倒的な制球力ビービーナインです。', highlight: 'bb_9', textSize: 'm', se: 'highlight_ping' },
+    { id: 8, speaker: 'B', emoji: '🧐', text: '1試合あたりの\n与四球率', speech: '1試合あたりの与四球率ですね。', highlight: 'bb_9', textSize: 'l', se: null },
+    { id: 9, speaker: 'A', emoji: '👨‍🏫', text: '今季はなんと\n【0.00】', speech: '今季はなんとぜろてんぜろぜろです。', highlight: 'bb_9', textSize: 'l', se: 'stat_reveal' },
+    { id: 10, speaker: 'B', emoji: '🤯', text: '7回四球\n【ゼロ】\n完璧！', speech: '7回で四球ゼロ完璧ですね。', highlight: 'bb_9', textSize: 'l', se: 'shock_hit' },
+    { id: 11, speaker: 'A', emoji: '👨‍🏫', text: 'K/BBは\n測定不能\n「MAX」記録', speech: 'ケービービーは測定不能マックスを記録しました。', highlight: 'k_bb', textSize: 'm', se: 'stat_reveal' },
+    { id: 12, speaker: 'B', emoji: '😆', text: '四球自滅が\n全く無い', speech: '四球からの自滅が全く無かったんですね。', highlight: 'k_bb', textSize: 'l', se: null },
+    { id: 13, speaker: 'A', emoji: '👨‍🏫', text: 'ただし被弾\n「HR/9」悪化', speech: 'ただし被弾リスクは増加エイチアールナインが悪化。', highlight: 'hr_9', textSize: 'l', se: 'warning_alert' },
+    { id: 14, speaker: 'B', emoji: '😨', text: '「DIPS」も\n防御率より悪い', speech: 'ディップスも実際の防御率より悪いんですね。', highlight: 'fip', textSize: 'l', se: null },
+    { id: 15, speaker: 'A', emoji: '👨‍🏫', text: '四球無く\n被弾もソロ\n致命傷なし', speech: 'しかし四球が無く被弾してもソロで致命傷なしです。', highlight: null, textSize: 'm', se: null },
+    { id: 16, speaker: 'B', emoji: '😲', text: 'WHIP0.71\n抜群の安定感', speech: 'ウィップもぜろてんなないちで抜群の安定感ですね。', highlight: null, textSize: 'l', se: 'success_chime' },
+    { id: 17, speaker: 'A', emoji: '👨‍🏫', text: '球数を抑えて\n長いイニング\n見事な適応', speech: '球数を抑えて長いイニング先発への見事な適応です。', highlight: null, textSize: 'm', se: null },
+    { id: 18, speaker: 'B', emoji: '🥰', text: '戸郷離脱の穴\n埋める存在に', speech: '戸郷離脱の穴を埋める存在になりそう。', highlight: null, textSize: 'l', se: null },
+    { id: 19, speaker: 'A', emoji: '👨‍🏫', text: '則本に今季\n【何勝】\n期待？', speech: 'あなたは則本に今季何勝を期待しますか。', highlight: null, textSize: 'm', se: null },
+    { id: 20, speaker: 'B', emoji: '🥰', text: '私は10勝！\n皆の予想も\nコメントで🥰', speech: '私は10勝予想皆の予想もコメントで教えてください。', highlight: null, textSize: 'm', se: 'outro_fade' },
+  ]
+};
