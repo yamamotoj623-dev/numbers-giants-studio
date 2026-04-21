@@ -421,35 +421,50 @@ const CSS_TEXT = `
   .avatar-hl .emoji { font-size: 22px; line-height: 1; }
 
   /* ================================================================ */
-  /* フェーズD */
+  /* フェーズD — テロップ上部(アバター右)、summary縮小、CTA強調 */
   /* ================================================================ */
   .phase-d { background: linear-gradient(180deg, #0d0d0f 0%, #1a1a1e 100%); }
 
-  .outro-date { position: absolute; top: 100px; right: 14px; color: var(--p); opacity: 0.8; font-size: 9px; font-weight: 700; z-index: 25; display: flex; align-items: center; gap: 4px; }
+  .outro-date { position: absolute; top: 14px; right: 14px; color: var(--p); opacity: 0.8; font-size: 9px; font-weight: 700; z-index: 25; display: flex; align-items: center; gap: 4px; }
   .outro-date .ping { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--p); animation: pulse 2s infinite; }
 
-  .outro-avatars { position: absolute; top: 94px; left: 14px; display: flex; gap: 8px; z-index: 25; }
-  .outro-avatar { display: flex; align-items: center; }
-  .outro-avatar .circle { width: 36px; height: 36px; border-radius: 50%; background: #27272a; display: flex; align-items: center; justify-content: center; border: 2px solid; position: relative; }
-  .outro-avatar.a .circle { border-color: var(--p); box-shadow: 0 0 10px var(--p-glow); }
-  .outro-avatar.b .circle { border-color: var(--sky); box-shadow: 0 0 10px rgba(14,165,233,0.5); }
-  .outro-avatar .emoji { font-size: 20px; line-height: 1; }
+  .outro-avatars { position: absolute; top: 40px; left: 14px; display: flex; gap: 8px; z-index: 35; }
+  .outro-avatar { display: flex; align-items: center; transition: all 0.3s; }
+  .outro-avatar .circle { width: 42px; height: 42px; border-radius: 50%; background: #27272a; display: flex; align-items: center; justify-content: center; border: 2px solid #52525b; position: relative; transition: all 0.3s; }
+  .outro-avatar.active .circle { transform: scale(1.1); }
+  .outro-avatar.passive { opacity: 0.5; transform: scale(0.9); }
+  .outro-avatar.a.active .circle { border-color: var(--p); box-shadow: 0 0 14px var(--p-glow); }
+  .outro-avatar.b.active .circle { border-color: var(--sky); box-shadow: 0 0 14px rgba(14,165,233,0.6); }
+  .outro-avatar .emoji { font-size: 22px; line-height: 1; }
 
-  /* アウトロにもテロップ表示 (id:19 A問いかけ / id:20 B自己予想) */
-  .telop-wrap-outro { position: absolute; bottom: 6%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; z-index: 38; pointer-events: none; padding: 0 14px; }
-  .telop-wrap-outro:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 20px; padding-right: 80px; }
-  .telop-wrap-outro:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 80px; padding-right: 20px; }
+  /* アウトロのテロップ: ABアバターの右横に横長で配置 */
+  .telop-wrap-outro { position: absolute; top: 46px; left: 118px; right: 50px; display: flex; align-items: center; z-index: 36; pointer-events: none; min-height: 42px; }
+  .telop-wrap-outro .telop-bg { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border-radius: 12px; padding: 7px 12px; border: 2px solid rgba(255,255,255,0.15); position: relative; width: 100%; max-width: none; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
+  .telop-wrap-outro .telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); box-shadow: 0 4px 12px rgba(249,115,22,0.35); }
+  .telop-wrap-outro .telop-bg[data-speaker="b"] { border-color: rgba(14,165,233,0.85); box-shadow: 0 4px 12px rgba(14,165,233,0.35); }
+  /* 尻尾をアバター方向(左)に向ける */
+  .telop-wrap-outro .telop-bg::before { content: ''; position: absolute; left: -10px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-style: solid; border-width: 10px 12px 10px 0; border-color: transparent; display: block; }
+  .telop-wrap-outro .telop-bg[data-speaker="a"]::before { border-right-color: rgba(249,115,22,0.85); }
+  .telop-wrap-outro .telop-bg[data-speaker="b"]::before { border-right-color: rgba(14,165,233,0.85); }
+  .telop-wrap-outro .telop-bg::after { content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-style: solid; border-width: 7px 9px 7px 0; border-color: transparent rgba(0,0,0,0.6) transparent transparent; display: block; }
+  /* アウトロtelopは横長なのでサイズを少し控えめに */
+  .telop-wrap-outro .telop-normal { font-size: 16px !important; line-height: 1.2; text-align: left; }
+  .telop-wrap-outro .telop-normal.size-xl { font-size: 18px !important; }
+  .telop-wrap-outro .telop-normal.size-l { font-size: 16px !important; }
+  .telop-wrap-outro .telop-normal.size-m { font-size: 14px !important; }
+  .telop-wrap-outro .telop-normal.size-s { font-size: 13px !important; }
 
-  /* アウトロスタックをテロップ分上に縮める */
-  .outro-stack { position: absolute; top: 135px; bottom: 22%; left: 10px; right: 44px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+  /* アウトロスタック: テロップがトップに移動したので底面にフィット */
+  .outro-stack { position: absolute; top: 100px; bottom: 14%; left: 10px; right: 44px; display: flex; flex-direction: column; gap: 7px; z-index: 20; }
 
-  .outro-summary { flex: 2.3; background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(39,39,42,0.85)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.35); padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: center; }
-  .outro-summary-label { font-size: 11px; color: var(--p); font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 10px; }
-  .outro-summary-title { text-align: center; font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 12px; line-height: 1.3; letter-spacing: -0.8px; }
+  /* サマリー縮小 flex:2.3→1.3 / padding 14→9 / font 20→16 */
+  .outro-summary { flex: 1.3; background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(39,39,42,0.85)); border-radius: 12px; border: 1px solid rgba(249,115,22,0.35); padding: 9px 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: center; }
+  .outro-summary-label { font-size: 9px; color: var(--p); font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 5px; }
+  .outro-summary-title { text-align: center; font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 7px; line-height: 1.25; letter-spacing: -0.6px; }
   .outro-summary-title .accent { color: var(--p); }
-  .outro-points { display: flex; flex-direction: column; gap: 8px; }
-  .outro-point { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; color: #d4d4d8; font-weight: 700; line-height: 1.4; opacity: 0; transform: translateX(-12px); }
-  .outro-point .check { color: var(--p); font-weight: 900; font-size: 18px; flex-shrink: 0; display: inline-block; opacity: 0; transform: scale(0) rotate(-45deg); }
+  .outro-points { display: flex; flex-direction: column; gap: 4px; }
+  .outro-point { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: #d4d4d8; font-weight: 700; line-height: 1.3; opacity: 0; transform: translateX(-12px); }
+  .outro-point .check { color: var(--p); font-weight: 900; font-size: 14px; flex-shrink: 0; display: inline-block; opacity: 0; transform: scale(0) rotate(-45deg); line-height: 1.3; }
   .outro-point strong { color: #fff; font-weight: 900; }
 
   .phase-d.active .outro-point { animation: pointSlideIn 0.4s ease-out forwards; }
@@ -461,17 +476,19 @@ const CSS_TEXT = `
   .phase-d.active .outro-point:nth-child(2) .check { animation-delay: 0.75s; }
   .phase-d.active .outro-point:nth-child(3) .check { animation-delay: 1.05s; }
 
-  .outro-cta { flex: 1; background: linear-gradient(135deg, var(--p) 0%, #c2410c 100%); border-radius: 14px; padding: 14px 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(249,115,22,0.4); position: relative; display: flex; flex-direction: column; justify-content: center; }
+  /* CTA大幅強調 flex:1→1.6 / padding 14→16 / font 18→22 / big 1.4→1.6 */
+  .outro-cta { flex: 1.6; background: linear-gradient(135deg, var(--p) 0%, #c2410c 100%); border-radius: 14px; padding: 16px 18px; overflow: hidden; box-shadow: 0 8px 28px rgba(249,115,22,0.5); position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
   .phase-d.active .outro-cta { animation: ctaJiggle 3s ease-in-out 1.3s infinite; }
-  .outro-cta::after { content: ''; position: absolute; top: -40%; right: -15%; width: 120px; height: 120px; background: rgba(255,255,255,0.12); border-radius: 50%; }
-  .outro-cta-q { font-size: 18px; color: #fff; font-weight: 900; text-align: center; letter-spacing: -0.3px; line-height: 1.35; position: relative; z-index: 1; }
-  .outro-cta-q .big { font-size: 1.4em; display: inline-block; }
-  .outro-cta-hint { text-align: center; font-size: 13px; color: rgba(255,255,255,0.95); font-weight: 900; margin-top: 6px; position: relative; z-index: 1; letter-spacing: 1px; }
+  .outro-cta::after { content: ''; position: absolute; top: -40%; right: -15%; width: 140px; height: 140px; background: rgba(255,255,255,0.15); border-radius: 50%; }
+  .outro-cta-q { font-size: 22px; color: #fff; font-weight: 900; text-align: center; letter-spacing: -0.4px; line-height: 1.25; position: relative; z-index: 1; }
+  .outro-cta-q .big { font-size: 1.6em; display: inline-block; color: #FFD700; text-shadow: 3px 3px 0 rgba(0,0,0,0.4); margin: 0 2px; }
+  .outro-cta-hint { text-align: center; font-size: 14px; color: rgba(255,255,255,0.98); font-weight: 900; margin-top: 8px; position: relative; z-index: 1; letter-spacing: 1px; }
 
+  /* アクションボタン: size維持 */
   .outro-actions { flex: 1; display: flex; gap: 8px; }
-  .outro-action { flex: 1; background: rgba(39,39,42,0.9); border: 2px solid; border-radius: 12px; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); justify-content: center; position: relative; overflow: hidden; }
-  .outro-action .icon { font-size: 30px; line-height: 1; }
-  .outro-action .lbl { font-size: 13px; font-weight: 900; letter-spacing: 0.5px; line-height: 1; }
+  .outro-action { flex: 1; background: rgba(39,39,42,0.9); border: 2px solid; border-radius: 12px; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); justify-content: center; position: relative; overflow: hidden; }
+  .outro-action .icon { font-size: 26px; line-height: 1; }
+  .outro-action .lbl { font-size: 12px; font-weight: 900; letter-spacing: 0.5px; line-height: 1; }
   .outro-action.like { border-color: var(--like); }
   .outro-action.like .icon { color: var(--like); filter: drop-shadow(0 0 8px rgba(239,68,68,0.6)); animation: pulse-like 1s infinite; }
   .outro-action.like .lbl { color: var(--like); }
