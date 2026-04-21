@@ -1,22 +1,45 @@
 /**
- * v5.0.0 UI確定版レーダーチャート
- * - SVG内テキストラベル(頂点外周5点固定配置)
- * - viewBox 240x220、五角形は中央(120,110)・半径60
- * - ラベルは背景rect付き小バッジで読みやすく
- * - highlight時は該当頂点だけ金色強調
- * - compact モード時はラベルを外側に
+ * v5.0.0 UI確定版 レーダーチャートSVG
+ * デモv15と1対1対応:
+ * - 通常: viewBox 0 0 240 220、中心 (120,110)、半径60
+ * - コンパクト: viewBox 0 0 150 110、中心 (75,55)、半径35
+ * - ラベルは背景rect付きバッジ (通常のみ)、コンパクトはプレーンテキスト
+ * - CSSクラス radar-main-poly / radar-sub-poly / radar-dot / radar-label-group が
+ *   GlobalStylesのアニメーションと連動
  */
 
 import React from 'react';
 
+// 5軸の方向ベクトル (五角形、-90度から開始、時計回り)
+// -90, -18, 54, 126, 198 度
+const AXIS_ANGLES = [-90, -18, 54, 126, 198].map(d => d * Math.PI / 180);
+
+// 通常サイズ: 半径60で最大値(100)の時の頂点を計算
+// 0度=右、-90=上 (SVG座標)
+// (R * cos, R * sin)
+// angle=-90: (0, -60)
+// angle=-18: (57.06, -18.54)
+// angle=54:  (35.27, 48.54)
+// angle=126: (-35.27, 48.54)
+// angle=198: (-57.06, -18.54)
+
+// コンパクトは半径35
+// angle=-90: (0, -35)
+// angle=-18: (33.28, -10.82)
+// angle=54:  (20.58, 28.32)
+// angle=126: (-20.58, 28.32)
+// angle=198: (-33.28, -10.82)
+
+// ラベル位置 (通常、240x220 viewBox)
 const LABEL_POSITIONS = [
-  { x: 120, y: 16, w: 50, h: 28, tx: 120, ty1: 27, ty2: 40 },
-  { x: 213, y: 86, w: 46, h: 28, tx: 213, ty1: 83, ty2: 96 },
-  { x: 191, y: 182, w: 46, h: 28, tx: 191, ty1: 179, ty2: 192 },
-  { x: 49, y: 182, w: 46, h: 28, tx: 49, ty1: 179, ty2: 192 },
-  { x: 27, y: 86, w: 46, h: 28, tx: 27, ty1: 83, ty2: 96 },
+  { x: 95, y: 16,  w: 50, h: 28, tx: 120, ty1: 27, ty2: 40 },  // 上: 長打力
+  { x: 190, y: 72, w: 46, h: 28, tx: 213, ty1: 83, ty2: 96 },  // 右上: 出塁力
+  { x: 168, y: 168, w: 46, h: 28, tx: 191, ty1: 179, ty2: 192 }, // 右下: 選球眼
+  { x: 26, y: 168, w: 46, h: 28, tx: 49, ty1: 179, ty2: 192 }, // 左下: 得点力
+  { x: 4, y: 72, w: 46, h: 28, tx: 27, ty1: 83, ty2: 96 },  // 左上: HR率
 ];
 
+// コンパクトラベル位置 (150x110 viewBox)
 const COMPACT_LABEL_POSITIONS = [
   { tx: 75, ty1: 10, ty2: 19 },
   { tx: 130, ty1: 41, ty2: 51 },
@@ -41,18 +64,20 @@ function valueToRank(value) {
   return 'G';
 }
 
-function polygonPoints(values, cx, cy, maxR) {
-  // 五角形: 12, 84, 156, 228, 300度 (基準上方向、時計回り)
-  const angles = [-90, -18, 54, 126, 198].map(d => d * Math.PI / 180);
+function computePoints(values, maxR) {
   return values.map((v, i) => {
-    const r = (v / 100) * maxR;
-    const x = cx + r * Math.cos(angles[i]);
-    const y = cy + r * Math.sin(angles[i]);
-    return { x, y };
+    const r = (Math.max(0, Math.min(100, v)) / 100) * maxR;
+    const x = r * Math.cos(AXIS_ANGLES[i]);
+    const y = r * Math.sin(AXIS_ANGLES[i]);
+    return { x: +x.toFixed(2), y: +y.toFixed(2) };
   });
 }
 
-export function RadarChartSVG({ stats, highlight, themeColor, comparisons, showLabels = true, compact = false }) {
+function pointsToString(points) {
+  return points.map(p => `${p.x},${p.y}`).join(' ');
+}
+
+export function RadarChartSVG({ stats, highlight, comparisons, compact = false }) {
   if (!stats) return null;
 
   const keys = Object.keys(stats);
@@ -60,95 +85,112 @@ export function RadarChartSVG({ stats, highlight, themeColor, comparisons, showL
   const subValues = keys.map(k => stats[k].sub);
   const labels = keys.map(k => stats[k].label);
 
-  const cx = compact ? 75 : 120;
-  const cy = compact ? 55 : 110;
   const maxR = compact ? 35 : 60;
   const viewBox = compact ? '0 0 150 110' : '0 0 240 220';
+  const transform = compact ? 'translate(75 55)' : 'translate(120 110)';
 
-  const mainPts = polygonPoints(mainValues, cx, cy, maxR);
-  const subPts = polygonPoints(subValues, cx, cy, maxR);
+  const mainPts = computePoints(mainValues, maxR);
+  const subPts = computePoints(subValues, maxR);
+  const full100Pts = computePoints([100,100,100,100,100], maxR);
 
-  const mainStr = mainPts.map(p => `${p.x},${p.y}`).join(' ');
-  const subStr = subPts.map(p => `${p.x},${p.y}`).join(' ');
+  // ガイド5段
+  const guide = (scale) => pointsToString(computePoints([100,100,100,100,100].map(() => scale*100), maxR));
 
-  const guideStr = (scale) => polygonPoints([scale*100, scale*100, scale*100, scale*100, scale*100], cx, cy, maxR).map(p => `${p.x},${p.y}`).join(' ');
-
-  const highlightIdx = highlight && comparisons ? comparisons.findIndex(c => c.id === highlight) : -1;
-  const hlKey = highlightIdx >= 0 ? keys[highlightIdx] : null;
-  const hlVertexIdx = hlKey ? keys.indexOf(hlKey) : -1;
-  const hlVertex = hlVertexIdx >= 0 ? mainPts[hlVertexIdx] : null;
+  // ハイライト対象頂点のインデックス (radarStatsのキー配列上で探す)
+  // highlight(=comparison.id) に対応するradarLabelを持つradarStatsキーを探す
+  let highlightIdx = -1;
+  if (highlight && comparisons) {
+    const comp = comparisons.find(c => c.id === highlight);
+    if (comp?.radarMatch) {
+      highlightIdx = keys.findIndex(k => stats[k]?.label === comp.radarMatch);
+    }
+  }
+  const hlVertex = highlightIdx >= 0 ? mainPts[highlightIdx] : null;
 
   return (
-    <svg viewBox={viewBox} className="w-full h-full overflow-visible">
-      {/* ガイド5段 */}
-      <polygon points={guideStr(1.0)} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={compact ? 0.6 : 0.8} />
-      <polygon points={guideStr(0.75)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6" />
-      <polygon points={guideStr(0.5)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6" />
-      <polygon points={guideStr(0.25)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6" />
+    <svg viewBox={viewBox} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}>
+      <g transform={transform}>
+        {/* ガイド */}
+        {!compact && (
+          <>
+            <polygon points={guide(1.0)} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.8"/>
+            <polygon points={guide(0.75)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
+            <polygon points={guide(0.5)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
+            <polygon points={guide(0.25)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
+          </>
+        )}
+        {compact && (
+          <>
+            <polygon points={guide(1.0)} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.6"/>
+            <polygon points={guide(0.5)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5"/>
+          </>
+        )}
 
-      {/* 軸線 */}
-      {mainPts.map((_, i) => {
-        const p = polygonPoints([100,100,100,100,100], cx, cy, maxR)[i];
-        const isHlAxis = i === hlVertexIdx;
-        return (
-          <line
-            key={i}
-            x1={cx} y1={cy} x2={p.x} y2={p.y}
-            stroke={isHlAxis ? 'rgba(255,215,0,0.5)' : 'rgba(255,255,255,0.12)'}
-            strokeWidth={isHlAxis ? 1 : 0.5}
-          />
-        );
-      })}
+        {/* 軸線 */}
+        {full100Pts.map((p, i) => {
+          const isHlAxis = i === highlightIdx;
+          return (
+            <line
+              key={i}
+              x1={0} y1={0} x2={p.x} y2={p.y}
+              stroke={isHlAxis ? 'rgba(255,215,0,0.5)' : 'rgba(255,255,255,0.12)'}
+              strokeWidth={isHlAxis ? 1 : (compact ? 0.4 : 0.5)}
+            />
+          );
+        })}
 
-      {/* サブ (昨季/相手) - 破線 */}
-      <polygon
-        className={compact ? '' : 'radar-sub-poly'}
-        points={subStr}
-        fill="rgba(161,161,170,0.2)"
-        stroke="#d4d4d8"
-        strokeWidth={compact ? 1 : 1.5}
-        strokeDasharray="3 2"
-      />
-
-      {/* メイン (今季) - 塗り */}
-      <polygon
-        className={compact ? '' : 'radar-main-poly'}
-        points={mainStr}
-        fill="rgba(249,115,22,0.35)"
-        stroke="#f97316"
-        strokeWidth={compact ? 1.5 : 2}
-        style={{ filter: 'drop-shadow(0 0 6px rgba(249,115,22,0.6))' }}
-      />
-
-      {/* 頂点ドット (非コンパクトのみ) */}
-      {!compact && mainPts.map((p, i) => (
-        <circle
-          key={i}
-          className="radar-dot"
-          cx={p.x} cy={p.y} r="3"
-          fill="#f97316"
-          style={{ filter: 'drop-shadow(0 0 4px #f97316)' }}
+        {/* メイン (今季) */}
+        <polygon
+          className="radar-main-poly"
+          points={pointsToString(mainPts)}
+          fill="rgba(249,115,22,0.35)"
+          stroke="#f97316"
+          strokeWidth={compact ? 1.5 : 2}
+          style={{ filter: 'drop-shadow(0 0 6px rgba(249,115,22,0.6))' }}
         />
-      ))}
 
-      {/* ハイライト頂点を金色強調 */}
-      {hlVertex && (
-        <g className="vertex-glow">
-          <circle cx={hlVertex.x} cy={hlVertex.y} r="5" fill="#FFD700" style={{ filter: 'drop-shadow(0 0 8px #FFD700)' }} />
-          <circle cx={hlVertex.x} cy={hlVertex.y} r="2" fill="#fff" />
-        </g>
-      )}
+        {/* サブ (昨季/相手) */}
+        {!compact && (
+          <polygon
+            className="radar-sub-poly"
+            points={pointsToString(subPts)}
+            fill="rgba(161,161,170,0.2)"
+            stroke="#d4d4d8"
+            strokeWidth="1.5"
+            strokeDasharray="3 2"
+          />
+        )}
 
-      {/* ラベル */}
-      {showLabels && !compact && LABEL_POSITIONS.map((pos, i) => {
+        {/* 頂点ドット (通常のみ) */}
+        {!compact && mainPts.map((p, i) => (
+          <circle
+            key={i}
+            className="radar-dot"
+            cx={p.x} cy={p.y} r="3"
+            fill="#f97316"
+            style={{ filter: 'drop-shadow(0 0 4px #f97316)', transformOrigin: `${p.x}px ${p.y}px`, transformBox: 'fill-box' }}
+          />
+        ))}
+
+        {/* ハイライト頂点 (金色) */}
+        {hlVertex && (
+          <g className="vertex-glow" style={{ transformOrigin: `${hlVertex.x}px ${hlVertex.y}px` }}>
+            <circle cx={hlVertex.x} cy={hlVertex.y} r="5" fill="#FFD700" style={{ filter: 'drop-shadow(0 0 8px #FFD700)' }}/>
+            <circle cx={hlVertex.x} cy={hlVertex.y} r="2" fill="#fff"/>
+          </g>
+        )}
+      </g>
+
+      {/* ラベル (通常) */}
+      {!compact && LABEL_POSITIONS.map((pos, i) => {
         const label = labels[i] || '';
         const rank = valueToRank(mainValues[i]);
         const color = RANK_COLORS[rank] || '#d4d4d8';
-        const isHl = i === hlVertexIdx;
+        const isHl = i === highlightIdx;
         return (
           <g key={i} className="radar-label-group">
             <rect
-              x={pos.x - pos.w / 2} y={pos.y}
+              x={pos.x} y={pos.y}
               width={pos.w} height={pos.h}
               rx="6"
               fill="rgba(24,24,27,0.92)"
@@ -161,12 +203,12 @@ export function RadarChartSVG({ stats, highlight, themeColor, comparisons, showL
         );
       })}
 
-      {/* コンパクトモードのラベル */}
-      {showLabels && compact && COMPACT_LABEL_POSITIONS.map((pos, i) => {
+      {/* ラベル (コンパクト) */}
+      {compact && COMPACT_LABEL_POSITIONS.map((pos, i) => {
         const label = labels[i] || '';
         const rank = valueToRank(mainValues[i]);
         const color = RANK_COLORS[rank] || '#d4d4d8';
-        const isHl = i === hlVertexIdx;
+        const isHl = i === highlightIdx;
         return (
           <g key={i}>
             <text

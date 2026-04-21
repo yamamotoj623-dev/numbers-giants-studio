@@ -16,3 +16,19 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* ================================================================ */
+/* phone 内は Tailwind preflight の影響を避ける(デモCSSが完全統制) */
+/* ================================================================ */
+.phone {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tailwind の heading reset, p margin reset は phone 内でも適用されてOK */
+/* ただし img, svg の block 化 / vertical-align は Tailwind デフォルトが優先 */
+
+/* spanやdivのlineheightをTailwindに上書きされないようCSS優先 */
+.phone span, .phone div {
+  line-height: inherit;
+}

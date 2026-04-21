@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio } from 'lucide-react';
+import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack } from 'lucide-react';
 
 import { APP_VERSION } from './lib/config';
 import { defaultBatterData } from './data/defaultBatter';
@@ -33,6 +33,8 @@ const App = () => {
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
   const [isRecordingMode, setIsRecordingMode] = useState(false);
   const [recordingCountdown, setRecordingCountdown] = useState(0);
+  const [isSquareMode, setIsSquareMode] = useState(false);
+  const [showSafeZone, setShowSafeZone] = useState(false);
 
   const {
     isPlaying,
@@ -202,6 +204,8 @@ const App = () => {
           animationKey={animationKey}
           isFullscreenMode={isFullscreenMode}
           isRecordingMode={isRecordingMode}
+          isSquareMode={isSquareMode}
+          showSafeZone={showSafeZone}
         />
 
         {!isFullscreenMode && (
@@ -218,6 +222,25 @@ const App = () => {
                 <RotateCcw size={18}/>
               </button>
             </div>
+
+            {/* プレビューモードトグル */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsSquareMode(v => !v)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition flex items-center gap-1 ${isSquareMode ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-100'}`}
+                title="スクエアモード"
+              >
+                <SquareStack size={12}/> スクエア
+              </button>
+              <button
+                onClick={() => setShowSafeZone(v => !v)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition flex items-center gap-1 ${showSafeZone ? 'bg-red-500 text-white border-red-500' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-100'}`}
+                title="セーフゾーン表示"
+              >
+                <Shield size={12}/> セーフゾーン
+              </button>
+            </div>
+
             <div className="text-[10px] text-zinc-500 font-bold flex items-center gap-1.5">
               エンジン: <span className={ttsEngine === 'gemini' ? 'text-indigo-600' : 'text-zinc-700'}>
                 {ttsEngine === 'gemini' ? 'Gemini 3.1 Flash TTS (本番)' : 'Web Speech (下書き)'}

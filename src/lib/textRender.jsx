@@ -1,6 +1,9 @@
 /**
- * テロップレンダリング関数
- * 【】黄色 / 「」オレンジ / 『』赤 の強調ルールを実装
+ * テロップレンダリング関数 v5.0.0 UI確定版
+ * 【】黄色 / 「」オレンジ / 『』赤 の強調ルール
+ *
+ * デモHTML の em-y / em-o / em-r クラスと対応。
+ * GlobalStyles 内の .telop-normal .em-y 等のCSSが適用される。
  */
 
 import React from 'react';
@@ -8,34 +11,28 @@ import React from 'react';
 export function renderFormattedText(text, isCatchy = false, speaker = null) {
   if (!text) return null;
   const lines = text.split('\n');
-  let firstBracketEncountered = false;
-  const baseTextColor = speaker === 'B' ? 'text-yellow-300' : 'text-white';
-
   return lines.map((line, lineIndex) => {
     const parts = line.split(/(【.*?】|「.*?」|『.*?』)/g);
     return (
-      <div key={lineIndex} className="block w-full leading-[1.35] py-0.5">
+      <React.Fragment key={lineIndex}>
+        {lineIndex > 0 && <br />}
         {parts.map((part, i) => {
           if (!part) return null;
           if (part.startsWith('【') && part.endsWith('】')) {
-            let displayText = part.slice(1, -1);
-            if (isCatchy && !firstBracketEncountered) {
-              displayText = part;
-              firstBracketEncountered = true;
-            } else if (isCatchy) {
-              firstBracketEncountered = true;
-            }
-            return <span key={i} className="text-[#FFD700] text-[1.15em] font-black tracking-tighter mx-0.5 transform -translate-y-[2px] inline-block">{displayText}</span>;
+            const inner = part.slice(1, -1);
+            // 数字だけの場合は em-n (モノスペース), それ以外は em-y
+            const isNumberOnly = /^[0-9.０-９．\-−\s]+$/.test(inner);
+            return <span key={i} className={isNumberOnly ? 'em-n' : 'em-y'}>{inner}</span>;
           }
           if (part.startsWith('「') && part.endsWith('」')) {
-            return <span key={i} className="text-[#FF8C00] text-[1.1em] font-black tracking-tighter mx-0.5 inline-block">{part.slice(1, -1)}</span>;
+            return <span key={i} className="em-o">{part.slice(1, -1)}</span>;
           }
           if (part.startsWith('『') && part.endsWith('』')) {
-            return <span key={i} className="text-[#FF4500] text-[1.1em] font-black tracking-tighter mx-0.5 inline-block">{part.slice(1, -1)}</span>;
+            return <span key={i} className="em-r">{part.slice(1, -1)}</span>;
           }
-          return <span key={i} className={`${baseTextColor} font-black tracking-tight drop-shadow-md`}>{part}</span>;
+          return <React.Fragment key={i}>{part}</React.Fragment>;
         })}
-      </div>
+      </React.Fragment>
     );
   });
 }
