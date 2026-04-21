@@ -9,7 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAdapter } from '../lib/ttsAdapter';
 import { getMixer } from '../lib/mixer';
 
-export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speechRate = 1.6, isVoiceEnabled = true } = {}) {
+export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speechRate = 1.6, isVoiceEnabled = true, isSEEnabled = true } = {}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -52,7 +52,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     const mixer = mixerRef.current;
     if (!adapter) return;
 
-    if (script.se && mixer) {
+    if (script.se && mixer && isSEEnabled) {
       mixer.playSe(script.se);
     }
 
@@ -76,7 +76,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
         playNext();
       },
     });
-  }, [currentIndex, isPlaying, scripts, isVoiceEnabled, speechRate, playNext]);
+  }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, playNext]);
 
   const togglePlay = useCallback(() => {
     if (!isPlaying) {

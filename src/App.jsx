@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack } from 'lucide-react';
+import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack, Volume2, VolumeX } from 'lucide-react';
 
 import { APP_VERSION } from './lib/config';
 import { defaultBatterData } from './data/defaultBatter';
@@ -29,6 +29,7 @@ const App = () => {
   const [ttsEngine, setTtsEngine] = useState('web_speech');
   const [speechRate, setSpeechRate] = useState(1.6);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
+  const [isSEEnabled, setIsSEEnabled] = useState(true);
 
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
   const [isRecordingMode, setIsRecordingMode] = useState(false);
@@ -44,7 +45,7 @@ const App = () => {
     animationKey,
     togglePlay,
     reset,
-  } = usePlaybackEngine(projectData, { ttsEngine, speechRate, isVoiceEnabled });
+  } = usePlaybackEngine(projectData, { ttsEngine, speechRate, isVoiceEnabled, isSEEnabled });
 
   const loadTemplate = (type) => {
     const tpl = type === 'batter' ? defaultBatterData : defaultPitcherData;
@@ -224,7 +225,7 @@ const App = () => {
             </div>
 
             {/* プレビューモードトグル */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-center">
               <button
                 onClick={() => setIsSquareMode(v => !v)}
                 className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition flex items-center gap-1 ${isSquareMode ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-100'}`}
@@ -238,6 +239,13 @@ const App = () => {
                 title="セーフゾーン表示"
               >
                 <Shield size={12}/> セーフゾーン
+              </button>
+              <button
+                onClick={() => setIsSEEnabled(v => !v)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition flex items-center gap-1 ${isSEEnabled ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-zinc-400 border-zinc-200 hover:bg-zinc-100'}`}
+                title={isSEEnabled ? '効果音オン' : '効果音オフ'}
+              >
+                {isSEEnabled ? <Volume2 size={12}/> : <VolumeX size={12}/>} {isSEEnabled ? 'SE オン' : 'SE オフ'}
               </button>
             </div>
 
