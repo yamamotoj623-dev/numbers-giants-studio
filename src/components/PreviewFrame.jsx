@@ -168,7 +168,9 @@ export function PreviewFrame({
         <div
           className={phaseClassMap[phase]}
           data-p={phase}
-          key={`phase-${phase}-${animationKey}-${currentIndex}`}
+          key={phase === 'highlight'
+            ? `highlight-${currentScript?.highlight || 'none'}`
+            : `phase-${phase}`}
         >
           {/* 日付 (平常・ハイライトのみ) */}
           {(phase === 'normal' || phase === 'highlight') && (
@@ -183,7 +185,8 @@ export function PreviewFrame({
             </div>
           )}
 
-          {/* レイアウト本体 */}
+          {/* レイアウト本体 (normal時はkey固定でアニメ発火は初回のみ、
+              highlight時は highlight.id ごとに再発火) */}
           <LayoutRouter
             projectData={projectData}
             currentScript={currentScript}
@@ -193,9 +196,9 @@ export function PreviewFrame({
             phase={phase}
           />
 
-          {/* テロップ (平常・ハイライトのみ、アウトロはLayout側に内蔵) */}
+          {/* テロップ (currentIndexでkey更新→id変化のたびにtelopSlideUp発火) */}
           {phase === 'normal' && (
-            <div className="telop-wrap-normal">
+            <div className="telop-wrap-normal" key={`telop-n-${currentIndex}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
                 <div className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}>
                   {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
@@ -204,7 +207,18 @@ export function PreviewFrame({
             </div>
           )}
           {phase === 'highlight' && (
-            <div className="telop-wrap-hl">
+            <div className="telop-wrap-hl" key={`telop-h-${currentIndex}`}>
+              <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
+                <div className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}>
+                  {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* アウトロのテロップ (id:19,20の問いかけ/予想) */}
+          {phase === 'outro' && currentScript?.text && (
+            <div className="telop-wrap-outro" key={`telop-o-${currentIndex}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
                 <div className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}>
                   {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}

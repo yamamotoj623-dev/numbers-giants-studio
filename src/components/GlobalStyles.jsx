@@ -284,10 +284,10 @@ const CSS_TEXT = `
   .telop-wrap-normal, .telop-wrap-hl { align-items: center; }
   /* speaker-a(左アナリスト)が喋る場合: テロップを左寄りに */
   .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 60px; padding-right: 100px; }
-  /* speaker-b(右ファン)が喋る場合: テロップを右寄りに（Bアバターright:14px+46px幅を避ける） */
+  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 75px; padding-right: 115px; }
+  /* speaker-b(右ファン)が喋る場合: テロップを右寄りに（Bアバターright:14px+46px幅+余白） */
   .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 100px; padding-right: 75px; }
+  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 115px; padding-right: 90px; }
 
   .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 210px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
 
@@ -384,8 +384,12 @@ const CSS_TEXT = `
 
   .hl-val-main.loser .num { color: #fca5a5; text-shadow: 0 0 12px rgba(248,113,113,0.4); }
   .hl-val-main.loser .tag { color: #fca5a5; }
+  .hl-val-main.winner .num { color: var(--p); text-shadow: 0 0 20px var(--p-glow); }
+  .hl-val-main.winner .tag { color: var(--p); }
   .hl-val-sub.winner .num { color: var(--p); text-shadow: 0 0 15px var(--p-glow); }
   .hl-val-sub.winner .tag { color: var(--p); }
+  .hl-val-sub.loser .num { color: #fca5a5; text-shadow: 0 0 8px rgba(248,113,113,0.3); opacity: 0.85; }
+  .hl-val-sub.loser .tag { color: #fca5a5; opacity: 0.85; }
   .hl-vs { font-size: 12px; font-weight: 900; color: #52525b; font-style: italic; }
 
   /* 下部: 「なぜ見るか」を簡潔に。計算式と優秀基準は統合表示 */
@@ -431,7 +435,13 @@ const CSS_TEXT = `
   .outro-avatar.b .circle { border-color: var(--sky); box-shadow: 0 0 10px rgba(14,165,233,0.5); }
   .outro-avatar .emoji { font-size: 20px; line-height: 1; }
 
-  .outro-stack { position: absolute; top: 135px; bottom: 14%; left: 10px; right: 44px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+  /* アウトロにもテロップ表示 (id:19 A問いかけ / id:20 B自己予想) */
+  .telop-wrap-outro { position: absolute; bottom: 6%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; z-index: 38; pointer-events: none; padding: 0 14px; }
+  .telop-wrap-outro:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 20px; padding-right: 80px; }
+  .telop-wrap-outro:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 80px; padding-right: 20px; }
+
+  /* アウトロスタックをテロップ分上に縮める */
+  .outro-stack { position: absolute; top: 135px; bottom: 22%; left: 10px; right: 44px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
 
   .outro-summary { flex: 2.3; background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(39,39,42,0.85)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.35); padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: center; }
   .outro-summary-label { font-size: 11px; color: var(--p); font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 10px; }
