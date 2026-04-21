@@ -38,45 +38,93 @@ export const defaultBatterData = {
     { id: 'ab_hr', label: 'AB/HR', kana: 'エービー・エイチアール', desc: '本塁打率', formula: '打数 ÷ 本塁打', criteria: '優秀: 15.0以下', radarMatch: 'HR率', valMain: '29.0', valSub: '52.8', unit: '', winner: 'main' },
   ],
   scripts: [
-    { id: 1, speaker: 'A', emoji: '👨‍🏫', text: '増田陸\n四球ゼロ\n【29打席】', speech: '増田陸四球ゼロ29打席です。', highlight: null, isCatchy: true, se: 'hook_impact' },
-    { id: 2, speaker: 'B', emoji: '😲', text: 'え！？\nホント？', speech: 'え本当ですか。', highlight: null, textSize: 'xl', se: null },
-    { id: 3, speaker: 'B', emoji: '🤔', text: 'ツーラン\n打ったのに', speech: 'でもこの前ディーエヌエー戦で同点ツーラン打ちましたよ。', highlight: null, textSize: 'l', se: null },
-    { id: 4, speaker: 'A', emoji: '👨‍🏫', text: '長打は本物\nでも内容が', speech: '確かに長打は本物ですでも中身に問題があります。', highlight: null, textSize: 'l', se: null },
-    { id: 5, speaker: 'B', emoji: '😤', text: '打率.276\n十分では？', speech: '打率にわりななぶろくりんありますよ十分じゃないですか。', highlight: null, textSize: 'l', se: null },
-    { id: 6, speaker: 'A', emoji: '👨‍🏫', text: '打率だけでは\n見抜けない', speech: '打率だけでは長打力は見抜けません。', highlight: null, textSize: 'm', se: null },
-    { id: 7, speaker: 'A', emoji: '👨‍🏫', text: '「IsoP」を\n見ます', speech: '純粋長打力の指標アイソピーを見てください。', highlight: 'isop', textSize: 'l', se: 'highlight_ping' },
-    { id: 8, speaker: 'B', emoji: '🧐', text: '長打率\n−打率', speech: '長打率から打率を引いた数字ですね。', highlight: 'isop', textSize: 'l', se: null },
-    { id: 9, speaker: 'A', emoji: '👨‍🏫', text: '昨季は\n.095', speech: '昨季はれいてんぜろきゅうごでした。', highlight: 'isop', textSize: 'l', se: null },
-    { id: 10, speaker: 'A', emoji: '👨‍🏫', text: '今季\n【.172】', speech: '今季はてんいちななにです。', highlight: 'isop', textSize: 'xl', se: 'stat_reveal' },
-    { id: 11, speaker: 'B', emoji: '🤯', text: 'ほぼ倍！\nすごい', speech: 'ほぼ倍じゃないですかすごい。', highlight: 'isop', textSize: 'xl', se: 'shock_hit' },
-    { id: 12, speaker: 'A', emoji: '👨‍🏫', text: '長打スタイル\nに変身', speech: 'バッティングが完全に長打スタイルに進化しました。', highlight: 'isop', textSize: 'm', se: null },
-    { id: 13, speaker: 'B', emoji: '😊', text: 'じゃあ\n問題なし？', speech: 'じゃあ問題ないんじゃないですか。', highlight: null, textSize: 'l', se: null },
-    { id: 14, speaker: 'A', emoji: '👨‍🏫', text: 'そこに落とし穴\nがあります', speech: 'ここに大きな落とし穴があるんです。', highlight: null, textSize: 'm', se: 'warning_alert' },
-    { id: 15, speaker: 'A', emoji: '👨‍🏫', text: '「IsoD」\n出塁力', speech: '次は出塁力の指標アイソディーを見ます。', highlight: 'isod', textSize: 'l', se: 'highlight_ping' },
-    { id: 16, speaker: 'B', emoji: '🧐', text: '出塁率\n−打率', speech: '出塁率から打率を引いた数字ですね。', highlight: 'isod', textSize: 'l', se: null },
-    { id: 17, speaker: 'A', emoji: '👨‍🏫', text: 'なんと\n【.000】', speech: '今季はなんとれいてんれいれいれいです。', highlight: 'isod', textSize: 'xl', se: 'stat_reveal' },
-    { id: 18, speaker: 'B', emoji: '😨', text: 'ゼロ！？\nマジ？', speech: 'えゼロですか本当に。', highlight: 'isod', textSize: 'xl', se: 'shock_hit' },
-    { id: 19, speaker: 'A', emoji: '👨‍🏫', text: '基準は\n.080以上', speech: '優秀な基準はれいてんぜろはち以上です。', highlight: 'isod', textSize: 'l', se: null },
-    { id: 20, speaker: 'B', emoji: '😰', text: '程遠い\nですね', speech: '基準から程遠いですね。', highlight: 'isod', textSize: 'l', se: null },
-    { id: 21, speaker: 'A', emoji: '👨‍🏫', text: '29打席で\n四死球ゼロ', speech: '29打席すべてで四死球がありません。', highlight: null, textSize: 'm', se: null },
-    { id: 22, speaker: 'B', emoji: '😲', text: '初球から\n振ってる？', speech: '初球からどんどん振ってるんでしょうか。', highlight: null, textSize: 'm', se: null },
-    { id: 23, speaker: 'A', emoji: '👨‍🏫', text: '選球眼\n「BB/K」も', speech: '選球眼を示すビービーケーも見てみましょう。', highlight: 'bb_k', textSize: 'm', se: 'highlight_ping' },
-    { id: 24, speaker: 'A', emoji: '👨‍🏫', text: '四球÷三振\nで算出', speech: '四球を三振で割った指標です。', highlight: 'bb_k', textSize: 'l', se: null },
-    { id: 25, speaker: 'A', emoji: '👨‍🏫', text: 'こちらも\n【0.00】', speech: 'こちらも当然ぜろてんぜろぜろです。', highlight: 'bb_k', textSize: 'l', se: 'stat_reveal' },
-    { id: 26, speaker: 'B', emoji: '🤔', text: 'ボール球も\n振ってる？', speech: 'もしかしてぼーるだまにも手を出してますか。', highlight: 'bb_k', textSize: 'm', se: null },
-    { id: 27, speaker: 'A', emoji: '👨‍🏫', text: '積極性が\n裏目に', speech: '積極性がいまは裏目に出ています。', highlight: null, textSize: 'l', se: null },
-    { id: 28, speaker: 'B', emoji: '🥲', text: '攻め過ぎ\nってこと？', speech: '攻め過ぎってことですか。', highlight: null, textSize: 'l', se: null },
-    { id: 29, speaker: 'A', emoji: '👨‍🏫', text: '四球も\n「武器」', speech: '四球もバッターにとっては立派な武器です。', highlight: null, textSize: 'l', se: null },
-    { id: 30, speaker: 'A', emoji: '👨‍🏫', text: '1試合\n1四球分', speech: '1試合1四球増えるだけで打点も増えます。', highlight: null, textSize: 'l', se: null },
-    { id: 31, speaker: 'B', emoji: '🧐', text: 'なるほど\n大事だ', speech: 'なるほど四球って大事なんですね。', highlight: null, textSize: 'l', se: null },
-    { id: 32, speaker: 'A', emoji: '👨‍🏫', text: '長打力は\n本物です', speech: 'ただし長打力は本物です。', highlight: null, textSize: 'l', se: null },
-    { id: 33, speaker: 'B', emoji: '🥹', text: '選球眼さえ\n身につけば', speech: '選球眼さえ身につけば完璧ですね。', highlight: null, textSize: 'm', se: null },
-    { id: 34, speaker: 'A', emoji: '👨‍🏫', text: '3ボール時\n振らない', speech: 'まずさんぼーる時は振らないことから。', highlight: null, textSize: 'l', se: null },
-    { id: 35, speaker: 'A', emoji: '👨‍🏫', text: '有利カウントで\n球を絞る', speech: '有利なカウントで振るたまを絞りましょう。', highlight: null, textSize: 'm', se: 'success_chime' },
-    { id: 36, speaker: 'B', emoji: '🤩', text: 'これで\n化ける！', speech: 'これで一気に化けるかもしれませんね。', highlight: null, textSize: 'xl', se: null },
-    { id: 37, speaker: 'A', emoji: '👨‍🏫', text: 'レギュラー\n定着も見える', speech: 'レギュラー定着も十分見えてきます。', highlight: null, textSize: 'm', se: null },
-    { id: 38, speaker: 'B', emoji: '🥰', text: '楽しみ！\n期待大', speech: '楽しみですね期待してます。', highlight: null, textSize: 'l', se: null },
-    { id: 39, speaker: 'A', emoji: '👨‍🏫', text: '増田陸\n今季HR予想', speech: 'あなたは増田陸今季の本塁打何本予想しますか。', highlight: null, textSize: 'm', se: null },
-    { id: 40, speaker: 'B', emoji: '🥰', text: '私は10本！\nコメントで🥰', speech: '私は10本予想皆さんの予想もコメントで教えてください。', highlight: null, textSize: 'm', se: 'outro_fade' },
+    // ===== フック (id:1) =====
+    { id: 1, speaker: 'A', emoji: '👨‍🏫', text: '増田陸
+四球ゼロ
+【29打席】', speech: '増田陸四球ゼロ29打席です。', highlight: null, isCatchy: true, se: 'hook_impact' },
+
+    // ===== 平常: 導入 =====
+    { id: 2, speaker: 'B', emoji: '😲', text: '先日の「DeNA戦」で
+同点ツーラン
+打ったのに！？', speech: '先日のディーエヌエー戦で同点ツーラン打ったのに。', highlight: null, textSize: 's', se: null },
+    { id: 3, speaker: 'A', emoji: '👨‍🏫', text: '確かに長打は本物
+でも中身に注目', speech: '確かに長打は本物。でも中身に注目してください。', highlight: null, textSize: 'm', se: null },
+    { id: 4, speaker: 'B', emoji: '🤔', text: '打率も【.276】
+ありますよね？', speech: '打率もにわりななぶろくりんありますよね。', highlight: null, textSize: 'm', se: null },
+    { id: 5, speaker: 'A', emoji: '👨‍🏫', text: '数字だけ見ると
+そう見えますが', speech: '数字だけ見るとそう見えるんです。', highlight: null, textSize: 'm', se: null },
+
+    // ===== ハイライト1: IsoP (長打力が本物) =====
+    { id: 6, speaker: 'A', emoji: '👨‍🏫', text: '長打力を示す
+「IsoP」を
+見てください', speech: '純粋な長打力を示すアイソピーを見てください。', highlight: 'isop', textSize: 's', se: 'highlight_ping' },
+    { id: 7, speaker: 'B', emoji: '🧐', text: '長打率から打率を
+引いた値ですね', speech: '長打率から打率を引いた値ですね。', highlight: 'isop', textSize: 'm', se: null },
+    { id: 8, speaker: 'A', emoji: '👨‍🏫', text: '昨季【.095】が', speech: '昨季はれいてんぜろきゅうご。', highlight: 'isop', textSize: 'l', se: 'stat_reveal' },
+    { id: 9, speaker: 'A', emoji: '👨\u200d🏫', text: '今季【.172】に\n大幅上昇', speech: '今季はてんいちななにまで大幅上昇です。', highlight: 'isop', textSize: 'm', se: 'stat_reveal' },
+    { id: 10, speaker: 'B', emoji: '🤯', text: 'ほぼ倍
+すごい進化！', speech: 'ほぼ倍じゃないですか。すごい進化ですね。', highlight: 'isop', textSize: 'l', se: 'shock_hit' },
+    { id: 11, speaker: 'A', emoji: '👨‍🏫', text: '優秀基準【.200】
+まであと一歩', speech: '優秀基準のれいてんにぜろぜろまであと一歩です。', highlight: 'isop', textSize: 'm', se: null },
+
+    // ===== 平常: ブリッジ =====
+    { id: 12, speaker: 'B', emoji: '😯', text: 'じゃあ問題は
+何なんですか？', speech: 'じゃあ何が問題なんですか。', highlight: null, textSize: 'm', se: null },
+    { id: 13, speaker: 'A', emoji: '👨‍🏫', text: '出塁力が
+致命的です', speech: '出塁力が致命的なんです。', highlight: null, textSize: 'l', se: null },
+
+    // ===== ハイライト2: IsoD (致命的弱点) =====
+    { id: 14, speaker: 'A', emoji: '👨‍🏫', text: '出塁力を示す
+「IsoD」', speech: '出塁力を測るアイソディーを見ます。', highlight: 'isod', textSize: 'm', se: 'highlight_ping' },
+    { id: 15, speaker: 'B', emoji: '🧐', text: '出塁率から打率を
+引いた値ですね', speech: '出塁率から打率を引いた値ですね。', highlight: 'isod', textSize: 'm', se: null },
+    { id: 16, speaker: 'A', emoji: '👨‍🏫', text: '今季なんと【.000】', speech: '今季はなんとぜろてんぜろぜろぜろ。', highlight: 'isod', textSize: 'm', se: 'warning_alert' },
+    { id: 17, speaker: 'B', emoji: '😨', text: '『ゼロ』！？
+おかしいですよ', speech: 'ゼロですか。おかしいですよ。', highlight: 'isod', textSize: 'm', se: 'shock_hit' },
+    { id: 18, speaker: 'A', emoji: '👨‍🏫', text: '優秀基準は【.080】', speech: '優秀基準はれいてんぜろはちぜろ。', highlight: 'isod', textSize: 'l', se: null },
+    { id: 19, speaker: 'A', emoji: '👨‍🏫', text: '程遠い数字です', speech: '程遠い数字です。', highlight: 'isod', textSize: 'l', se: null },
+    { id: 20, speaker: 'B', emoji: '😯', text: '29打席で
+四死球ゼロ
+なんですね', speech: 'にじゅうきゅう打席で四死球ゼロなんですね。', highlight: null, textSize: 'm', se: null },
+
+    // ===== ハイライト3: BB/K (選球眼) =====
+    { id: 21, speaker: 'A', emoji: '👨‍🏫', text: '選球眼の
+「BB/K」も当然', speech: '選球眼を示すビービーケーも当然です。', highlight: 'bb_k', textSize: 'm', se: 'highlight_ping' },
+    { id: 22, speaker: 'A', emoji: '👨‍🏫', text: '四球を三振で
+割った比率', speech: '四球を三振で割った比率ですね。', highlight: 'bb_k', textSize: 'm', se: null },
+    { id: 23, speaker: 'A', emoji: '👨‍🏫', text: '今季も【0.00】', speech: '今季もぜろてんぜろぜろ。', highlight: 'bb_k', textSize: 'l', se: 'stat_reveal' },
+    { id: 24, speaker: 'B', emoji: '🧐', text: 'ボール球にも
+手を出しすぎ
+なんですね', speech: 'ぼーるだまにも手を出しすぎてるんですね。', highlight: 'bb_k', textSize: 's', se: null },
+
+    // ===== 平常: 反論擁護 =====
+    { id: 25, speaker: 'A', emoji: '👨‍🏫', text: '積極性は長所
+ですが', speech: '積極性は長所です。ですが。', highlight: null, textSize: 'm', se: null },
+    { id: 26, speaker: 'A', emoji: '👨‍🏫', text: '四球も価値ある
+武器なんです', speech: '四球も価値ある武器なんです。', highlight: null, textSize: 'm', se: null },
+    { id: 27, speaker: 'B', emoji: '😆', text: '長打力は本物
+だから…', speech: '長打力は本物ですしね。', highlight: null, textSize: 'l', se: null },
+    { id: 28, speaker: 'B', emoji: '🥹', text: '選球眼さえ
+身につけば', speech: '選球眼さえ身につけば。', highlight: null, textSize: 'm', se: null },
+    { id: 29, speaker: 'A', emoji: '👨‍🏫', text: '有利カウントで
+球を絞れば', speech: 'カウント有利時に振る球を絞れば。', highlight: null, textSize: 'm', se: 'success_chime' },
+    { id: 30, speaker: 'A', emoji: '👨‍🏫', text: '必ず化けます', speech: '必ず化けます。', highlight: null, textSize: 'l', se: null },
+    { id: 31, speaker: 'B', emoji: '🥰', text: 'スタメン定着
+楽しみですね！', speech: 'スタメン定着楽しみですね。', highlight: null, textSize: 'm', se: null },
+
+    // ===== 結論 =====
+    { id: 32, speaker: 'A', emoji: '👨‍🏫', text: '結論
+四球を覚えれば
+一流打者へ', speech: '結論。四球を覚えれば一流打者へ進化します。', highlight: null, textSize: 's', se: null },
+    { id: 33, speaker: 'B', emoji: '🤩', text: '今後に期待
+大ですね！', speech: '今後に期待大ですね。', highlight: null, textSize: 'm', se: null },
+
+    // ===== アウトロ =====
+    { id: 34, speaker: 'A', emoji: '👨‍🏫', text: '増田陸の今季
+本塁打【何本】
+予想しますか？', speech: 'あなたは増田陸今季の本塁打何本予想しますか。', highlight: null, textSize: 's', se: null },
+    { id: 35, speaker: 'B', emoji: '🥰', text: '私は10本予想！
+皆さんの予想も
+コメントで🥰', speech: '私はじゅっぽん予想。皆さんの予想もコメントで教えてください。', highlight: null, textSize: 's', se: 'outro_fade' },
   ]
 };
