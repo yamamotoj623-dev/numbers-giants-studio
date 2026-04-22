@@ -83,17 +83,6 @@ export function OutroPanel({ projectData }) {
           </div>
           <div className="outro-cta-hint">💬 コメントで教えて！</div>
         </div>
-
-        <div className="outro-actions">
-          <div className="outro-action like">
-            <span className="icon">❤</span>
-            <span className="lbl">いいね</span>
-          </div>
-          <div className="outro-action sub">
-            <span className="icon">🔔</span>
-            <span className="lbl">チャンネル登録</span>
-          </div>
-        </div>
       </div>
     </>
   );

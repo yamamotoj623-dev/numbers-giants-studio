@@ -125,8 +125,8 @@ function HighlightView({ projectData, comp }) {
         </div>
       </div>
 
-      {/* ハイライトカード */}
-      <div className="highlight-card">
+      {/* ハイライトカード (keyをcomp.idにするとIDが変わった時だけ再マウント、レーダーは維持) */}
+      <div className="highlight-card" key={highlightId}>
         {/* 1行統合ヘッダー */}
         <div className="hl-header-compact">
           <span className="hl-radar-badge">📊 {comp.radarMatch || comp.label}</span>

@@ -30,6 +30,7 @@ const App = () => {
   const [speechRate, setSpeechRate] = useState(1.6);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isSEEnabled, setIsSEEnabled] = useState(true);
+  const [showDurationBadge, setShowDurationBadge] = useState(true);
 
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
   const [isRecordingMode, setIsRecordingMode] = useState(false);
@@ -207,6 +208,7 @@ const App = () => {
           isRecordingMode={isRecordingMode}
           isSquareMode={isSquareMode}
           showSafeZone={showSafeZone}
+          showDurationBadge={showDurationBadge}
         />
 
         {!isFullscreenMode && (
@@ -246,6 +248,13 @@ const App = () => {
                 title={isSEEnabled ? '効果音オン' : '効果音オフ'}
               >
                 {isSEEnabled ? <Volume2 size={12}/> : <VolumeX size={12}/>} {isSEEnabled ? 'SE オン' : 'SE オフ'}
+              </button>
+              <button
+                onClick={() => setShowDurationBadge(v => !v)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition flex items-center gap-1 ${showDurationBadge ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-zinc-400 border-zinc-200 hover:bg-zinc-100'}`}
+                title="動画時間バッジ表示"
+              >
+                🎬 時間
               </button>
             </div>
 

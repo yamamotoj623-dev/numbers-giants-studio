@@ -47,12 +47,22 @@ const CSS_TEXT = `
   @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 
   /* 動画時間バッジ(右上、日付と重ならないように上部左に配置) */
-  .duration-badge { position: absolute; top: 14px; left: 14px; background: rgba(24,24,27,0.85); border: 1px solid rgba(79,70,229,0.5); color: #a5b4fc; font-size: 9px; font-weight: 900; padding: 3px 8px; border-radius: 4px; z-index: 25; display: flex; align-items: center; gap: 4px; letter-spacing: 0.5px; }
+  .duration-badge { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: rgba(24,24,27,0.85); border: 1px solid rgba(79,70,229,0.5); color: #a5b4fc; font-size: 9px; font-weight: 900; padding: 3px 8px; border-radius: 4px; z-index: 45; display: flex; align-items: center; gap: 4px; letter-spacing: 0.5px; }
   .duration-badge .clock { font-size: 10px; }
 
   .ph-brand-small { position: absolute; bottom: 10px; left: 10px; opacity: 0.4; z-index: 40; display: flex; align-items: baseline; gap: 2px; }
   .ph-brand-small .g { color: var(--p); font-weight: 900; font-style: italic; font-size: 13px; line-height: 1; }
   .ph-brand-small .a { color: #a1a1aa; font-weight: 700; font-size: 6px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* 全phase共通ロゴ (左上固定、フェーズ問わず) */
+  .brand-logo-fixed {
+    position: absolute; top: 10px; left: 14px; z-index: 35;
+    display: flex; flex-direction: column; align-items: flex-start; pointer-events: none;
+  }
+  .brand-logo-fixed .row { display: flex; align-items: baseline; gap: 3px; }
+  .brand-logo-fixed .g { color: var(--p); font-weight: 900; font-style: italic; font-size: 15px; line-height: 1; text-shadow: 0 0 6px var(--p-glow); }
+  .brand-logo-fixed .title { color: #fff; font-weight: 900; font-size: 9px; letter-spacing: 0.5px; line-height: 1; opacity: 0.9; }
+  .brand-logo-fixed .sub { color: var(--p); font-weight: 700; font-size: 6px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 2px; opacity: 0.6; }
 
   .content { position: absolute; inset: 0; z-index: 10; }
   .phase { display: none; position: absolute; inset: 0; }
@@ -198,20 +208,26 @@ const CSS_TEXT = `
   .hook-player-pill .name { color: #fff; font-size: 13px; font-weight: 900; letter-spacing: -0.3px; }
 
   .hook-telop-wrap { position: absolute; top: 36%; left: 50%; transform: translate(-50%, -50%); z-index: 20; width: 100%; padding: 0 12px; }
-  .telop-hook { font-size: 46px; font-weight: 900; text-align: center; line-height: 1.15; letter-spacing: -1.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 10px 30px rgba(0,0,0,1); }
+  .telop-hook { font-size: 46px; font-weight: 900; text-align: center; line-height: 1.05; letter-spacing: -1.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 10px 30px rgba(0,0,0,1); }
+  /* 4行モード: フォント縮小 */
+  .telop-hook.lines-4 { font-size: 38px; line-height: 1.02; }
   .telop-hook .em-y { color: #FFD700; font-size: 1.3em; letter-spacing: -2.5px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 30px rgba(255,215,0,0.6); }
 
-  .telop-hook .line { display: block; opacity: 0; }
+  .telop-hook .line { display: block; opacity: 0; margin: 2px 0; }
 
   /* ポップアップモード */
   .phase-a.active.anim-pop .telop-hook .line-1 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards; }
-  .phase-a.active.anim-pop .telop-hook .line-2 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.8s forwards; }
-  .phase-a.active.anim-pop .telop-hook .line-3 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 1.3s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-2 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.65s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-3 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 1.0s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-4 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 1.35s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-5 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 1.7s forwards; }
 
   /* シェイクモード（1行ずつシェイクイン、1.5秒の長尺シェイク） */
   .phase-a.active.anim-shake .telop-hook .line-1 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.3s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-2 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.7s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-3 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.1s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-2 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.65s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-3 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.0s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-4 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.35s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-5 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.7s forwards; }
 
   .hook-stats-big { position: absolute; top: 58%; left: 10px; right: 10px; z-index: 25; opacity: 0; }
   .phase-a.active.anim-pop .hook-stats-big { animation: telopSlideUp 0.5s ease-out 0.9s forwards; }
@@ -227,11 +243,11 @@ const CSS_TEXT = `
   /* ================================================================ */
   /* フェーズB — タイミング短縮+テロップ中央+透過 */
   /* ================================================================ */
-  .phase-b-header { position: absolute; top: 44px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 8px; }
-  .phase-b-header .num { width: 26px; height: 26px; background: var(--p); color: #fff; font-weight: 900; font-size: 13px; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px var(--p-glow); }
-  .phase-b-header .name { color: var(--p); font-size: 22px; font-weight: 900; letter-spacing: -0.8px; line-height: 1; }
+  .phase-b-header { position: absolute; top: 50px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 10px; }
+  .phase-b-header .num { width: 34px; height: 34px; background: var(--p); color: #fff; font-weight: 900; font-size: 17px; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px var(--p-glow); }
+  .phase-b-header .name { color: var(--p); font-size: 30px; font-weight: 900; letter-spacing: -1px; line-height: 1; text-shadow: 0 0 12px var(--p-glow); }
 
-  .radar-outer { position: absolute; top: 62px; bottom: 42%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 15px; }
+  .radar-outer { position: absolute; top: 90px; bottom: 42%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 15px; }
   .radar-svg-box { width: 100%; max-width: 220px; position: relative; }
   .radar-svg-box svg { width: 100%; height: auto; display: block; }
 
@@ -327,7 +343,8 @@ const CSS_TEXT = `
     border-color: rgba(0,0,0,0.55) transparent transparent transparent;
   }
 
-  .telop-normal { font-weight: 900; text-align: center; line-height: 1.2; letter-spacing: -0.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 6px 14px rgba(0,0,0,1); }
+  .telop-normal { font-weight: 900; text-align: center; line-height: 1.2; letter-spacing: -0.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 6px 14px rgba(0,0,0,1); animation: textFadeIn 0.18s ease-out; }
+  @keyframes textFadeIn { 0% { opacity: 0.3; transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
   .telop-normal.b { color: #fde047; }
   .telop-normal.size-xl { font-size: 26px; }
   .telop-normal.size-l { font-size: 22px; }
@@ -345,11 +362,11 @@ const CSS_TEXT = `
   /* ================================================================ */
   /* フェーズC — 情報量削減+数値上部配置 */
   /* ================================================================ */
-  .phase-c-header { position: absolute; top: 44px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 8px; }
-  .phase-c-header .num { width: 22px; height: 22px; background: var(--p); color: #fff; font-weight: 900; font-size: 11px; border-radius: 5px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px var(--p-glow); }
-  .phase-c-header .name { color: var(--p); font-size: 18px; font-weight: 900; letter-spacing: -0.7px; line-height: 1; }
+  .phase-c-header { position: absolute; top: 50px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 9px; }
+  .phase-c-header .num { width: 30px; height: 30px; background: var(--p); color: #fff; font-weight: 900; font-size: 15px; border-radius: 7px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px var(--p-glow); }
+  .phase-c-header .name { color: var(--p); font-size: 26px; font-weight: 900; letter-spacing: -0.9px; line-height: 1; text-shadow: 0 0 10px var(--p-glow); }
 
-  .hl-radar-outer { position: absolute; top: 74px; left: 0; right: 0; height: 110px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
+  .hl-radar-outer { position: absolute; top: 100px; left: 0; right: 0; height: 110px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
   .hl-radar-svg-box { width: 140px; height: 110px; position: relative; transform-origin: center; }
   .phase.active .hl-radar-svg-box { animation: radarShrink 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
   .hl-radar-svg-box svg { width: 100%; height: 100%; display: block; }
@@ -363,10 +380,10 @@ const CSS_TEXT = `
   .highlight-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--p); box-shadow: 0 0 10px var(--p-glow); border-radius: 4px 0 0 4px; }
 
   /* 上部: バッジ・kana・IsoD を1行に圧縮 */
-  .hl-header-compact { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .hl-radar-badge { font-size: 9px; font-weight: 900; color: #fff; background: var(--p); padding: 3px 8px; border-radius: 12px; flex-shrink: 0; }
-  .hl-label-compact { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; flex: 1; }
-  .hl-kana-compact { font-size: 10px; font-weight: 700; color: var(--p); letter-spacing: 1.5px; white-space: nowrap; }
+  .hl-header-compact { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; min-width: 0; }
+  .hl-radar-badge { font-size: 9px; font-weight: 900; color: #fff; background: var(--p); padding: 3px 8px; border-radius: 12px; flex-shrink: 0; white-space: nowrap; }
+  .hl-label-compact { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; flex-shrink: 0; }
+  .hl-kana-compact { font-size: 9px; font-weight: 700; color: var(--p); letter-spacing: 0.5px; line-height: 1.15; overflow-wrap: anywhere; word-break: break-all; flex: 1; min-width: 0; text-align: right; }
 
   /* コンパクト計算式 */
   .hl-formula-compact { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; padding: 4px 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(63,63,70,0.6); border-radius: 6px; }
@@ -476,16 +493,16 @@ const CSS_TEXT = `
   .phase-d.active .outro-point:nth-child(2) .check { animation-delay: 0.75s; }
   .phase-d.active .outro-point:nth-child(3) .check { animation-delay: 1.05s; }
 
-  /* CTA大幅強調 flex:1→1.6 / padding 14→16 / font 18→22 / big 1.4→1.6 */
-  .outro-cta { flex: 1.6; background: linear-gradient(135deg, var(--p) 0%, #c2410c 100%); border-radius: 14px; padding: 16px 18px; overflow: hidden; box-shadow: 0 8px 28px rgba(249,115,22,0.5); position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  /* CTA主役: flex大幅拡大 (actionsボタンは削除、YouTube側ボタンで代替) */
+  .outro-cta { flex: 2.2; background: linear-gradient(135deg, var(--p) 0%, #c2410c 100%); border-radius: 16px; padding: 22px 20px; overflow: hidden; box-shadow: 0 10px 32px rgba(249,115,22,0.55); position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
   .phase-d.active .outro-cta { animation: ctaJiggle 3s ease-in-out 1.3s infinite; }
-  .outro-cta::after { content: ''; position: absolute; top: -40%; right: -15%; width: 140px; height: 140px; background: rgba(255,255,255,0.15); border-radius: 50%; }
-  .outro-cta-q { font-size: 22px; color: #fff; font-weight: 900; text-align: center; letter-spacing: -0.4px; line-height: 1.25; position: relative; z-index: 1; }
-  .outro-cta-q .big { font-size: 1.6em; display: inline-block; color: #FFD700; text-shadow: 3px 3px 0 rgba(0,0,0,0.4); margin: 0 2px; }
-  .outro-cta-hint { text-align: center; font-size: 14px; color: rgba(255,255,255,0.98); font-weight: 900; margin-top: 8px; position: relative; z-index: 1; letter-spacing: 1px; }
+  .outro-cta::after { content: ''; position: absolute; top: -40%; right: -15%; width: 160px; height: 160px; background: rgba(255,255,255,0.15); border-radius: 50%; }
+  .outro-cta-q { font-size: 24px; color: #fff; font-weight: 900; text-align: center; letter-spacing: -0.4px; line-height: 1.3; position: relative; z-index: 1; }
+  .outro-cta-q .big { font-size: 1.8em; display: inline-block; color: #FFD700; text-shadow: 3px 3px 0 rgba(0,0,0,0.4); margin: 0 3px; }
+  .outro-cta-hint { text-align: center; font-size: 15px; color: rgba(255,255,255,0.98); font-weight: 900; margin-top: 12px; position: relative; z-index: 1; letter-spacing: 1px; }
 
-  /* アクションボタン: size維持 */
-  .outro-actions { flex: 1; display: flex; gap: 8px; }
+  /* アクションボタン: 非表示 (YouTube側のいいね/登録ボタンで代替) */
+  .outro-actions { display: none; }
   .outro-action { flex: 1; background: rgba(39,39,42,0.9); border: 2px solid; border-radius: 12px; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); justify-content: center; position: relative; overflow: hidden; }
   .outro-action .icon { font-size: 26px; line-height: 1; }
   .outro-action .lbl { font-size: 12px; font-weight: 900; letter-spacing: 0.5px; line-height: 1; }

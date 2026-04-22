@@ -55,6 +55,7 @@ export function PreviewFrame({
   isRecordingMode = false,
   isSquareMode = false,
   showSafeZone = false,
+  showDurationBadge = true,
 }) {
   const scripts = projectData?.scripts || [];
   const phase = getPhase(currentScript, currentIndex, scripts);
@@ -105,9 +106,20 @@ export function PreviewFrame({
     <div className={phoneClasses} style={phoneStyle} id="phone-root" key={`phone-${animationKey}`}>
 
       {/* 動画時間バッジ */}
-      {!isRecordingMode && (
+      {!isRecordingMode && showDurationBadge && (
         <div className="duration-badge">
           <span className="clock">🎬</span>{estDuration}
+        </div>
+      )}
+
+      {/* 全phase共通ロゴ (フック以外、フックはhook-headerが代替) */}
+      {phase !== 'hook' && (
+        <div className="brand-logo-fixed">
+          <div className="row">
+            <span className="g">G</span>
+            <span className="title">数字で見るG党</span>
+          </div>
+          <span className="sub">Giants Analytics</span>
         </div>
       )}
 
@@ -147,17 +159,14 @@ export function PreviewFrame({
             </div>
           </div>
           <div className="hook-telop-wrap">
-            <div className="telop-hook">
+            <div className={`telop-hook ${getHookTextClass(currentScript?.text)}`}>
               {renderHookLines(currentScript?.text)}
             </div>
           </div>
           <div className="hook-stats-big">
             <div className="title">▼ SEASON STATS</div>
             <div className="hook-stats-grid">
-              {renderHookStatCell(projectData, 'avg', 'AVG')}
-              {renderHookStatCell(projectData, 'ops', 'OPS')}
-              {renderHookStatCell(projectData, 'hr', 'HR')}
-              {renderHookStatCell(projectData, 'rbi', 'RBI')}
+              {renderHookStatsCells(projectData)}
             </div>
           </div>
         </div>
@@ -168,9 +177,7 @@ export function PreviewFrame({
         <div
           className={phaseClassMap[phase]}
           data-p={phase}
-          key={phase === 'highlight'
-            ? `highlight-${currentScript?.highlight || 'none'}`
-            : `phase-${phase}`}
+          key={`phase-${phase}`}
         >
           {/* 日付 (平常・ハイライトのみ) */}
           {(phase === 'normal' || phase === 'highlight') && (
@@ -198,29 +205,38 @@ export function PreviewFrame({
 
           {/* テロップ (currentIndexでkey更新→id変化のたびにtelopSlideUp発火) */}
           {phase === 'normal' && (
-            <div className="telop-wrap-normal" key={`telop-n-${currentIndex}`}>
+            <div className="telop-wrap-normal" key={`telop-n-${currentScript?.speaker || 'a'}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
-                <div className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}>
+                <div
+                  className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
+                  key={`telop-n-inner-${currentIndex}`}
+                >
                   {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
                 </div>
               </div>
             </div>
           )}
           {phase === 'highlight' && (
-            <div className="telop-wrap-hl" key={`telop-h-${currentIndex}`}>
+            <div className="telop-wrap-hl" key={`telop-h-${currentScript?.speaker || 'a'}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
-                <div className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}>
+                <div
+                  className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
+                  key={`telop-h-inner-${currentIndex}`}
+                >
                   {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
                 </div>
               </div>
             </div>
           )}
 
-          {/* アウトロのテロップ (id:19,20の問いかけ/予想) */}
+          {/* アウトロのテロップ */}
           {phase === 'outro' && currentScript?.text && (
-            <div className="telop-wrap-outro" key={`telop-o-${currentIndex}`}>
+            <div className="telop-wrap-outro" key={`telop-o-${currentScript?.speaker || 'a'}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
-                <div className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}>
+                <div
+                  className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
+                  key={`telop-o-inner-${currentIndex}`}
+                >
                   {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
                 </div>
               </div>
@@ -282,12 +298,40 @@ function renderHookLines(text) {
   ));
 }
 
+function getHookTextClass(text) {
+  if (!text) return '';
+  const lines = text.split('\n').length;
+  return lines >= 4 ? 'lines-4' : '';
+}
+
 function renderHookStatCell(projectData, key, label) {
   const v = projectData?.mainPlayer?.stats?.[key] || '-';
   return (
-    <div className="cell">
+    <div className="cell" key={key}>
       <span className="v">{v}</span>
       <span className="l">{label}</span>
     </div>
+  );
+}
+
+function renderHookStatsCells(projectData) {
+  const isPitcher = projectData?.playerType === 'pitcher';
+  if (isPitcher) {
+    return (
+      <>
+        {renderHookStatCell(projectData, 'era', 'ERA')}
+        {renderHookStatCell(projectData, 'whip', 'WHIP')}
+        {renderHookStatCell(projectData, 'so', 'K')}
+        {renderHookStatCell(projectData, 'win', 'W')}
+      </>
+    );
+  }
+  return (
+    <>
+      {renderHookStatCell(projectData, 'avg', 'AVG')}
+      {renderHookStatCell(projectData, 'ops', 'OPS')}
+      {renderHookStatCell(projectData, 'hr', 'HR')}
+      {renderHookStatCell(projectData, 'rbi', 'RBI')}
+    </>
   );
 }
