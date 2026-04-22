@@ -387,6 +387,13 @@ ${layoutList}
 ・schemaVersion "5.0.0" を先頭に含める。
 ・layoutType, pattern, aspectRatio "9:16", audio プロパティを含める。
 ・playerType: "${currentData.playerType}"
+・silhouetteType: 選手の特徴に合わせて以下から1つ選ぶ (フック画面の影絵):
+  - 野手用: "batter_right" (右打者打撃) / "batter_left" (左打者打撃) /
+            "batter_stance" (打者構え・全打者向け) / "runner" (走塁・盗塁アピール時)
+  - 投手用: "pitcher_right" (右投手ワインドアップ) / "pitcher_left" (左投手ワインドアップ) /
+            "pitcher_set" (セットポジション・リリーフ) / "catcher" (捕手構え)
+  デフォルト: 野手→batter_right / 投手→pitcher_right
+  例: 盗塁王なら "runner"、セットアッパーなら "pitcher_set"、左腕エースなら "pitcher_left"
 ・scripts は ★必ず35〜45項目★ で出力（30未満・50超は不合格）。id は1から連番、欠番禁止。
 ・フェーズ判定は自動:
   - id:1 & isCatchy:true → フェーズA（フック）

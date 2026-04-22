@@ -1,102 +1,134 @@
 /**
  * BGM / SE ミキサーパネル
- * - ボイス/BGM/SE の音量調整（Web Audio API経由）
+ * - ボイス/BGM/SE の音量調整（Web Audio API経由、リアルタイム反映）
  * - ダッキング強度調整
- * - ローカルファイルアップロード (primary) + Google Drive連携 (optional fallback)
+ * - ローカルファイルアップロード+IndexedDB永続保存
+ * - 動画再生と連動、停止するとBGMも停止
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Music, RefreshCw, Loader2, Volume2, AlertCircle, Upload, X } from 'lucide-react';
+import { Music, Loader2, Volume2, AlertCircle, Upload, X, HardDrive } from 'lucide-react';
 import { getMixer } from '../lib/mixer';
-import { fetchBgmLibrary } from '../lib/gasClient';
-import { GAS_CONFIG, SE_PRESETS } from '../lib/config';
+import { SE_PRESETS } from '../lib/config';
+import { saveBgm, listBgms, getBgmBlob, deleteBgm, getBgmStats } from '../lib/bgmStorage';
 
 export function BGMPanel() {
-  const [bgmList, setBgmList] = useState([]);
-  const [localBgms, setLocalBgms] = useState([]); // { id, name, url, size }
-  const [selectedBgm, setSelectedBgm] = useState(null);
+  const [bgmList, setBgmList] = useState([]);  // { key, name, size, mimeType, createdAt }
+  const [selectedBgmKey, setSelectedBgmKey] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [levels, setLevels] = useState({ voice: 1.0, bgm: 0.15, se: 0.6, master: 1.0 });
   const [duckingAmount, setDuckingAmount] = useState(0.25);
-  const [isBgmPlaying, setIsBgmPlaying] = useState(false);
-  const [showDriveSection, setShowDriveSection] = useState(false);
+  const [isPreviewingBgm, setIsPreviewingBgm] = useState(false);
+  const [stats, setStats] = useState({ count: 0, totalBytes: 0 });
   const fileInputRef = useRef(null);
+  const currentBlobUrlRef = useRef(null); // 現在ロードしたBGMのblob URL (メモリ管理用)
 
   const mixer = getMixer();
 
-  // ローカルファイル選択
+  // 起動時: 保存済みBGM一覧を復元
+  useEffect(() => {
+    (async () => {
+      try {
+        const saved = await listBgms();
+        setBgmList(saved);
+        const s = await getBgmStats();
+        setStats(s);
+        // 最初のBGMを自動選択 (一番新しいもの)
+        if (saved.length > 0) {
+          await handleSelectBgm(saved[0]);
+        }
+      } catch (err) {
+        setError('BGM読み込み失敗: ' + err.message);
+      }
+    })();
+    return () => {
+      if (currentBlobUrlRef.current) {
+        URL.revokeObjectURL(currentBlobUrlRef.current);
+        currentBlobUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  // ローカルファイル選択 → IndexedDBに永続保存
   const handleLocalFile = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     setError(null);
-    const added = files.map(file => ({
-      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name: file.name,
-      url: URL.createObjectURL(file),
-      size: file.size,
-      genre: 'ローカル',
-      isLocal: true,
-    }));
-    setLocalBgms(prev => [...prev, ...added]);
-    // 最初のファイルを自動選択
-    if (added.length > 0 && !selectedBgm) {
-      handleSelectBgm(added[0]);
-    }
-    e.target.value = ''; // re-select same file enabled
-  };
-
-  const handleRemoveLocal = (id, e) => {
-    e?.stopPropagation();
-    setLocalBgms(prev => {
-      const target = prev.find(b => b.id === id);
-      if (target) URL.revokeObjectURL(target.url);
-      return prev.filter(b => b.id !== id);
-    });
-    if (selectedBgm?.id === id) {
-      mixer.stopBgm();
-      setSelectedBgm(null);
-      setIsBgmPlaying(false);
-    }
-  };
-
-  // Drive連携 (オプション)
-  const handleLoadLibrary = async () => {
-    if (!GAS_CONFIG.endpoint) {
-      setError('GAS endpoint が設定されていません (.env.local 参照)');
-      return;
-    }
     setLoading(true);
-    setError(null);
     try {
-      const files = await fetchBgmLibrary();
-      setBgmList(files);
-      if (files.length === 0) setError('BGMが見つかりませんでした');
+      const newKeys = [];
+      for (const file of files) {
+        const key = await saveBgm(file);
+        newKeys.push(key);
+      }
+      const updated = await listBgms();
+      setBgmList(updated);
+      setStats(await getBgmStats());
+      // 最初のアップロードファイルを自動選択
+      if (newKeys.length > 0) {
+        const first = updated.find(b => b.key === newKeys[0]);
+        if (first) await handleSelectBgm(first);
+      }
     } catch (err) {
-      setError(`Drive連携失敗: ${err.message}。ローカルファイルアップロードをご利用ください。`);
+      setError('BGM保存失敗: ' + err.message);
     } finally {
       setLoading(false);
+      e.target.value = ''; // 同一ファイル再選択可能に
+    }
+  };
+
+  const handleRemoveBgm = async (key, e) => {
+    e?.stopPropagation();
+    try {
+      await deleteBgm(key);
+      const updated = await listBgms();
+      setBgmList(updated);
+      setStats(await getBgmStats());
+      if (selectedBgmKey === key) {
+        mixer.stopBgm();
+        setSelectedBgmKey(null);
+        setIsPreviewingBgm(false);
+        if (currentBlobUrlRef.current) {
+          URL.revokeObjectURL(currentBlobUrlRef.current);
+          currentBlobUrlRef.current = null;
+        }
+      }
+    } catch (err) {
+      setError('削除失敗: ' + err.message);
     }
   };
 
   const handleSelectBgm = async (bgm) => {
-    setSelectedBgm(bgm);
-    setIsBgmPlaying(false);
     setError(null);
     try {
-      await mixer.loadBgmFromUrl(bgm.url);
+      const blob = await getBgmBlob(bgm.key);
+      if (!blob) {
+        setError('BGM blob が見つかりません');
+        return;
+      }
+      // 既存のblob URLを解放
+      if (currentBlobUrlRef.current) {
+        URL.revokeObjectURL(currentBlobUrlRef.current);
+      }
+      const url = URL.createObjectURL(blob);
+      currentBlobUrlRef.current = url;
+      setSelectedBgmKey(bgm.key);
+      setIsPreviewingBgm(false);
+      mixer.stopBgm();
+      await mixer.loadBgmFromUrl(url);
     } catch (err) {
       setError('BGM読み込み失敗: ' + err.message);
     }
   };
 
-  const handleToggleBgm = () => {
-    if (isBgmPlaying) {
+  const handleTogglePreview = () => {
+    if (isPreviewingBgm) {
       mixer.stopBgm();
-      setIsBgmPlaying(false);
+      setIsPreviewingBgm(false);
     } else {
       mixer.playBgm(true);
-      setIsBgmPlaying(true);
+      setIsPreviewingBgm(true);
     }
   };
 
@@ -110,27 +142,26 @@ export function BGMPanel() {
     mixer.setDuckingAmount(val);
   };
 
-  // cleanup blob URLs on unmount
-  useEffect(() => {
-    return () => {
-      localBgms.forEach(b => {
-        if (b.isLocal) URL.revokeObjectURL(b.url);
-      });
-    };
-  }, []);
-
-  const allBgms = [...localBgms, ...bgmList];
+  const formatBytes = (b) => {
+    if (b < 1024) return b + 'B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + 'KB';
+    return (b / 1024 / 1024).toFixed(1) + 'MB';
+  };
 
   return (
     <div className="flex flex-col gap-3">
 
-      {/* ローカルファイルアップロード (推奨) */}
+      {/* BGM ライブラリ (IndexedDB永続) */}
       <div className="bg-gradient-to-br from-indigo-50 to-white p-4 rounded-lg border border-indigo-100 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <span className="font-bold text-sm text-zinc-700 flex items-center gap-2">
-            <Upload size={16} className="text-indigo-600"/>BGM アップロード <span className="text-[10px] font-normal text-indigo-600">(推奨)</span>
+            <HardDrive size={16} className="text-indigo-600"/>BGM ライブラリ
+          </span>
+          <span className="text-[10px] text-zinc-500 font-mono">
+            {stats.count}件 · {formatBytes(stats.totalBytes)}
           </span>
         </div>
+
         <input
           ref={fileInputRef}
           type="file"
@@ -141,21 +172,29 @@ export function BGMPanel() {
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg border-2 border-dashed border-indigo-300 transition flex items-center justify-center gap-2"
+          disabled={loading}
+          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg border-2 border-dashed border-indigo-300 transition flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <Upload size={14}/> MP3/WAV/OGG ファイルを選択
+          {loading ? <Loader2 size={14} className="animate-spin"/> : <Upload size={14}/>}
+          MP3/WAV/OGG を追加
         </button>
         <div className="text-[10px] text-zinc-500 mt-2">
-          ローカルファイルはブラウザ内だけで処理、サーバーには送信されません
+          ブラウザ内に永続保存、リロードしても残ります
         </div>
 
-        {localBgms.length > 0 && (
-          <div className="mt-3 space-y-1">
-            {localBgms.map(bgm => (
+        {error && (
+          <div className="text-red-500 text-[10px] font-bold mt-2 flex items-center gap-1 bg-red-50 p-2 rounded">
+            <AlertCircle size={12}/> {error}
+          </div>
+        )}
+
+        {bgmList.length > 0 && (
+          <div className="mt-3 space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
+            {bgmList.map(bgm => (
               <div
-                key={bgm.id}
+                key={bgm.key}
                 className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-bold transition cursor-pointer ${
-                  selectedBgm?.id === bgm.id
+                  selectedBgmKey === bgm.key
                     ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-400'
                     : 'bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200'
                 }`}
@@ -163,10 +202,10 @@ export function BGMPanel() {
               >
                 <span className="truncate flex-1">{bgm.name}</span>
                 <span className="text-[9px] font-normal text-zinc-500 ml-2 whitespace-nowrap">
-                  {(bgm.size / 1024 / 1024).toFixed(1)}MB
+                  {formatBytes(bgm.size)}
                 </span>
                 <button
-                  onClick={(e) => handleRemoveLocal(bgm.id, e)}
+                  onClick={(e) => handleRemoveBgm(bgm.key, e)}
                   className="ml-2 text-zinc-400 hover:text-red-500"
                   title="削除"
                 >
@@ -177,82 +216,25 @@ export function BGMPanel() {
           </div>
         )}
 
-        {selectedBgm && (
+        {selectedBgmKey && (
           <button
-            onClick={handleToggleBgm}
+            onClick={handleTogglePreview}
             className={`mt-3 w-full py-2 rounded text-xs font-bold transition ${
-              isBgmPlaying
+              isPreviewingBgm
                 ? 'bg-red-500 hover:bg-red-600 text-white'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
           >
-            {isBgmPlaying ? '■ BGM停止' : '▶ BGM試聴'}
+            {isPreviewingBgm ? '■ 試聴停止' : '▶ BGM試聴（この設定で動画再生時にも鳴ります）'}
           </button>
         )}
       </div>
 
-      {/* Google Drive連携 (オプション、折りたたみ) */}
-      <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
-        <button
-          onClick={() => setShowDriveSection(v => !v)}
-          className="w-full flex items-center justify-between text-sm font-bold text-zinc-600 hover:text-zinc-800"
-        >
-          <span className="flex items-center gap-2">
-            <Music size={14}/> Google Drive BGM <span className="text-[10px] font-normal text-zinc-500">(オプション・動作不安定)</span>
-          </span>
-          <span className="text-xs">{showDriveSection ? '▲' : '▼'}</span>
-        </button>
-
-        {showDriveSection && (
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-zinc-500">GAS経由でDrive連携</span>
-              <button
-                onClick={handleLoadLibrary}
-                disabled={loading}
-                className="p-1.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200 disabled:opacity-50 transition"
-              >
-                {loading ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
-              </button>
-            </div>
-
-            {error && (
-              <div className="text-red-500 text-[10px] font-bold mb-2 flex items-center gap-1 bg-red-50 p-2 rounded">
-                <AlertCircle size={12}/> {error}
-              </div>
-            )}
-
-            {!error && bgmList.length === 0 && (
-              <div className="text-[10px] text-zinc-500 bg-zinc-50 p-2 rounded">
-                Google Drive連携は CORS/外部抽出防止で動作不安定です。
-                ローカルファイルアップロードをご利用ください。
-              </div>
-            )}
-
-            <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1 mt-2">
-              {bgmList.map(bgm => (
-                <button
-                  key={bgm.id}
-                  onClick={() => handleSelectBgm(bgm)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded text-xs font-bold transition flex items-center justify-between ${
-                    selectedBgm?.id === bgm.id
-                      ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-400'
-                      : 'bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200'
-                  }`}
-                >
-                  <span className="truncate">{bgm.name}</span>
-                  <span className="text-[9px] font-normal text-zinc-500 ml-2 whitespace-nowrap">{bgm.genre}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
+      {/* 音量ミキサー */}
       <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
           <Volume2 size={16} className="text-zinc-600"/>
-          <span className="font-bold text-sm text-zinc-700">音量ミキサー</span>
+          <span className="font-bold text-sm text-zinc-700">音量ミキサー (リアルタイム反映)</span>
         </div>
 
         <VolumeSlider label="ボイス"       value={levels.voice}  onChange={v => updateLevel('voice', v)}  accent="bg-indigo-500"/>
@@ -278,6 +260,7 @@ export function BGMPanel() {
         </div>
       </div>
 
+      {/* SE プリセット */}
       <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-sm text-zinc-700">SE プリセット確認</span>
@@ -318,3 +301,4 @@ function VolumeSlider({ label, value, onChange, accent }) {
     </div>
   );
 }
+

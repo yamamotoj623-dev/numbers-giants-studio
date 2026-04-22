@@ -12,6 +12,7 @@
 import React, { useMemo } from 'react';
 import { LayoutRouter } from '../layouts/LayoutRouter.jsx';
 import { renderFormattedText } from '../lib/textRender.jsx';
+import { Silhouette } from './Silhouettes.jsx';
 
 function getPhase(currentScript, currentIndex, scripts) {
   if (!currentScript) return 'normal';
@@ -127,20 +128,10 @@ export function PreviewFrame({
       {phase === 'hook' && (
         <div className={phaseClassMap.hook} data-p="hook" key={`hook-${animationKey}-${currentIndex}`}>
           <div className="hook-silhouette">
-            <svg viewBox="0 0 200 200">
-              <g fill="#f97316">
-                <ellipse cx="105" cy="38" rx="18" ry="20"/>
-                <path d="M 88 40 L 80 42 L 82 46 L 95 45 Z"/>
-                <rect x="99" y="55" width="12" height="10"/>
-                <path d="M 85 65 L 125 65 L 130 120 L 80 120 Z"/>
-                <path d="M 125 70 L 145 75 L 155 65 L 160 50 L 155 45 L 145 50 L 130 65 Z"/>
-                <path d="M 85 72 L 70 85 L 72 105 L 80 100 L 90 85 Z"/>
-                <path d="M 155 65 L 175 25 L 180 18 L 178 15 L 170 20 L 158 60 Z"/>
-                <path d="M 80 120 L 130 120 L 128 140 L 82 140 Z"/>
-                <path d="M 82 140 L 78 180 L 68 185 L 70 192 L 92 188 L 98 140 Z"/>
-                <path d="M 108 140 L 122 180 L 132 188 L 135 192 L 122 195 L 108 188 L 100 140 Z"/>
-              </g>
-            </svg>
+            <Silhouette
+              silhouetteType={projectData?.silhouetteType}
+              playerType={projectData?.playerType}
+            />
           </div>
           <div className="hook-header">
             <div className="hook-brand-strong">

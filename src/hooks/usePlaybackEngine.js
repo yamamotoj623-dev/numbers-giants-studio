@@ -9,7 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAdapter } from '../lib/ttsAdapter';
 import { getMixer } from '../lib/mixer';
 
-export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speechRate = 1.6, isVoiceEnabled = true, isSEEnabled = true } = {}) {
+export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speechRate = 1.6, isVoiceEnabled = true, isSEEnabled = true, isBgmEnabled = true } = {}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -39,6 +39,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       if (next < scripts.length) return next;
       setIsPlaying(false);
       mixerRef.current?.stopDucking();
+      mixerRef.current?.stopBgm();
       return prev;
     });
   }, [scripts.length]);
@@ -87,13 +88,18 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       } else if (elapsedTime === 0) {
         setAnimationKey(Date.now());
       }
+      // 動画再生と同時に BGM を最初から開始
+      if (isBgmEnabled) {
+        mixerRef.current?.playBgm(true);
+      }
       setIsPlaying(true);
     } else {
       setIsPlaying(false);
       adapterRef.current?.stop();
       mixerRef.current?.stopDucking();
+      mixerRef.current?.stopBgm();
     }
-  }, [isPlaying, currentIndex, elapsedTime, scripts.length]);
+  }, [isPlaying, currentIndex, elapsedTime, scripts.length, isBgmEnabled]);
 
   const reset = useCallback(() => {
     setIsPlaying(false);
@@ -102,6 +108,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     setAnimationKey(Date.now());
     adapterRef.current?.stop();
     mixerRef.current?.stopDucking();
+    mixerRef.current?.stopBgm();
   }, []);
 
   const jumpTo = useCallback((index) => {

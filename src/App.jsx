@@ -30,6 +30,7 @@ const App = () => {
   const [speechRate, setSpeechRate] = useState(1.6);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isSEEnabled, setIsSEEnabled] = useState(true);
+  const [isBgmEnabled, setIsBgmEnabled] = useState(true);
   const [showDurationBadge, setShowDurationBadge] = useState(true);
 
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
@@ -46,7 +47,7 @@ const App = () => {
     animationKey,
     togglePlay,
     reset,
-  } = usePlaybackEngine(projectData, { ttsEngine, speechRate, isVoiceEnabled, isSEEnabled });
+  } = usePlaybackEngine(projectData, { ttsEngine, speechRate, isVoiceEnabled, isSEEnabled, isBgmEnabled });
 
   const loadTemplate = (type) => {
     const tpl = type === 'batter' ? defaultBatterData : defaultPitcherData;
