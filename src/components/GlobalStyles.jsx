@@ -252,24 +252,28 @@ const CSS_TEXT = `
   .radar-svg-box svg { width: 100%; height: auto; display: block; }
 
   /* 描画時間 0.8s に短縮 */
-  .phase.active .radar-main-poly { animation: radarStrokeDraw 0.8s cubic-bezier(0.65,0,0.35,1) forwards; }
-  .phase.active .radar-sub-poly { animation: radarStrokeDraw 0.8s cubic-bezier(0.65,0,0.35,1) 0.2s backwards; }
-  /* ドットもラベルも前倒し */
-  .phase.active .radar-dot { animation: radarDotPop 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards; }
-  .phase.active .radar-dot:nth-of-type(1) { animation-delay: 0.7s; }
-  .phase.active .radar-dot:nth-of-type(2) { animation-delay: 0.78s; }
-  .phase.active .radar-dot:nth-of-type(3) { animation-delay: 0.86s; }
-  .phase.active .radar-dot:nth-of-type(4) { animation-delay: 0.94s; }
-  .phase.active .radar-dot:nth-of-type(5) { animation-delay: 1.02s; }
-  .phase.active .radar-label-group { animation: radarLabelIn 0.35s ease-out backwards; }
-  .phase.active .radar-label-group:nth-of-type(1) { animation-delay: 1.1s; }
-  .phase.active .radar-label-group:nth-of-type(2) { animation-delay: 1.18s; }
-  .phase.active .radar-label-group:nth-of-type(3) { animation-delay: 1.26s; }
-  .phase.active .radar-label-group:nth-of-type(4) { animation-delay: 1.34s; }
-  .phase.active .radar-label-group:nth-of-type(5) { animation-delay: 1.42s; }
+  /* レーダー描画アニメは normal フェーズ (data-p="normal") 初回のみ発火。
+     highlight phase でレーダー再マウントされても、phaseがnormalじゃないのでアニメしない。
+     highlight 内で id が変わってもレーダー自体は mount 維持なので再発火しない */
+  .phase[data-p="normal"].active .radar-main-poly { animation: radarStrokeDraw 0.8s cubic-bezier(0.65,0,0.35,1) forwards; }
+  .phase[data-p="normal"].active .radar-sub-poly { animation: radarStrokeDraw 0.8s cubic-bezier(0.65,0,0.35,1) 0.2s backwards; }
+  .phase[data-p="normal"].active .radar-dot { animation: radarDotPop 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(1) { animation-delay: 0.7s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(2) { animation-delay: 0.78s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(3) { animation-delay: 0.86s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(4) { animation-delay: 0.94s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(5) { animation-delay: 1.02s; }
+  .phase[data-p="normal"].active .radar-label-group { animation: radarLabelIn 0.35s ease-out backwards; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(1) { animation-delay: 1.1s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(2) { animation-delay: 1.18s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(3) { animation-delay: 1.26s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(4) { animation-delay: 1.34s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(5) { animation-delay: 1.42s; }
 
   .radar-legend { margin-top: 2px; display: flex; gap: 10px; justify-content: center; opacity: 0; }
-  .phase.active .radar-legend { animation: telopSlideUp 0.4s ease-out 1.5s forwards; }
+  .phase[data-p="normal"].active .radar-legend { animation: telopSlideUp 0.4s ease-out 1.5s forwards; }
+  /* highlight phase では legend は即時表示 */
+  .phase[data-p="highlight"].active .radar-legend { opacity: 1; }
   .radar-legend-item { display: flex; align-items: center; gap: 6px; background: rgba(24,24,27,0.9); padding: 6px 12px; border-radius: 14px; border: 1px solid rgba(63,63,70,0.6); }
   .radar-legend-item .swatch { width: 16px; height: 3px; border-radius: 2px; flex-shrink: 0; }
   .radar-legend-item.main .swatch { background: var(--p); box-shadow: 0 0 6px var(--p); }
@@ -366,7 +370,7 @@ const CSS_TEXT = `
   .phase-c-header .num { width: 30px; height: 30px; background: var(--p); color: #fff; font-weight: 900; font-size: 15px; border-radius: 7px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px var(--p-glow); }
   .phase-c-header .name { color: var(--p); font-size: 26px; font-weight: 900; letter-spacing: -0.9px; line-height: 1; text-shadow: 0 0 10px var(--p-glow); }
 
-  .hl-radar-outer { position: absolute; top: 100px; left: 0; right: 0; height: 110px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
+  .hl-radar-outer { position: absolute; top: 100px; left: 0; right: 0; height: 125px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
   .hl-radar-svg-box { width: 140px; height: 110px; position: relative; transform-origin: center; }
   .phase.active .hl-radar-svg-box { animation: radarShrink 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
   .hl-radar-svg-box svg { width: 100%; height: 100%; display: block; }
@@ -375,24 +379,24 @@ const CSS_TEXT = `
   .phase.active .vertex-glow { animation: vertexZoomLight 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s backwards; }
 
   /* ハイライトカード: 両サイド均等マージンで中央バランス、右のショートUI回避 */
-  .highlight-card { position: absolute; top: 188px; left: 40px; right: 44px; background: linear-gradient(180deg, rgba(24,24,27,0.97), rgba(39,39,42,0.9)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.4); padding: 12px 12px 10px; box-shadow: 0 8px 24px rgba(249,115,22,0.15); z-index: 20; transform-origin: top; }
+  .highlight-card { position: absolute; top: 235px; left: 40px; right: 44px; background: linear-gradient(180deg, rgba(24,24,27,0.97), rgba(39,39,42,0.9)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.4); padding: 8px 10px 7px; box-shadow: 0 8px 24px rgba(249,115,22,0.15); z-index: 20; transform-origin: top; }
   .phase.active .highlight-card { animation: cardExpand 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.3s backwards, cardPulse 2.5s ease-in-out 1s infinite; }
   .highlight-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--p); box-shadow: 0 0 10px var(--p-glow); border-radius: 4px 0 0 4px; }
 
   /* 上部: バッジ・kana・IsoD を1行に圧縮 */
-  .hl-header-compact { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; min-width: 0; }
+  .hl-header-compact { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; min-width: 0; }
   .hl-radar-badge { font-size: 9px; font-weight: 900; color: #fff; background: var(--p); padding: 3px 8px; border-radius: 12px; flex-shrink: 0; white-space: nowrap; }
   .hl-label-compact { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; flex-shrink: 0; }
   .hl-kana-compact { font-size: 9px; font-weight: 700; color: var(--p); letter-spacing: 0.5px; line-height: 1.15; overflow-wrap: anywhere; word-break: break-all; flex: 1; min-width: 0; text-align: right; }
 
   /* コンパクト計算式 */
-  .hl-formula-compact { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; padding: 4px 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(63,63,70,0.6); border-radius: 6px; }
+  .hl-formula-compact { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; padding: 3px 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(63,63,70,0.6); border-radius: 6px; }
   .hl-formula-compact .eq-label { font-size: 8px; color: #71717a; font-weight: 900; letter-spacing: 1.5px; border-right: 1px solid rgba(63,63,70,0.8); padding-right: 6px; }
-  .hl-formula-compact .eq-text { font-size: 12px; color: #fff; font-weight: 900; letter-spacing: 0.3px; }
+  .hl-formula-compact .eq-text { font-size: 11px; color: #fff; font-weight: 900; letter-spacing: 0.3px; }
   .hl-formula-compact .eq-text .op { color: var(--p); margin: 0 3px; }
 
   /* 数値を大きく・目立つ中央配置 (ハイライト最重要) */
-  .hl-values { display: flex; justify-content: center; align-items: baseline; gap: 10px; margin-bottom: 8px; padding: 6px 0; border-top: 1px solid rgba(63,63,70,0.5); border-bottom: 1px solid rgba(63,63,70,0.5); }
+  .hl-values { display: flex; justify-content: center; align-items: baseline; gap: 10px; margin-bottom: 5px; padding: 4px 0; border-top: 1px solid rgba(63,63,70,0.5); border-bottom: 1px solid rgba(63,63,70,0.5); }
   .hl-val-main, .hl-val-sub { display: flex; flex-direction: column; align-items: center; }
   .hl-val-main .num { font-family: monospace; font-size: 32px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
   .hl-val-sub .num { font-family: monospace; font-size: 22px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
