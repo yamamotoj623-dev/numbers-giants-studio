@@ -152,32 +152,50 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     // ★ スペースでなく句点「。」で連結すると、Web Speech でも自然な間が入る
     const joinedSpeech = groupScripts.map(s => {
       const s_ = s.speech || s.text || '';
-      // 末尾が句点でなければ追加
       return /[。！？.!?]$/.test(s_) ? s_ : s_ + '。';
     }).join('');
 
+    // エラー時やタイムアウト時に確実にグループを進める fallback 関数
+    let hasAdvanced = false;
+    const advanceToNextGroup = (reason) => {
+      if (hasAdvanced) return;
+      hasAdvanced = true;
+      if (reason) console.warn('Advancing past group due to:', reason);
+      mixer?.stopDucking();
+      setCurrentIndex(cur => {
+        const nextAfterGroup = groupStartIdx + groupSize;
+        if (cur < nextAfterGroup) return nextAfterGroup;
+        return cur;
+      });
+    };
+
+    // 絶対timeout: 連結speech の想定時間 + 10秒 (TTS生成時間+リトライ分を見込む)
+    // 例: 100文字 @ rate 1.6 → 100 * 160ms / 1.6 = 10秒 + バッファ10秒 = 20秒
+    const absoluteTimeoutMs = Math.max(15000, groupTotalMs + 15000);
+    const absoluteTimer = setTimeout(() => {
+      advanceToNextGroup('absolute timeout (' + absoluteTimeoutMs + 'ms)');
+    }, absoluteTimeoutMs);
+
     mixer?.startDucking();
-    adapter.speak(joinedSpeech, script.speaker || 'A', {
+    const speakPromise = adapter.speak(joinedSpeech, script.speaker || 'A', {
       rate: speechRate,
       onEnd: () => {
-        mixer?.stopDucking();
-        // 音声終了: グループ末尾以降に進める (テロップが追いついてない場合のfallback)
-        setCurrentIndex(cur => {
-          const nextAfterGroup = groupStartIdx + groupSize;
-          if (cur < nextAfterGroup) return nextAfterGroup;
-          return cur;
-        });
+        clearTimeout(absoluteTimer);
+        advanceToNextGroup();
       },
       onError: (err) => {
-        console.warn('TTS error:', err);
-        mixer?.stopDucking();
-        setCurrentIndex(cur => {
-          const nextAfterGroup = groupStartIdx + groupSize;
-          if (cur < nextAfterGroup) return nextAfterGroup;
-          return cur;
-        });
+        clearTimeout(absoluteTimer);
+        advanceToNextGroup('TTS onError: ' + (err?.message || err));
       },
     });
+    
+    // speak() が Promise の場合、catchされない rejection があっても進行保証
+    if (speakPromise && typeof speakPromise.catch === 'function') {
+      speakPromise.catch(err => {
+        clearTimeout(absoluteTimer);
+        advanceToNextGroup('speak promise rejected: ' + (err?.message || err));
+      });
+    }
 
     // ★ cleanup: テロップタイマーのみ解除、adapter.stop() は呼ばない
     //   (グループ途中の useEffect 再実行で音声が止まらないよう)

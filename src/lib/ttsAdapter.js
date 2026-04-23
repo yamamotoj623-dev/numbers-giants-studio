@@ -182,25 +182,62 @@ export class GeminiAdapter {
 
   async _fetchFromGAS(text, speaker) {
     if (!GAS_CONFIG.endpoint) throw new Error('GAS endpoint not configured');
-    const response = await fetch(GAS_CONFIG.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'tts',
-        token: GAS_CONFIG.authToken,
-        text,
-        speaker,
-      }),
-    });
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`GAS error ${response.status}: ${errText}`);
+    
+    // クライアント側リトライ (GAS側でも3回リトライしてるので、合計最大6回)
+    // GAS側が完全失敗した時や、タイムアウト/ネットワークエラー時の保険
+    const MAX_CLIENT_RETRIES = 2;
+    let lastError = null;
+    
+    for (let attempt = 0; attempt <= MAX_CLIENT_RETRIES; attempt++) {
+      if (attempt > 0) {
+        // 1秒, 2秒と待つ
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+        console.warn(`TTS retry ${attempt}/${MAX_CLIENT_RETRIES} for: ${text.substring(0, 30)}...`);
+      }
+      
+      try {
+        const response = await fetch(GAS_CONFIG.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'tts',
+            token: GAS_CONFIG.authToken,
+            text,
+            speaker,
+          }),
+        });
+        
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = new Error(`GAS error ${response.status}: ${errText.substring(0, 200)}`);
+          // 4xx(認証等)はリトライしない
+          if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+            throw lastError;
+          }
+          continue; // 5xx/429 はリトライ
+        }
+        
+        const data = await response.json();
+        if (data.error) {
+          lastError = new Error(data.error);
+          // 5xx相当はリトライ
+          if (data.statusCode >= 500 || data.statusCode === 429) continue;
+          throw lastError;
+        }
+        if (!data.audioBase64) {
+          lastError = new Error('No audio data returned from GAS');
+          continue; // リトライ対象
+        }
+        
+        this._totalCostUsd += data.estimatedCostUsd || 0;
+        return data; // 成功
+      } catch (err) {
+        lastError = err;
+        // ネットワークエラーもリトライ
+      }
     }
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    if (!data.audioBase64) throw new Error('No audio data returned from GAS');
-    this._totalCostUsd += data.estimatedCostUsd || 0;
-    return data;
+    
+    throw lastError || new Error('TTS failed after all retries');
   }
 
   async _getOrGenerate(text, speaker) {
