@@ -108,24 +108,37 @@ export class WebSpeechAdapter {
 
       utt.onend = () => {
         clearTimeout(this.fallbackTimer);
+        clearInterval(this._chromeBugKeepAlive);
         onEnd?.();
         resolve();
       };
       utt.onerror = (e) => {
         clearTimeout(this.fallbackTimer);
+        clearInterval(this._chromeBugKeepAlive);
         onError?.(e);
         resolve();
       };
 
       window.speechSynthesis.speak(utt);
 
-      // 既存の v4.24.0 由来のセーフティタイマー（ブラウザバグ対策）
-      const maxDelay = Math.max(3000, (text.length * 280) / rate) + 1000;
+      // ★ Chrome 15秒バグ対策: 14秒おきに pause→resume で speechSynthesis を活性化
+      // (Chromeは長文speakで内部タイマーが切れて発話停止する既知バグ、業界標準ワークアラウンド)
+      this._chromeBugKeepAlive = setInterval(() => {
+        if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 10000);
+
+      // セーフティタイマー: 長文連結にも耐えるよう余裕を大きく
+      // 日本語で 1文字 ≈ 280ms の発話、rateで割る。これに加え+5秒余裕
+      const maxDelay = Math.max(5000, (text.length * 400) / rate) + 5000;
       this.fallbackTimer = setTimeout(() => {
         if (this.currentUtterance) {
           this.currentUtterance.onend = null;
           this.currentUtterance.onerror = null;
         }
+        clearInterval(this._chromeBugKeepAlive);
         window.speechSynthesis.cancel();
         onEnd?.();
         resolve();
@@ -135,6 +148,7 @@ export class WebSpeechAdapter {
 
   stop() {
     clearTimeout(this.fallbackTimer);
+    clearInterval(this._chromeBugKeepAlive);
     if (this.currentUtterance) {
       this.currentUtterance.onend = null;
       this.currentUtterance.onerror = null;

@@ -66,6 +66,9 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     return { isGroupStart: true, groupSize: groupScripts.length, groupScripts };
   }, [scripts]);
 
+  // 現在進行中のグループ情報を ref で管理 (useEffect再実行でも音声停止されないよう)
+  const currentGroupRef = useRef({ startIdx: -1, endIdx: -1 });
+
   useEffect(() => {
     if (!isPlaying) return;
     const script = scripts[currentIndex];
@@ -81,33 +84,38 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
 
     const { isGroupStart, groupSize, groupScripts } = getSpeakerGroupInfo(currentIndex);
 
-    // グループ途中 (前のscriptと同speaker) → 何もしない
-    // テロップは前回のグループ先頭で setTimeout された timers が順次進めてくれる
+    // グループ途中 (前のscriptと同speaker) → 何もしない (音声継続中、テロップは親のtimerが進める)
     if (!isGroupStart) {
-      return;
+      return; // ★ cleanup で adapter.stop() しない
     }
 
-    // === グループ開始: 音声発火 + テロップ同期setTimeout配列 ===
-    // テロップの表示時間 = 各scriptのspeech文字数の比率 × 音声全体想定時間
-    // Gemini TTS は 1文字 ≈ 160ms、webspeech は ≈ 150ms、playbackRateで割る
+    // グループ先頭: 前のグループと違うグループなら新規speak
+    const groupStartIdx = currentIndex;
+    const groupEndIdx = currentIndex + groupSize - 1;
+
+    // 同じグループ先頭が既に発火済みなら二重呼び出しを防ぐ (React Strict Mode 対策)
+    if (currentGroupRef.current.startIdx === groupStartIdx) {
+      return;
+    }
+    currentGroupRef.current = { startIdx: groupStartIdx, endIdx: groupEndIdx };
+
+    // === テロップ同期setTimeout配列 ===
     const charMs = ttsEngine === 'gemini' ? 160 : 150;
-    const groupTotalChars = groupScripts.reduce((sum, s) => sum + (s.speech || s.text || '').length, 0);
+    const groupTotalChars = groupScripts.reduce((sum, s) => sum + (s.speech || s.text || '').length, 0) || 1;
     const groupTotalMs = groupTotalChars * charMs / speechRate;
 
-    // 各scriptの表示終了時刻を累積で計算 → playNext をその時刻にスケジュール
     const telopTimers = [];
     let cumulativeMs = 0;
     for (let i = 0; i < groupScripts.length - 1; i++) {
-      // i番目が終わる = 次(i+1)のscriptに進む
       const thisScript = groupScripts[i];
       const thisChars = (thisScript.speech || thisScript.text || '').length;
       cumulativeMs += (thisChars / groupTotalChars) * groupTotalMs;
-      // 最低表示時間 保証 (グループ長に応じて)
       const delay = Math.max(800, cumulativeMs);
+      const targetIdx = groupStartIdx + i + 1;
       telopTimers.push(setTimeout(() => {
         setCurrentIndex(cur => {
-          // 該当idにまだ居れば進める (他要因で既に進んでたら何もしない)
-          if (cur === currentIndex + i) return currentIndex + i + 1;
+          // 該当グループ内かつ現在位置が進めるべき位置の1つ前なら進める
+          if (cur === targetIdx - 1) return targetIdx;
           return cur;
         });
       }, delay));
@@ -130,7 +138,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       // 音声OFF: グループ末尾に進めるタイマー
       const endTimer = setTimeout(() => {
         setCurrentIndex(cur => {
-          if (cur < currentIndex + groupSize) return currentIndex + groupSize;
+          if (cur < groupStartIdx + groupSize) return groupStartIdx + groupSize;
           return cur;
         });
       }, groupTotalMs);
@@ -141,36 +149,41 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     }
 
     // グループ全部の speech を連結して1回でTTS
-    const joinedSpeech = groupScripts.map(s => s.speech || s.text || '').join(' ');
+    // ★ スペースでなく句点「。」で連結すると、Web Speech でも自然な間が入る
+    const joinedSpeech = groupScripts.map(s => {
+      const s_ = s.speech || s.text || '';
+      // 末尾が句点でなければ追加
+      return /[。！？.!?]$/.test(s_) ? s_ : s_ + '。';
+    }).join('');
 
     mixer?.startDucking();
     adapter.speak(joinedSpeech, script.speaker || 'A', {
       rate: speechRate,
       onEnd: () => {
         mixer?.stopDucking();
-        // 音声終了時にグループ末尾以降に進める
+        // 音声終了: グループ末尾以降に進める (テロップが追いついてない場合のfallback)
         setCurrentIndex(cur => {
-          const groupEnd = currentIndex + groupSize;
-          if (cur < groupEnd) return groupEnd;
+          const nextAfterGroup = groupStartIdx + groupSize;
+          if (cur < nextAfterGroup) return nextAfterGroup;
           return cur;
         });
       },
       onError: (err) => {
         console.warn('TTS error:', err);
         mixer?.stopDucking();
-        // エラー時もグループ末尾まで進める
         setCurrentIndex(cur => {
-          const groupEnd = currentIndex + groupSize;
-          if (cur < groupEnd) return groupEnd;
+          const nextAfterGroup = groupStartIdx + groupSize;
+          if (cur < nextAfterGroup) return nextAfterGroup;
           return cur;
         });
       },
     });
 
+    // ★ cleanup: テロップタイマーのみ解除、adapter.stop() は呼ばない
+    //   (グループ途中の useEffect 再実行で音声が止まらないよう)
+    //   音声の本当の停止は togglePlay/reset で明示的に行う
     return () => {
       telopTimers.forEach(clearTimeout);
-      // 音声停止 (unmount/dep変更時)
-      adapter.stop?.();
     };
   }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, ttsEngine, getSpeakerGroupInfo]);
 
@@ -183,13 +196,15 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       } else if (elapsedTime === 0) {
         setAnimationKey(Date.now());
       }
-      // 動画再生と同時に BGM を最初から開始
+      // 再生開始時にグループトラッキングリセット
+      currentGroupRef.current = { startIdx: -1, endIdx: -1 };
       if (isBgmEnabled) {
         mixerRef.current?.playBgm(true);
       }
       setIsPlaying(true);
     } else {
       setIsPlaying(false);
+      currentGroupRef.current = { startIdx: -1, endIdx: -1 };
       adapterRef.current?.stop();
       mixerRef.current?.stopDucking();
       mixerRef.current?.stopBgm();
@@ -201,6 +216,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     setCurrentIndex(0);
     setElapsedTime(0);
     setAnimationKey(Date.now());
+    currentGroupRef.current = { startIdx: -1, endIdx: -1 };
     adapterRef.current?.stop();
     mixerRef.current?.stopDucking();
     mixerRef.current?.stopBgm();
@@ -208,6 +224,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
 
   const jumpTo = useCallback((index) => {
     setCurrentIndex(Math.max(0, Math.min(scripts.length - 1, index)));
+    currentGroupRef.current = { startIdx: -1, endIdx: -1 };
     adapterRef.current?.stop();
   }, [scripts.length]);
 
