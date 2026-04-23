@@ -252,23 +252,23 @@ const CSS_TEXT = `
   .radar-svg-box svg { width: 100%; height: auto; display: block; }
 
   /* 描画時間 0.8s に短縮 */
-  /* レーダー描画アニメは normal フェーズ (data-p="normal") 初回のみ発火。
-     highlight phase でレーダー再マウントされても、phaseがnormalじゃないのでアニメしない。
-     highlight 内で id が変わってもレーダー自体は mount 維持なので再発火しない */
-  .phase[data-p="normal"].active .radar-main-poly { animation: radarStrokeDraw 0.8s cubic-bezier(0.65,0,0.35,1) forwards; }
-  .phase[data-p="normal"].active .radar-sub-poly { animation: radarStrokeDraw 0.8s cubic-bezier(0.65,0,0.35,1) 0.2s backwards; }
-  .phase[data-p="normal"].active .radar-dot { animation: radarDotPop 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(1) { animation-delay: 0.7s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(2) { animation-delay: 0.78s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(3) { animation-delay: 0.86s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(4) { animation-delay: 0.94s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(5) { animation-delay: 1.02s; }
-  .phase[data-p="normal"].active .radar-label-group { animation: radarLabelIn 0.35s ease-out backwards; }
-  .phase[data-p="normal"].active .radar-label-group:nth-of-type(1) { animation-delay: 1.1s; }
-  .phase[data-p="normal"].active .radar-label-group:nth-of-type(2) { animation-delay: 1.18s; }
-  .phase[data-p="normal"].active .radar-label-group:nth-of-type(3) { animation-delay: 1.26s; }
-  .phase[data-p="normal"].active .radar-label-group:nth-of-type(4) { animation-delay: 1.34s; }
-  .phase[data-p="normal"].active .radar-label-group:nth-of-type(5) { animation-delay: 1.42s; }
+  /* レーダー描画アニメ: 全て radarFadeIn (opacity) に統一。
+     normal phase 初回のみ発火、highlight ではCSSマッチせず完全無発火 */
+  .phase[data-p="normal"].active .radar-main-poly { animation: radarFadeIn 0.5s ease-out forwards; }
+  .phase[data-p="normal"].active .radar-sub-poly { animation: radarFadeIn 0.5s ease-out 0.15s backwards; }
+  .phase[data-p="normal"].active .radar-dot { animation: radarFadeIn 0.3s ease-out backwards; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(1) { animation-delay: 0.3s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(2) { animation-delay: 0.35s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(3) { animation-delay: 0.4s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(4) { animation-delay: 0.45s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(5) { animation-delay: 0.5s; }
+  .phase[data-p="normal"].active .radar-label-group { animation: radarFadeIn 0.3s ease-out backwards; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(1) { animation-delay: 0.55s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(2) { animation-delay: 0.6s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(3) { animation-delay: 0.65s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(4) { animation-delay: 0.7s; }
+  .phase[data-p="normal"].active .radar-label-group:nth-of-type(5) { animation-delay: 0.75s; }
+  @keyframes radarFadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
   .radar-legend { margin-top: 2px; display: flex; gap: 10px; justify-content: center; opacity: 0; }
   .phase[data-p="normal"].active .radar-legend { animation: telopSlideUp 0.4s ease-out 1.5s forwards; }
@@ -428,46 +428,107 @@ const CSS_TEXT = `
 
   @keyframes avatarTalk {
     0%, 100% { transform: scale(1.1); }
-    50% { transform: scale(1.15); }
+    50% { transform: scale(1.22); }
   }
 
-  /* キャラ感情アニメ: script.animation フィールドで制御 */
+  /* ============================================================
+     キャラ感情アニメ: script.animation / emoji から自動選択
+     大きな動き・発光・弾み・振動で視聴維持率に貢献
+     ============================================================ */
+
+  /* 衝撃: 一瞬巨大化→振動→収束、同時に赤/オレンジ発光 */
   @keyframes avatarShock {
-    0% { transform: scale(1.1) translateY(0); }
-    15% { transform: scale(1.3) translateY(-8px); }
-    30% { transform: scale(1.25) translateY(-4px); }
-    60% { transform: scale(1.15) translateY(-2px); }
-    100% { transform: scale(1.1) translateY(0); }
-  }
-  @keyframes avatarNod {
-    0%, 100% { transform: scale(1.1) rotate(0deg); }
-    25% { transform: scale(1.1) rotate(-3deg) translateY(-3px); }
-    50% { transform: scale(1.1) rotate(0deg) translateY(0); }
-    75% { transform: scale(1.1) rotate(3deg) translateY(-3px); }
-  }
-  @keyframes avatarShake {
-    0%, 100% { transform: scale(1.1) translateX(0); }
-    25% { transform: scale(1.1) translateX(-4px) rotate(-2deg); }
-    50% { transform: scale(1.1) translateX(4px) rotate(2deg); }
-    75% { transform: scale(1.1) translateX(-3px) rotate(-1deg); }
-  }
-  @keyframes avatarBounce {
-    0%, 100% { transform: scale(1.1) translateY(0); }
-    40% { transform: scale(1.15) translateY(-10px); }
-    60% { transform: scale(1.15) translateY(-8px); }
-    80% { transform: scale(1.1) translateY(-2px); }
-  }
-  @keyframes avatarThink {
-    0%, 100% { transform: scale(1.1) rotate(0deg); }
-    33% { transform: scale(1.1) rotate(-5deg); }
-    66% { transform: scale(1.1) rotate(5deg); }
+    0%   { transform: scale(1.1) translateY(0) rotate(0deg); filter: brightness(1); }
+    8%   { transform: scale(1.55) translateY(-14px) rotate(-3deg); filter: brightness(1.4) drop-shadow(0 0 20px rgba(239,68,68,0.9)); }
+    16%  { transform: scale(1.45) translateY(-10px) rotate(4deg); filter: brightness(1.3) drop-shadow(0 0 18px rgba(249,115,22,0.9)); }
+    26%  { transform: scale(1.4)  translateY(-8px) rotate(-2deg); filter: brightness(1.2) drop-shadow(0 0 14px rgba(249,115,22,0.7)); }
+    40%  { transform: scale(1.25) translateY(-4px) rotate(2deg);  filter: brightness(1.1); }
+    70%  { transform: scale(1.12) translateY(-1px) rotate(0deg);  filter: brightness(1); }
+    100% { transform: scale(1.1)  translateY(0) rotate(0deg);     filter: brightness(1); }
   }
 
-  /* data-anim 属性でアニメ切替 */
-  .avatar-hl.active[data-anim="shock"] { animation: avatarShock 0.8s ease-out !important; }
-  .avatar-hl.active[data-anim="nod"] { animation: avatarNod 1.2s ease-in-out infinite !important; }
-  .avatar-hl.active[data-anim="shake"] { animation: avatarShake 0.5s ease-in-out 2 !important; }
-  .avatar-hl.active[data-anim="bounce"] { animation: avatarBounce 0.8s ease-out !important; }
+  /* 頷き: 大きく深く、リズミカル、少し前傾 */
+  @keyframes avatarNod {
+    0%, 100% { transform: scale(1.1) rotate(0deg) translateY(0); }
+    20% { transform: scale(1.15) rotate(-2deg) translateY(-6px); }
+    40% { transform: scale(1.18) rotate(8deg)  translateY(5px);  }
+    60% { transform: scale(1.15) rotate(-3deg) translateY(-5px); }
+    80% { transform: scale(1.18) rotate(7deg)  translateY(4px);  }
+  }
+
+  /* 否定・困惑: 激しく左右振動、ブレるような印象 */
+  @keyframes avatarShake {
+    0%, 100% { transform: scale(1.1) translateX(0)    rotate(0deg); }
+    10% { transform: scale(1.15) translateX(-10px) rotate(-6deg); }
+    25% { transform: scale(1.15) translateX(10px)  rotate(6deg); }
+    40% { transform: scale(1.18) translateX(-12px) rotate(-8deg); }
+    55% { transform: scale(1.15) translateX(12px)  rotate(8deg); }
+    70% { transform: scale(1.13) translateX(-6px)  rotate(-3deg); }
+    85% { transform: scale(1.12) translateX(3px)   rotate(1deg); }
+  }
+
+  /* 弾み: 高くジャンプ、着地で弾む、色も明るく */
+  @keyframes avatarBounce {
+    0%   { transform: scale(1.1)  translateY(0)    rotate(0deg); filter: brightness(1); }
+    20%  { transform: scale(1.25) translateY(-24px) rotate(-5deg); filter: brightness(1.25) drop-shadow(0 0 14px rgba(255,215,0,0.85)); }
+    35%  { transform: scale(1.3)  translateY(-28px) rotate(5deg); filter: brightness(1.3) drop-shadow(0 0 16px rgba(255,215,0,0.9)); }
+    50%  { transform: scale(1.15) translateY(-10px) rotate(-3deg); filter: brightness(1.2); }
+    65%  { transform: scale(1.25) translateY(4px)   rotate(2deg);  filter: brightness(1.15); } /* 着地squash */
+    78%  { transform: scale(1.18) translateY(-6px)  rotate(-1deg); filter: brightness(1.1); }
+    90%  { transform: scale(1.12) translateY(-2px)  rotate(0deg);  filter: brightness(1.05); }
+    100% { transform: scale(1.1)  translateY(0)    rotate(0deg); filter: brightness(1); }
+  }
+
+  /* 考え込み: ゆっくり左右揺れ + かすかな上下、腕組みしてる感 */
+  @keyframes avatarThink {
+    0%, 100% { transform: scale(1.1) rotate(0deg) translateY(0); }
+    25% { transform: scale(1.1) rotate(-8deg) translateY(-2px); }
+    50% { transform: scale(1.1) rotate(0deg)  translateY(-4px); }
+    75% { transform: scale(1.1) rotate(8deg)  translateY(-2px); }
+  }
+
+  /* 円形背景の光オーラ (shock/bounce時に重ねる) */
+  @keyframes circleGlowShock {
+    0%   { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0 rgba(239,68,68,0); }
+    15%  { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 30px 12px rgba(239,68,68,0.6); }
+    40%  { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 40px 20px rgba(249,115,22,0.4); }
+    100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0 rgba(239,68,68,0); }
+  }
+  @keyframes circleGlowBounce {
+    0%   { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0 rgba(255,215,0,0); }
+    30%  { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 30px 12px rgba(255,215,0,0.7); }
+    60%  { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 40px 18px rgba(250,204,21,0.5); }
+    100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0 rgba(255,215,0,0); }
+  }
+
+  /* emoji を円内で独立に動かす (より派手さup) */
+  @keyframes emojiWiggle {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    20% { transform: scale(1.3) rotate(-10deg); }
+    50% { transform: scale(1.4) rotate(15deg); }
+    80% { transform: scale(1.2) rotate(-5deg); }
+  }
+  @keyframes emojiPop {
+    0%   { transform: scale(0.7); opacity: 0.5; }
+    30%  { transform: scale(1.5); opacity: 1; }
+    60%  { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* data-anim 属性でアニメ切替: アバター本体 + circle + emoji の3層同時発火 */
+  .avatar-hl.active[data-anim="shock"] { animation: avatarShock 0.9s cubic-bezier(0.34,1.56,0.64,1) !important; }
+  .avatar-hl.active[data-anim="shock"] .circle { animation: circleGlowShock 0.9s ease-out !important; }
+  .avatar-hl.active[data-anim="shock"] .emoji { animation: emojiPop 0.9s cubic-bezier(0.34,1.56,0.64,1) !important; }
+
+  .avatar-hl.active[data-anim="nod"] { animation: avatarNod 1.1s ease-in-out infinite !important; }
+
+  .avatar-hl.active[data-anim="shake"] { animation: avatarShake 0.6s ease-in-out 2 !important; }
+  .avatar-hl.active[data-anim="shake"] .emoji { animation: emojiWiggle 0.6s ease-in-out 2 !important; }
+
+  .avatar-hl.active[data-anim="bounce"] { animation: avatarBounce 1s cubic-bezier(0.34,1.56,0.64,1) !important; }
+  .avatar-hl.active[data-anim="bounce"] .circle { animation: circleGlowBounce 1s ease-out !important; }
+  .avatar-hl.active[data-anim="bounce"] .emoji { animation: emojiWiggle 1s ease-in-out !important; }
+
   .avatar-hl.active[data-anim="think"] { animation: avatarThink 2s ease-in-out infinite !important; }
 
   .avatar-hl { position: absolute; bottom: 13%; display: flex; flex-direction: column; align-items: center; z-index: 35; transition: all 0.3s; }

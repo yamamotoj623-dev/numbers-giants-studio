@@ -44,6 +44,28 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     });
   }, [scripts.length]);
 
+  // 同一speaker連続の scripts を「グループ」にまとめる
+  // グループ内の最初のscriptの useEffect で、全部の speech を連結して1回 speak
+  // テロップは文字数推定で順次切替
+  const getSpeakerGroupInfo = useCallback((idx) => {
+    const current = scripts[idx];
+    if (!current) return { isGroupStart: false, groupSize: 1, groupScripts: [] };
+    const prev = scripts[idx - 1];
+    const sameAsPrev = prev && prev.speaker === current.speaker;
+    // 前と同speakerならグループ途中 = speakは発火しない(既に呼ばれてる)
+    if (sameAsPrev) return { isGroupStart: false, groupSize: 0, groupScripts: [] };
+    // グループ開始: 同speakerが続くだけ集める
+    const groupScripts = [current];
+    for (let i = idx + 1; i < scripts.length; i++) {
+      if (scripts[i].speaker === current.speaker) {
+        groupScripts.push(scripts[i]);
+      } else {
+        break;
+      }
+    }
+    return { isGroupStart: true, groupSize: groupScripts.length, groupScripts };
+  }, [scripts]);
+
   useEffect(() => {
     if (!isPlaying) return;
     const script = scripts[currentIndex];
@@ -57,15 +79,31 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       mixer.playSe(script.se);
     }
 
-    // 次のscriptをプリフェッチ (同一speakerの場合の待ち時間短縮)
-    const nextScript = scripts[currentIndex + 1];
-    if (nextScript && adapter.prefetch) {
-      adapter.prefetch(nextScript.speech || nextScript.text || '', nextScript.speaker || 'A').catch(() => {});
+    const { isGroupStart, groupSize, groupScripts } = getSpeakerGroupInfo(currentIndex);
+
+    // グループ途中(前のscriptと同speaker) → speakせず、テロップ推定時間だけ確保して次へ
+    if (!isGroupStart) {
+      const text = script.speech || script.text || '';
+      // 推定話速に応じた表示時間 (最低 900ms)
+      const delay = Math.max(900, text.length * 120 / speechRate);
+      const t = setTimeout(playNext, delay);
+      return () => clearTimeout(t);
     }
 
-    // 次が同一speakerかどうかで post-delay を調整
-    const isNextSameSpeaker = nextScript && nextScript.speaker === script.speaker;
-    const postDelay = isNextSameSpeaker ? 0 : 80; // 同一speakerなら即時、話者切替時は少し間
+    // グループ開始 (単独id または 連続の先頭)
+    // 次のグループ先頭(異speaker)をプリフェッチ
+    const nextGroupHeadIdx = currentIndex + groupSize;
+    const nextGroupHead = scripts[nextGroupHeadIdx];
+    if (nextGroupHead && adapter.prefetch) {
+      // 連結speech で先読み
+      const nextGroupScripts = [nextGroupHead];
+      for (let i = nextGroupHeadIdx + 1; i < scripts.length; i++) {
+        if (scripts[i].speaker === nextGroupHead.speaker) nextGroupScripts.push(scripts[i]);
+        else break;
+      }
+      const nextJoined = nextGroupScripts.map(s => s.speech || s.text || '').join(' ');
+      adapter.prefetch(nextJoined, nextGroupHead.speaker || 'A').catch(() => {});
+    }
 
     if (!isVoiceEnabled) {
       const text = script.speech || script.text || '';
@@ -74,16 +112,32 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       return () => clearTimeout(t);
     }
 
+    // グループ全部の speech を連結して1回でTTS (途切れず自然なテンポ)
+    const joinedSpeech = groupScripts.map(s => s.speech || s.text || '').join(' ');
+
     mixer?.startDucking();
-    adapter.speak(script.speech || script.text || '', script.speaker || 'A', {
+    adapter.speak(joinedSpeech, script.speaker || 'A', {
       rate: speechRate,
       onEnd: () => {
         mixer?.stopDucking();
-        if (postDelay > 0) {
-          setTimeout(playNext, postDelay);
-        } else {
-          playNext();
-        }
+        // グループ最後のidまで進める (onEndは連結音声全体の終了)
+        // ただし、途中のidはテロップ推定時間で既に進行済みのはずなので、
+        // もし未到達ならjumpして次グループへ
+        setCurrentIndex(cur => {
+          const groupEndIdx = currentIndex + groupSize;
+          // 音声が終わったので、グループ最後 or その次に進む
+          if (cur < groupEndIdx) {
+            // テロップがまだグループ途中 → groupEndIdx に跳ぶ
+            const nextIdx = groupEndIdx;
+            if (nextIdx >= scripts.length) {
+              setIsPlaying(false);
+              mixerRef.current?.stopBgm();
+              return cur;
+            }
+            return nextIdx;
+          }
+          return cur;
+        });
       },
       onError: (err) => {
         console.warn('TTS error, skipping:', err);
@@ -91,7 +145,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
         playNext();
       },
     });
-  }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, playNext]);
+  }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, playNext, getSpeakerGroupInfo]);
 
   const togglePlay = useCallback(() => {
     if (!isPlaying) {

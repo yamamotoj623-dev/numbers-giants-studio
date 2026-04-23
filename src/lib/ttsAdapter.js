@@ -225,6 +225,18 @@ export class GeminiAdapter {
         audio.playbackRate = rate;
         this.currentAudio = audio;
 
+        // mixer の voiceGain に接続 (録画キャプチャ経路に乗せる)
+        // 注意: createMediaElementSource は要素1つにつき1回しか呼べないので、audio要素は毎回新規
+        try {
+          const { getMixer } = await import('./mixer.js');
+          const mixer = getMixer();
+          mixer._ensureContext();
+          const srcNode = mixer.ctx.createMediaElementSource(audio);
+          srcNode.connect(mixer.voiceGain);
+        } catch (e) {
+          console.warn('TTS audio mixer routing failed, using direct playback:', e);
+        }
+
         audio.onended = () => {
           URL.revokeObjectURL(url);
           clearTimeout(this.fallbackTimer);

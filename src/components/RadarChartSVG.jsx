@@ -54,14 +54,16 @@ const RANK_COLORS = {
 };
 
 function valueToRank(value) {
-  if (value >= 85) return 'S';
-  if (value >= 70) return 'A';
-  if (value >= 55) return 'B';
-  if (value >= 40) return 'C';
-  if (value >= 25) return 'D';
-  if (value >= 15) return 'E';
-  if (value >= 5) return 'F';
-  return 'G';
+  // 厳格化: Sはメジャー級(MLBトッププレイヤー)、Aは日本のタイトル争い層
+  // 一般的なNPBレギュラー = C〜B、一軍定着前後 = D〜E
+  if (value >= 95) return 'S';  // メジャー級、歴史的水準
+  if (value >= 85) return 'A';  // NPBタイトル争いレベル
+  if (value >= 72) return 'B';  // NPBレギュラー上位
+  if (value >= 58) return 'C';  // NPBレギュラー平均
+  if (value >= 42) return 'D';  // 控え・限定的役割
+  if (value >= 28) return 'E';  // 一軍出場機会あり
+  if (value >= 15) return 'F';  // 二軍・課題多数
+  return 'G';                    // 未到達レベル
 }
 
 function computePoints(values, maxR) {
