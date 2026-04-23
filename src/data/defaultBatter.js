@@ -8,6 +8,7 @@ export const defaultBatterData = {
   schemaVersion: '5.0.0',
   layoutType: 'radar_compare',
   pattern: 'bad_news',
+  hookAnimation: 'shake',  // 選択可: pop / shake / slide / zoom / fade
   aspectRatio: '9:16',
   playerType: 'batter',
   silhouetteType: 'batter_right',  // 選択可: batter_right / batter_left / batter_stance / runner

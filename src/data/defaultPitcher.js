@@ -6,6 +6,7 @@ export const defaultPitcherData = {
   schemaVersion: '5.0.0',
   layoutType: 'radar_compare',
   pattern: 'awakening',
+  hookAnimation: 'zoom',  // 選択可: pop / shake / slide / zoom / fade
   aspectRatio: '9:16',
   playerType: 'pitcher',
   silhouetteType: 'pitcher_right',  // 選択可: pitcher_right / pitcher_left / pitcher_set / catcher

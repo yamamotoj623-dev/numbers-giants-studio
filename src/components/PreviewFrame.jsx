@@ -41,7 +41,11 @@ function estimateDuration(scripts) {
   return `${mm}:${ss}`;
 }
 
-function getHookAnim(pattern) {
+function getHookAnim(projectData) {
+  // 明示的な指定があれば優先: 'pop' / 'shake' / 'slide' / 'zoom' / 'fade'
+  if (projectData?.hookAnimation) return projectData.hookAnimation;
+  // pattern からの自動推測
+  const pattern = projectData?.pattern;
   const shakePatterns = ['bad_news', 'mystery'];
   return shakePatterns.includes(pattern) ? 'shake' : 'pop';
 }
@@ -60,7 +64,7 @@ export function PreviewFrame({
 }) {
   const scripts = projectData?.scripts || [];
   const phase = getPhase(currentScript, currentIndex, scripts);
-  const hookAnim = getHookAnim(projectData.pattern);
+  const hookAnim = getHookAnim(projectData);
   const textSize = resolveTextSize(currentScript);
   const estDuration = useMemo(() => estimateDuration(scripts), [scripts]);
 

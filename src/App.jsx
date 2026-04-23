@@ -257,6 +257,29 @@ const App = () => {
               >
                 🎬 時間
               </button>
+              <div className="flex items-center gap-1 bg-zinc-50 rounded-full px-2 py-1 border border-zinc-200">
+                <span className="text-[10px] font-bold text-zinc-500 mr-1">冒頭:</span>
+                {[
+                  { id: 'pop', label: '🎈 弾' },
+                  { id: 'shake', label: '💥 揺' },
+                  { id: 'slide', label: '➡ 滑' },
+                  { id: 'zoom', label: '🔍 拡' },
+                  { id: 'fade', label: '🌫 淡' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setProjectData(prev => ({ ...prev, hookAnimation: opt.id }))}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition ${
+                      (projectData.hookAnimation || 'pop') === opt.id
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-white text-zinc-500 hover:bg-zinc-100'
+                    }`}
+                    title={`冒頭アニメーション: ${opt.id}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="text-[10px] text-zinc-500 font-bold flex items-center gap-1.5">

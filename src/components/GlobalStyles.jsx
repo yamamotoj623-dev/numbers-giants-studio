@@ -229,6 +229,45 @@ const CSS_TEXT = `
   .phase-a.active.anim-shake .telop-hook .line-4 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.35s forwards; }
   .phase-a.active.anim-shake .telop-hook .line-5 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.7s forwards; }
 
+  /* hookAnimation オーバーライド用の追加パターン */
+  @keyframes hookSlide {
+    0% { opacity: 0; transform: translateX(-100%); }
+    60% { opacity: 1; transform: translateX(10px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes hookZoom {
+    0% { opacity: 0; transform: scale(3); filter: blur(8px); }
+    60% { opacity: 1; transform: scale(0.95); filter: blur(0); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  @keyframes hookFade {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .phase-a.active.anim-slide .telop-hook .line-1 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-2 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 0.7s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-3 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 1.1s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-4 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 1.5s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-5 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 1.9s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-1 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-2 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.75s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-3 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 1.2s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-4 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 1.65s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-5 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 2.1s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-1 { animation: hookFade 0.8s ease-out 0.3s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-2 { animation: hookFade 0.8s ease-out 0.8s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-3 { animation: hookFade 0.8s ease-out 1.3s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-4 { animation: hookFade 0.8s ease-out 1.8s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-5 { animation: hookFade 0.8s ease-out 2.3s forwards; opacity: 0; }
+
+  /* slide/zoom/fade モードでも stats は telopSlideUp で統一 */
+  .phase-a.active.anim-slide .hook-stats-big,
+  .phase-a.active.anim-zoom .hook-stats-big,
+  .phase-a.active.anim-fade .hook-stats-big { animation: telopSlideUp 0.5s ease-out 0.9s forwards; }
+  .phase-a.active.anim-slide .hook-stats-grid,
+  .phase-a.active.anim-zoom .hook-stats-grid,
+  .phase-a.active.anim-fade .hook-stats-grid { animation: statsWipe 0.8s ease-out 1.0s backwards; }
+
   .hook-stats-big { position: absolute; top: 58%; left: 10px; right: 10px; z-index: 25; opacity: 0; }
   .phase-a.active.anim-pop .hook-stats-big { animation: telopSlideUp 0.5s ease-out 0.9s forwards; }
   .phase-a.active.anim-shake .hook-stats-big { animation: telopSlideUp 0.5s ease-out 0.9s forwards; }

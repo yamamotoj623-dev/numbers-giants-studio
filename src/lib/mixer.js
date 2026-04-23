@@ -1,96 +1,64 @@
 /**
- * Web Audio API ベースのオーディオミキサー
- * 
- * 3トラック: voice / bgm / se を個別ゲインで管理。
- * ボイス再生中は BGM を自動で duckingAmount レベルまで減衰させる。
- * 
- * 設計: MixerEngine インスタンスは App レベルで1つ。複数作るとAudioContextが乱立する。
+ * HTMLAudioElement ベースのオーディオミキサー (v5.1.0)
+ *
+ * 【録画対応設計】
+ * スマホOSの画面録画機能(Pixel, iPhone)は HTMLAudioElement の直接再生音声のみを確実にキャプチャする。
+ * AudioContext の出力 (ctx.destination や MediaStreamDestination経由) は録画で拾われないケースが多い。
+ * そのため BGM / SE / Voice 全てを純粋な HTMLAudioElement で並行再生する設計。
+ *
+ * 音量制御・ducking は element.volume を直接操作 (AudioContext gain 不使用)。
+ * 合成音SE (カスタムSE未登録の場合) のみ AudioContext を使うが、これは短時間のため録画取りこぼしても許容。
  */
 
 import { DEFAULT_MIXER_LEVELS } from './config';
 
 export class MixerEngine {
   constructor() {
-    this.ctx = null;
     this.levels = { ...DEFAULT_MIXER_LEVELS };
-    this.bgmSource = null;
-    this.bgmGain = null;
-    this.bgmBuffer = null;
-    this.masterGain = null;
-    this.seGain = null;
-    this.voiceGain = null;
     this._ducking = false;
-    this._bgmStartedAt = 0;
-    this._bgmPausedAt = 0;
-    this._seBuffers = new Map();
-    this._recordingDestination = null;
+
+    // BGM: 単一HTMLAudioElement (ループ再生)
+    this.bgmAudioEl = null;
+    this._bgmUrl = null;
+
+    // SE: カスタムSE用 HTMLAudioElement プール (preset ID → Audio)
+    // 合成音SE用 AudioContext (録画で拾われないが fallback)
+    this._seAudioEls = new Map();
+    this._synthCtx = null;
   }
 
+  // AudioContext は合成音SEでのみ使用 (遅延生成)
+  _ensureSynthContext() {
+    if (this._synthCtx) return;
+    this._synthCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  // 互換性のため空実装 (古いコードから呼ばれてもエラーにならない)
   _ensureContext() {
-    if (this.ctx) return;
-    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = this.levels.master;
-
-    // ★録画対応: masterGain の出力を MediaStreamDestination 経由で HTMLAudioElement で再生
-    // これにより OS の画面録画が「メディア音声」として認識し、録画に音が乗る
-    // ctx.destination への直結は、OS の録画で拾われないケースがあるため避ける
-    this._outputDestination = this.ctx.createMediaStreamDestination();
-    this.masterGain.connect(this._outputDestination);
-    this.masterGain.connect(this.ctx.destination); // 通常スピーカーにも出す (フォールバック)
-
-    // 隠し HTMLAudioElement で MediaStream を再生 (OS録画で拾われる)
-    this._outputAudioEl = new Audio();
-    this._outputAudioEl.srcObject = this._outputDestination.stream;
-    this._outputAudioEl.volume = 1.0;
-    // 自動再生: ユーザーインタラクション後に呼び出されるはずなので成功する
-    this._outputAudioEl.play().catch(err => {
-      console.warn('Mixer output audio play failed:', err);
-    });
-
-    this.voiceGain = this.ctx.createGain();
-    this.voiceGain.gain.value = this.levels.voice;
-    this.voiceGain.connect(this.masterGain);
-
-    this.bgmGain = this.ctx.createGain();
-    this.bgmGain.gain.value = this.levels.bgm;
-    this.bgmGain.connect(this.masterGain);
-
-    this.seGain = this.ctx.createGain();
-    this.seGain.gain.value = this.levels.se;
-    this.seGain.connect(this.masterGain);
+    // no-op (新設計では不要)
   }
 
-  /**
-   * 画面録画用の MediaStream を取得。
-   * canvas.captureStream() の audioTracks と組み合わせることで BGM/SE/Voice が録画に乗る。
-   * 呼び出すと masterGain から分岐する MediaStreamDestination が生成される。
-   */
+  // 画面録画用 MediaStream (使わないが API互換性のため残す)
   getRecordingStream() {
-    this._ensureContext();
-    if (!this._recordingDestination) {
-      this._recordingDestination = this.ctx.createMediaStreamDestination();
-      this.masterGain.connect(this._recordingDestination);
-    }
-    return this._recordingDestination.stream;
+    return null;
   }
 
   setLevel(track, value) {
-    this._ensureContext();
     const v = Math.max(0, Math.min(1, value));
     this.levels[track] = v;
 
-    const node = {
-      voice: this.voiceGain,
-      bgm: this.bgmGain,
-      se: this.seGain,
-      master: this.masterGain,
-    }[track];
-    if (node) {
-      // BGMなら ducking 状態も反映
-      const target = (track === 'bgm' && this._ducking) ? v * this.levels.duckingAmount : v;
-      node.gain.cancelScheduledValues(this.ctx.currentTime);
-      node.gain.setTargetAtTime(target, this.ctx.currentTime, 0.05);
+    if (track === 'bgm' && this.bgmAudioEl) {
+      this.bgmAudioEl.volume = this._effectiveBgmVolume();
+    } else if (track === 'voice') {
+      // voice は TTSAdapter 側で HTMLAudioElement を直接作るので、
+      // mixer 側は levels を保持するだけ (TTS再生時にこの値を適用)
+    } else if (track === 'se') {
+      // 既にloopで鳴ってるSEがあれば即反映
+      for (const el of this._seAudioEls.values()) {
+        if (el && !el.paused) el.volume = v * this.levels.master;
+      }
+    } else if (track === 'master') {
+      if (this.bgmAudioEl) this.bgmAudioEl.volume = this._effectiveBgmVolume();
     }
   }
 
@@ -98,39 +66,53 @@ export class MixerEngine {
     this.levels.duckingAmount = Math.max(0, Math.min(1, amount));
   }
 
+  _effectiveBgmVolume() {
+    const base = this.levels.bgm * this.levels.master;
+    return this._ducking ? base * this.levels.duckingAmount : base;
+  }
+
+  _effectiveVoiceVolume() {
+    return this.levels.voice * this.levels.master;
+  }
+
+  _effectiveSeVolume() {
+    return this.levels.se * this.levels.master;
+  }
+
+  // ========== BGM ==========
+
   async loadBgmFromUrl(url) {
-    this._ensureContext();
     this._bgmUrl = url;
     if (this.bgmAudioEl) {
       try { this.bgmAudioEl.pause(); } catch (e) {}
-      try { this._bgmSourceNode?.disconnect(); } catch (e) {}
       this.bgmAudioEl.src = '';
     }
     const audio = new Audio();
-    audio.crossOrigin = 'anonymous';
     audio.loop = true;
     audio.preload = 'auto';
     audio.src = url;
-    // HTMLAudioElement自体を無音にしてAudioContext経由で再生 (録画対応 + mixer統合)
-    audio.volume = 1.0; // これはmixerのsrc→bgmGainに流す前の段階
+    audio.volume = this._effectiveBgmVolume();
     this.bgmAudioEl = audio;
     await new Promise((resolve, reject) => {
-      audio.addEventListener('canplaythrough', resolve, { once: true });
-      audio.addEventListener('error', reject, { once: true });
+      let done = false;
+      const ok = () => { if (!done) { done = true; resolve(); } };
+      audio.addEventListener('canplaythrough', ok, { once: true });
+      audio.addEventListener('loadedmetadata', ok, { once: true });
+      audio.addEventListener('error', (e) => { if (!done) { done = true; reject(e); } }, { once: true });
+      // 2秒で強制解決 (loadedmetadata不発火対策)
+      setTimeout(ok, 2000);
     });
-    // AudioContext graph に接続: HTMLAudioElement → bgmGain → masterGain
-    this._bgmSourceNode = this.ctx.createMediaElementSource(audio);
-    this._bgmSourceNode.connect(this.bgmGain);
     return audio.duration || 0;
   }
 
   playBgm(loop = true) {
     if (!this.bgmAudioEl) return;
-    this._ensureContext();
     try {
       this.bgmAudioEl.loop = loop;
       this.bgmAudioEl.currentTime = 0;
-      this.bgmAudioEl.play().catch(err => console.warn('BGM play failed:', err));
+      this.bgmAudioEl.volume = this._effectiveBgmVolume();
+      const p = this.bgmAudioEl.play();
+      if (p && p.catch) p.catch(err => console.warn('BGM play failed:', err));
     } catch (e) {
       console.warn('playBgm error:', e);
     }
@@ -145,69 +127,107 @@ export class MixerEngine {
     }
   }
 
+  // ========== ducking (BGMの音量 element.volume で直接制御) ==========
+
   startDucking() {
-    if (!this.bgmGain || this._ducking) return;
+    if (this._ducking) return;
     this._ducking = true;
-    const target = this.levels.bgm * this.levels.duckingAmount;
-    this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
-    this.bgmGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.1);
+    if (!this.bgmAudioEl) return;
+    const target = this._effectiveBgmVolume();
+    const start = this.bgmAudioEl.volume;
+    const steps = 6;
+    for (let i = 1; i <= steps; i++) {
+      setTimeout(() => {
+        if (this._ducking && this.bgmAudioEl) {
+          this.bgmAudioEl.volume = start + (target - start) * (i / steps);
+        }
+      }, i * 15);
+    }
   }
 
   stopDucking() {
-    if (!this.bgmGain || !this._ducking) return;
+    if (!this._ducking) return;
     this._ducking = false;
-    this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
-    this.bgmGain.gain.setTargetAtTime(this.levels.bgm, this.ctx.currentTime, 0.15);
+    if (!this.bgmAudioEl) return;
+    const target = this._effectiveBgmVolume();
+    const start = this.bgmAudioEl.volume;
+    const steps = 6;
+    for (let i = 1; i <= steps; i++) {
+      setTimeout(() => {
+        if (!this._ducking && this.bgmAudioEl) {
+          this.bgmAudioEl.volume = start + (target - start) * (i / steps);
+        }
+      }, i * 25);
+    }
   }
 
+  // ========== SE ==========
+
   /**
-   * カスタムSEバッファを登録 (アップロードされたファイル)
-   * 画面録画でも拾われるようHTMLAudioElement用にblobUrlとしても保持
+   * カスタムSEファイルを登録 (HTMLAudioElement + blob URL で保持)
    */
   async registerCustomSe(id, blob) {
-    this._ensureContext();
-    const arrayBuf = await blob.arrayBuffer();
-    // AudioContext用 (低レイテンシ再生用)
-    const audioBuffer = await this.ctx.decodeAudioData(arrayBuf.slice(0));
-    this._seBuffers.set(id, audioBuffer);
-    // HTMLAudioElement用 (画面録画用の予備ルート)
+    const prev = this._seAudioEls.get(id);
+    if (prev) {
+      try { prev.pause(); } catch (e) {}
+      if (prev._blobUrl) URL.revokeObjectURL(prev._blobUrl);
+    }
     const url = URL.createObjectURL(blob);
-    if (!this._seBlobUrls) this._seBlobUrls = new Map();
-    const prev = this._seBlobUrls.get(id);
-    if (prev) URL.revokeObjectURL(prev);
-    this._seBlobUrls.set(id, url);
-    return audioBuffer.duration;
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio.src = url;
+    audio._blobUrl = url;
+    audio.volume = this._effectiveSeVolume();
+    await new Promise((resolve) => {
+      let done = false;
+      const ok = () => { if (!done) { done = true; resolve(); } };
+      audio.addEventListener('canplaythrough', ok, { once: true });
+      audio.addEventListener('loadedmetadata', ok, { once: true });
+      audio.addEventListener('error', ok, { once: true });
+      setTimeout(ok, 2000);
+    });
+    this._seAudioEls.set(id, audio);
+    return audio.duration || 0;
   }
 
   unregisterCustomSe(id) {
-    this._seBuffers.delete(id);
-    if (this._seBlobUrls) {
-      const url = this._seBlobUrls.get(id);
-      if (url) URL.revokeObjectURL(url);
-      this._seBlobUrls.delete(id);
+    const el = this._seAudioEls.get(id);
+    if (el) {
+      try { el.pause(); } catch (e) {}
+      if (el._blobUrl) URL.revokeObjectURL(el._blobUrl);
     }
+    this._seAudioEls.delete(id);
   }
 
   /**
-   * SE（短い効果音）を再生。seIdはSE_PRESETSのいずれか or 登録済みカスタムID。
-   * カスタムSEが登録されていればそちらが優先、なければ合成音のプリセットを使う。
+   * SE再生: カスタムSE優先 (HTMLAudioElement 録画対応)、なければ合成音 fallback
    */
   playSe(seId) {
-    this._ensureContext();
-    const ctx = this.ctx;
-    const now = ctx.currentTime;
-
     // カスタムSE優先
-    const customBuffer = this._seBuffers.get(seId);
-    if (customBuffer) {
-      const src = ctx.createBufferSource();
-      src.buffer = customBuffer;
-      src.connect(this.seGain);
-      src.start(0);
+    const customEl = this._seAudioEls.get(seId);
+    if (customEl) {
+      try {
+        // 重ね再生: cloneして新インスタンスで鳴らす
+        const clone = customEl.cloneNode(true);
+        clone.volume = this._effectiveSeVolume();
+        clone.play().catch(err => console.warn('SE play failed:', err));
+        clone.addEventListener('ended', () => {
+          try { clone.remove(); } catch (e) {}
+        }, { once: true });
+      } catch (e) {
+        console.warn('SE clone failed, using original:', e);
+        customEl.currentTime = 0;
+        customEl.volume = this._effectiveSeVolume();
+        customEl.play().catch(() => {});
+      }
       return;
     }
 
-    // 軽量合成音のプリセット定義
+    // 合成音フォールバック (AudioContext - 録画で取れない可能性あり)
+    this._ensureSynthContext();
+    const ctx = this._synthCtx;
+    const now = ctx.currentTime;
+
     const presets = {
       hook_impact:     { freqs: [80, 40],   type: 'sawtooth', attack: 0.01, release: 0.25, gain: 0.5 },
       highlight_ping:  { freqs: [880, 1320],type: 'sine',     attack: 0.005, release: 0.18, gain: 0.3 },
@@ -223,9 +243,10 @@ export class MixerEngine {
 
     const preset = presets[seId] || presets.click_tap;
     const gain = ctx.createGain();
-    gain.connect(this.seGain);
+    gain.connect(ctx.destination);
+    const finalGain = preset.gain * this._effectiveSeVolume();
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(preset.gain, now + preset.attack);
+    gain.gain.linearRampToValueAtTime(finalGain, now + preset.attack);
     gain.gain.exponentialRampToValueAtTime(0.001, now + preset.attack + preset.release);
 
     preset.freqs.forEach((freq, idx) => {
@@ -238,24 +259,29 @@ export class MixerEngine {
     });
   }
 
-  /**
-   * 外部のVoice出力をミキサーに接続したい場合に使用。
-   * （HTMLAudioElementをcreateMediaElementSourceで接続できる）
-   * 現状のTTSAdapter実装では Audio要素 の直接再生なので、master gainの管理外だが、
-   * ミキサー経由にしたければこの関数経由で接続する。
-   */
+  // ========== 互換性プロパティ (既存コードが参照してもエラーにならない) ==========
+
+  get voiceGain() { return null; }
+  get bgmGain() { return null; }
+  get seGain() { return null; }
+  get masterGain() { return null; }
+  get ctx() { return this._synthCtx; }
+
   connectVoiceElement(htmlAudioElement) {
-    this._ensureContext();
-    const src = this.ctx.createMediaElementSource(htmlAudioElement);
-    src.connect(this.voiceGain);
-    return src;
+    return null;
   }
 
   dispose() {
     this.stopBgm();
-    if (this.ctx) {
-      try { this.ctx.close(); } catch (e) {}
-      this.ctx = null;
+    if (this.bgmAudioEl?._blobUrl) URL.revokeObjectURL(this.bgmAudioEl._blobUrl);
+    this.bgmAudioEl = null;
+    for (const el of this._seAudioEls.values()) {
+      if (el?._blobUrl) URL.revokeObjectURL(el._blobUrl);
+    }
+    this._seAudioEls.clear();
+    if (this._synthCtx) {
+      try { this._synthCtx.close(); } catch (e) {}
+      this._synthCtx = null;
     }
   }
 }
@@ -264,4 +290,9 @@ let _mixerInstance = null;
 export function getMixer() {
   if (!_mixerInstance) _mixerInstance = new MixerEngine();
   return _mixerInstance;
+}
+
+// 現在再生中のvoice要素を取得する helper (ducking連動用)
+export function getVoiceVolume(mixer) {
+  return mixer._effectiveVoiceVolume();
 }

@@ -81,21 +81,20 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
 
     const { isGroupStart, groupSize, groupScripts } = getSpeakerGroupInfo(currentIndex);
 
-    // グループ途中(前のscriptと同speaker) → speakせず、テロップ推定時間だけ確保して次へ
+    // ★ テロップは毎回 setTimeout で次のidに進める (同一speaker内も、グループ間も)
+    const text = script.speech || script.text || '';
+    const telopDelay = Math.max(900, text.length * 120 / speechRate);
+    const telopTimer = setTimeout(playNext, telopDelay);
+
+    // グループ途中 (前のscriptと同speaker) → speakせずテロップだけ進める
     if (!isGroupStart) {
-      const text = script.speech || script.text || '';
-      // 推定話速に応じた表示時間 (最低 900ms)
-      const delay = Math.max(900, text.length * 120 / speechRate);
-      const t = setTimeout(playNext, delay);
-      return () => clearTimeout(t);
+      return () => clearTimeout(telopTimer);
     }
 
-    // グループ開始 (単独id または 連続の先頭)
-    // 次のグループ先頭(異speaker)をプリフェッチ
+    // === グループ開始: 先読み + 連結speak ===
     const nextGroupHeadIdx = currentIndex + groupSize;
     const nextGroupHead = scripts[nextGroupHeadIdx];
     if (nextGroupHead && adapter.prefetch) {
-      // 連結speech で先読み
       const nextGroupScripts = [nextGroupHead];
       for (let i = nextGroupHeadIdx + 1; i < scripts.length; i++) {
         if (scripts[i].speaker === nextGroupHead.speaker) nextGroupScripts.push(scripts[i]);
@@ -106,10 +105,8 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     }
 
     if (!isVoiceEnabled) {
-      const text = script.speech || script.text || '';
-      const delay = Math.max(1200, text.length * 130 / speechRate);
-      const t = setTimeout(playNext, delay);
-      return () => clearTimeout(t);
+      // 音声OFF: テロップsetTimeoutに任せる
+      return () => clearTimeout(telopTimer);
     }
 
     // グループ全部の speech を連結して1回でTTS (途切れず自然なテンポ)
@@ -120,31 +117,16 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       rate: speechRate,
       onEnd: () => {
         mixer?.stopDucking();
-        // グループ最後のidまで進める (onEndは連結音声全体の終了)
-        // ただし、途中のidはテロップ推定時間で既に進行済みのはずなので、
-        // もし未到達ならjumpして次グループへ
-        setCurrentIndex(cur => {
-          const groupEndIdx = currentIndex + groupSize;
-          // 音声が終わったので、グループ最後 or その次に進む
-          if (cur < groupEndIdx) {
-            // テロップがまだグループ途中 → groupEndIdx に跳ぶ
-            const nextIdx = groupEndIdx;
-            if (nextIdx >= scripts.length) {
-              setIsPlaying(false);
-              mixerRef.current?.stopBgm();
-              return cur;
-            }
-            return nextIdx;
-          }
-          return cur;
-        });
+        // 音声終了時刻はテロップ末尾付近と一致するはず
+        // テロップsetTimeoutに任せて自然進行
       },
       onError: (err) => {
         console.warn('TTS error, skipping:', err);
         mixer?.stopDucking();
-        playNext();
       },
     });
+
+    return () => clearTimeout(telopTimer);
   }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, playNext, getSpeakerGroupInfo]);
 
   const togglePlay = useCallback(() => {
