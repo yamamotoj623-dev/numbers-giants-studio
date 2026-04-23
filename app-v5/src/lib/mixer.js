@@ -31,7 +31,22 @@ export class MixerEngine {
     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = this.levels.master;
-    this.masterGain.connect(this.ctx.destination);
+
+    // ★録画対応: masterGain の出力を MediaStreamDestination 経由で HTMLAudioElement で再生
+    // これにより OS の画面録画が「メディア音声」として認識し、録画に音が乗る
+    // ctx.destination への直結は、OS の録画で拾われないケースがあるため避ける
+    this._outputDestination = this.ctx.createMediaStreamDestination();
+    this.masterGain.connect(this._outputDestination);
+    this.masterGain.connect(this.ctx.destination); // 通常スピーカーにも出す (フォールバック)
+
+    // 隠し HTMLAudioElement で MediaStream を再生 (OS録画で拾われる)
+    this._outputAudioEl = new Audio();
+    this._outputAudioEl.srcObject = this._outputDestination.stream;
+    this._outputAudioEl.volume = 1.0;
+    // 自動再生: ユーザーインタラクション後に呼び出されるはずなので成功する
+    this._outputAudioEl.play().catch(err => {
+      console.warn('Mixer output audio play failed:', err);
+    });
 
     this.voiceGain = this.ctx.createGain();
     this.voiceGain.gain.value = this.levels.voice;
@@ -65,12 +80,6 @@ export class MixerEngine {
     const v = Math.max(0, Math.min(1, value));
     this.levels[track] = v;
 
-    // BGMは HTMLAudioElement なので .volume を直接操作
-    if (track === 'bgm' && this.bgmAudioEl) {
-      this.bgmAudioEl.volume = this._ducking ? v * this.levels.duckingAmount : v;
-      return;
-    }
-
     const node = {
       voice: this.voiceGain,
       bgm: this.bgmGain,
@@ -78,8 +87,10 @@ export class MixerEngine {
       master: this.masterGain,
     }[track];
     if (node) {
+      // BGMなら ducking 状態も反映
+      const target = (track === 'bgm' && this._ducking) ? v * this.levels.duckingAmount : v;
       node.gain.cancelScheduledValues(this.ctx.currentTime);
-      node.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05);
+      node.gain.setTargetAtTime(target, this.ctx.currentTime, 0.05);
     }
   }
 
@@ -89,22 +100,27 @@ export class MixerEngine {
 
   async loadBgmFromUrl(url) {
     this._ensureContext();
-    // HTMLAudioElementを使うことで: (1) OSの画面録画にBGM音声が乗る (2) 大きいファイルでもメモリ節約
     this._bgmUrl = url;
     if (this.bgmAudioEl) {
       try { this.bgmAudioEl.pause(); } catch (e) {}
+      try { this._bgmSourceNode?.disconnect(); } catch (e) {}
       this.bgmAudioEl.src = '';
     }
-    const audio = new Audio(url);
+    const audio = new Audio();
     audio.crossOrigin = 'anonymous';
     audio.loop = true;
     audio.preload = 'auto';
-    audio.volume = this.levels.bgm;
+    audio.src = url;
+    // HTMLAudioElement自体を無音にしてAudioContext経由で再生 (録画対応 + mixer統合)
+    audio.volume = 1.0; // これはmixerのsrc→bgmGainに流す前の段階
     this.bgmAudioEl = audio;
     await new Promise((resolve, reject) => {
       audio.addEventListener('canplaythrough', resolve, { once: true });
       audio.addEventListener('error', reject, { once: true });
     });
+    // AudioContext graph に接続: HTMLAudioElement → bgmGain → masterGain
+    this._bgmSourceNode = this.ctx.createMediaElementSource(audio);
+    this._bgmSourceNode.connect(this.bgmGain);
     return audio.duration || 0;
   }
 
@@ -114,9 +130,6 @@ export class MixerEngine {
     try {
       this.bgmAudioEl.loop = loop;
       this.bgmAudioEl.currentTime = 0;
-      this.bgmAudioEl.volume = this._ducking
-        ? this.levels.bgm * this.levels.duckingAmount
-        : this.levels.bgm;
       this.bgmAudioEl.play().catch(err => console.warn('BGM play failed:', err));
     } catch (e) {
       console.warn('playBgm error:', e);
@@ -133,38 +146,18 @@ export class MixerEngine {
   }
 
   startDucking() {
-    if (this._ducking) return;
+    if (!this.bgmGain || this._ducking) return;
     this._ducking = true;
     const target = this.levels.bgm * this.levels.duckingAmount;
-    // HTMLAudioElement: volumeを段階的に下げる (簡易fade: 50ms x 5)
-    if (this.bgmAudioEl) {
-      const start = this.bgmAudioEl.volume;
-      const steps = 5;
-      for (let i = 1; i <= steps; i++) {
-        setTimeout(() => {
-          if (this._ducking && this.bgmAudioEl) {
-            this.bgmAudioEl.volume = start + (target - start) * (i / steps);
-          }
-        }, i * 20);
-      }
-    }
+    this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.bgmGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.1);
   }
 
   stopDucking() {
-    if (!this._ducking) return;
+    if (!this.bgmGain || !this._ducking) return;
     this._ducking = false;
-    if (this.bgmAudioEl) {
-      const target = this.levels.bgm;
-      const start = this.bgmAudioEl.volume;
-      const steps = 5;
-      for (let i = 1; i <= steps; i++) {
-        setTimeout(() => {
-          if (!this._ducking && this.bgmAudioEl) {
-            this.bgmAudioEl.volume = start + (target - start) * (i / steps);
-          }
-        }, i * 30);
-      }
-    }
+    this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.bgmGain.gain.setTargetAtTime(this.levels.bgm, this.ctx.currentTime, 0.15);
   }
 
   /**

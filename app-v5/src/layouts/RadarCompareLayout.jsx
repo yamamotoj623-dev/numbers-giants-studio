@@ -130,8 +130,10 @@ function HighlightView({ projectData, comp }) {
         {/* 1行統合ヘッダー */}
         <div className="hl-header-compact">
           <span className="hl-radar-badge">📊 {comp.radarMatch || comp.label}</span>
-          <span className="hl-label-compact">{comp.label}</span>
-          <span className="hl-kana-compact">{comp.kana}</span>
+          <div className="hl-label-group">
+            <span className="hl-kana-compact">{comp.kana}</span>
+            <span className="hl-label-compact">{comp.label}</span>
+          </div>
         </div>
 
         {/* 計算式 */}

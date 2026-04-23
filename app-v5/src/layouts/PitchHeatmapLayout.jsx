@@ -22,7 +22,7 @@ import { OutroPanel } from '../components/OutroPanel.jsx';
 
 export function PitchHeatmapLayout({ projectData, currentScript, animationKey , phase = 'normal'}) {
   if (phase === 'hook') return null;
-  if (phase === 'outro') return <OutroPanel projectData={projectData} />;
+  if (phase === 'outro') return <OutroPanel projectData={projectData} currentScript={currentScript} />;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
   const data = projectData.layoutData?.heatmap || {
