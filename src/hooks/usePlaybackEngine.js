@@ -81,17 +81,39 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
 
     const { isGroupStart, groupSize, groupScripts } = getSpeakerGroupInfo(currentIndex);
 
-    // ★ テロップは毎回 setTimeout で次のidに進める (同一speaker内も、グループ間も)
-    const text = script.speech || script.text || '';
-    const telopDelay = Math.max(900, text.length * 120 / speechRate);
-    const telopTimer = setTimeout(playNext, telopDelay);
-
-    // グループ途中 (前のscriptと同speaker) → speakせずテロップだけ進める
+    // グループ途中 (前のscriptと同speaker) → 何もしない
+    // テロップは前回のグループ先頭で setTimeout された timers が順次進めてくれる
     if (!isGroupStart) {
-      return () => clearTimeout(telopTimer);
+      return;
     }
 
-    // === グループ開始: 先読み + 連結speak ===
+    // === グループ開始: 音声発火 + テロップ同期setTimeout配列 ===
+    // テロップの表示時間 = 各scriptのspeech文字数の比率 × 音声全体想定時間
+    // Gemini TTS は 1文字 ≈ 160ms、webspeech は ≈ 150ms、playbackRateで割る
+    const charMs = ttsEngine === 'gemini' ? 160 : 150;
+    const groupTotalChars = groupScripts.reduce((sum, s) => sum + (s.speech || s.text || '').length, 0);
+    const groupTotalMs = groupTotalChars * charMs / speechRate;
+
+    // 各scriptの表示終了時刻を累積で計算 → playNext をその時刻にスケジュール
+    const telopTimers = [];
+    let cumulativeMs = 0;
+    for (let i = 0; i < groupScripts.length - 1; i++) {
+      // i番目が終わる = 次(i+1)のscriptに進む
+      const thisScript = groupScripts[i];
+      const thisChars = (thisScript.speech || thisScript.text || '').length;
+      cumulativeMs += (thisChars / groupTotalChars) * groupTotalMs;
+      // 最低表示時間 保証 (グループ長に応じて)
+      const delay = Math.max(800, cumulativeMs);
+      telopTimers.push(setTimeout(() => {
+        setCurrentIndex(cur => {
+          // 該当idにまだ居れば進める (他要因で既に進んでたら何もしない)
+          if (cur === currentIndex + i) return currentIndex + i + 1;
+          return cur;
+        });
+      }, delay));
+    }
+
+    // 次のグループ先頭(異speaker)をプリフェッチ
     const nextGroupHeadIdx = currentIndex + groupSize;
     const nextGroupHead = scripts[nextGroupHeadIdx];
     if (nextGroupHead && adapter.prefetch) {
@@ -105,11 +127,20 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     }
 
     if (!isVoiceEnabled) {
-      // 音声OFF: テロップsetTimeoutに任せる
-      return () => clearTimeout(telopTimer);
+      // 音声OFF: グループ末尾に進めるタイマー
+      const endTimer = setTimeout(() => {
+        setCurrentIndex(cur => {
+          if (cur < currentIndex + groupSize) return currentIndex + groupSize;
+          return cur;
+        });
+      }, groupTotalMs);
+      return () => {
+        telopTimers.forEach(clearTimeout);
+        clearTimeout(endTimer);
+      };
     }
 
-    // グループ全部の speech を連結して1回でTTS (途切れず自然なテンポ)
+    // グループ全部の speech を連結して1回でTTS
     const joinedSpeech = groupScripts.map(s => s.speech || s.text || '').join(' ');
 
     mixer?.startDucking();
@@ -117,17 +148,31 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       rate: speechRate,
       onEnd: () => {
         mixer?.stopDucking();
-        // 音声終了時刻はテロップ末尾付近と一致するはず
-        // テロップsetTimeoutに任せて自然進行
+        // 音声終了時にグループ末尾以降に進める
+        setCurrentIndex(cur => {
+          const groupEnd = currentIndex + groupSize;
+          if (cur < groupEnd) return groupEnd;
+          return cur;
+        });
       },
       onError: (err) => {
-        console.warn('TTS error, skipping:', err);
+        console.warn('TTS error:', err);
         mixer?.stopDucking();
+        // エラー時もグループ末尾まで進める
+        setCurrentIndex(cur => {
+          const groupEnd = currentIndex + groupSize;
+          if (cur < groupEnd) return groupEnd;
+          return cur;
+        });
       },
     });
 
-    return () => clearTimeout(telopTimer);
-  }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, playNext, getSpeakerGroupInfo]);
+    return () => {
+      telopTimers.forEach(clearTimeout);
+      // 音声停止 (unmount/dep変更時)
+      adapter.stop?.();
+    };
+  }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, ttsEngine, getSpeakerGroupInfo]);
 
   const togglePlay = useCallback(() => {
     if (!isPlaying) {
