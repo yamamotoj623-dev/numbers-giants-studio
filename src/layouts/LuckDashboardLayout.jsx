@@ -16,10 +16,14 @@
 import React from 'react';
 import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
+import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
 
 export function LuckDashboardLayout({ projectData, currentScript, animationKey , phase = 'normal'}) {
   if (phase === 'hook') return null;
   if (phase === 'outro') return <OutroPanel projectData={projectData} currentScript={currentScript} />;
+
+  const highlightComp = useHighlightComp(projectData, currentScript);
+  const isHighlight = phase === 'highlight' && highlightComp;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
   const luck = projectData.layoutData?.luck || {
@@ -34,6 +38,7 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
   const unluckyColor = luck.unluckyScore >= 70 ? themeClass.primary : '#888780';
 
   return (
+<>
     <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-2 px-3">
       <div className="absolute top-1 left-4 z-20 flex flex-col items-start gap-0.5">
         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none ${themeClass.bg} text-white shadow-md`}>{projectData.mainPlayer.label}</span>
@@ -84,6 +89,10 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
         })}
       </div>
     </div>
+
+    {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}
+
+  </>
   );
 }
 

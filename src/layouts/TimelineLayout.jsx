@@ -14,10 +14,13 @@
 import React from 'react';
 import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
+import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
 
 export function TimelineLayout({ projectData, currentScript, animationKey , phase = 'normal'}) {
   if (phase === 'hook') return null;
   if (phase === 'outro') return <OutroPanel projectData={projectData} currentScript={currentScript} />;
+
+  const highlightComp = useHighlightComp(projectData, currentScript);
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
   const primaryColor = themeClass.primary;
@@ -47,6 +50,8 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
   const mainPath = data.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${scaleX(i)},${scaleY(p.main)}`).join(' ');
   const subPath  = data.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${scaleX(i)},${scaleY(p.sub)}`).join(' ');
 
+  const isHighlight = phase === 'highlight' && highlightComp;
+
   return (
     <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-2 px-3">
       <div className="absolute top-1 left-4 z-20 flex flex-col items-start gap-0.5">
@@ -60,7 +65,8 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none bg-zinc-700 text-zinc-300 shadow-md`}>{projectData.subPlayer.label}</span>
       </div>
 
-      <div className="z-20 mt-8 mb-3 w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm">
+      {/* ハイライト時はチャートを上に縮小、下にHighlightCard */}
+      <div className={`z-20 mt-8 ${isHighlight ? 'mb-1' : 'mb-3'} w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-500`} style={isHighlight ? { transform: 'scale(0.7)', transformOrigin: 'top center' } : {}}>
         <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">
           <span className={`${themeClass.text} text-[10px] font-black`}>{data.metric} 推移</span>
           <span className="text-zinc-500 text-[9px] font-bold">単位: {data.unit === 'month' ? '月別' : '週別'}</span>
@@ -83,21 +89,29 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
         </svg>
       </div>
 
-      <div className="z-20 w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-lg">
-        {projectData.comparisons.slice(0, 5).map((comp) => {
-          const isH = currentScript?.highlight === comp.id;
-          return (
-            <div key={comp.id} className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 ${isH ? `${themeClass.bg}/15 scale-[1.02]` : ''} transition-all duration-300`}>
-              <span className={`text-[11px] font-black ${isH ? 'text-white' : 'text-zinc-400'}`}>{comp.label}</span>
-              <div className="flex items-center gap-3">
-                <span className={`text-[14px] font-mono font-black ${comp.winner === 'main' ? themeClass.text : 'text-zinc-500'}`}>{comp.valMain}</span>
-                <span className="text-[9px] text-zinc-600">vs</span>
-                <span className={`text-[14px] font-mono font-black ${comp.winner === 'sub' ? 'text-zinc-100' : 'text-zinc-600'}`}>{comp.valSub}</span>
+      {/* ハイライト時: HighlightCard 大カード */}
+      {isHighlight && (
+        <HighlightCard comp={highlightComp} projectData={projectData} />
+      )}
+
+      {/* 通常時: 比較表 */}
+      {!isHighlight && (
+        <div className="z-20 w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-lg">
+          {projectData.comparisons.slice(0, 5).map((comp) => {
+            const isH = currentScript?.highlight === comp.id;
+            return (
+              <div key={comp.id} className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 ${isH ? `${themeClass.bg}/15 scale-[1.02]` : ''} transition-all duration-300`}>
+                <span className={`text-[11px] font-black ${isH ? 'text-white' : 'text-zinc-400'}`}>{comp.label}</span>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[14px] font-mono font-black ${comp.winner === 'main' ? themeClass.text : 'text-zinc-500'}`}>{comp.valMain}</span>
+                  <span className="text-[9px] text-zinc-600">vs</span>
+                  <span className={`text-[14px] font-mono font-black ${comp.winner === 'sub' ? 'text-zinc-100' : 'text-zinc-600'}`}>{comp.valSub}</span>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

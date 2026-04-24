@@ -200,7 +200,7 @@ const CSS_TEXT = `
   .hook-brand-strong .title { color: #fff; font-weight: 900; font-size: 12px; letter-spacing: 1px; line-height: 1; }
   .hook-brand-strong .sub { color: var(--p); font-weight: 700; font-size: 8px; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; opacity: 0.8; }
 
-  .hook-player-pill { position: absolute; top: 68px; right: 14px; z-index: 30; background: rgba(24,24,27,0.9); backdrop-filter: blur(8px); border: 1px solid rgba(249,115,22,0.4); border-radius: 10px; padding: 7px 11px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+  .hook-player-pill { position: absolute; top: 14px; right: 8px; z-index: 30; background: rgba(24,24,27,0.9); backdrop-filter: blur(8px); border: 1px solid rgba(249,115,22,0.4); border-radius: 10px; padding: 6px 9px; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
   .hook-player-pill .num { width: 22px; height: 22px; background: var(--p); color: #fff; font-weight: 900; font-size: 12px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
   .phase-a.active .hook-player-pill .num { animation: numberPulse 1.5s ease-in-out infinite; }
   .hook-player-pill .info { display: flex; flex-direction: column; line-height: 1; }
@@ -338,8 +338,8 @@ const CSS_TEXT = `
   /* テロップ配置: 話者側に寄せる(非話者アイコンと被らないように) */
   /* Shorts右サイドのYouTube UI (いいね・コメント・共有) を避けるため右padding大きめ
      左: ロゴエリア 14px + 余白 / 右: 12% (セーフゾーン想定) */
-  .telop-wrap-normal { position: absolute; bottom: 19%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 44px 0 14px; align-items: center; }
-  .telop-wrap-hl { position: absolute; bottom: 15%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 44px 0 72px; align-items: center; }
+  .telop-wrap-normal { position: absolute; bottom: 20%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 44px 0 14px; align-items: center; }
+  .telop-wrap-hl { position: absolute; bottom: 20%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 44px 0 72px; align-items: center; }
 
   /* デフォルト配置=中央 */
   .telop-wrap-normal, .telop-wrap-hl { align-items: center; }
