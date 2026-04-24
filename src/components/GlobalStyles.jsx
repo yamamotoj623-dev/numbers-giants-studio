@@ -216,18 +216,18 @@ const CSS_TEXT = `
   .telop-hook .line { display: block; opacity: 0; margin: 2px 0; }
 
   /* ポップアップモード */
-  .phase-a.active.anim-pop .telop-hook .line-1 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards; }
-  .phase-a.active.anim-pop .telop-hook .line-2 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.65s forwards; }
-  .phase-a.active.anim-pop .telop-hook .line-3 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 1.0s forwards; }
-  .phase-a.active.anim-pop .telop-hook .line-4 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 1.35s forwards; }
-  .phase-a.active.anim-pop .telop-hook .line-5 { animation: hookLineIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 1.7s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-1 { animation: hookLineIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-2 { animation: hookLineIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.1s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-3 { animation: hookLineIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.2s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-4 { animation: hookLineIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards; }
+  .phase-a.active.anim-pop .telop-hook .line-5 { animation: hookLineIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.4s forwards; }
 
   /* シェイクモード（1行ずつシェイクイン、1.5秒の長尺シェイク） */
-  .phase-a.active.anim-shake .telop-hook .line-1 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.3s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-2 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.65s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-3 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.0s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-4 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.35s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-5 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 1.7s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-1 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-2 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.1s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-3 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.2s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-4 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.3s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-5 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.4s forwards; }
 
   /* hookAnimation オーバーライド用の追加パターン */
   @keyframes hookSlide {
@@ -244,37 +244,37 @@ const CSS_TEXT = `
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
-  .phase-a.active.anim-slide .telop-hook .line-1 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; opacity: 0; }
-  .phase-a.active.anim-slide .telop-hook .line-2 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 0.7s forwards; opacity: 0; }
-  .phase-a.active.anim-slide .telop-hook .line-3 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 1.1s forwards; opacity: 0; }
-  .phase-a.active.anim-slide .telop-hook .line-4 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 1.5s forwards; opacity: 0; }
-  .phase-a.active.anim-slide .telop-hook .line-5 { animation: hookSlide 0.6s cubic-bezier(0.16,1,0.3,1) 1.9s forwards; opacity: 0; }
-  .phase-a.active.anim-zoom .telop-hook .line-1 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards; opacity: 0; }
-  .phase-a.active.anim-zoom .telop-hook .line-2 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.75s forwards; opacity: 0; }
-  .phase-a.active.anim-zoom .telop-hook .line-3 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 1.2s forwards; opacity: 0; }
-  .phase-a.active.anim-zoom .telop-hook .line-4 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 1.65s forwards; opacity: 0; }
-  .phase-a.active.anim-zoom .telop-hook .line-5 { animation: hookZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) 2.1s forwards; opacity: 0; }
-  .phase-a.active.anim-fade .telop-hook .line-1 { animation: hookFade 0.8s ease-out 0.3s forwards; opacity: 0; }
-  .phase-a.active.anim-fade .telop-hook .line-2 { animation: hookFade 0.8s ease-out 0.8s forwards; opacity: 0; }
-  .phase-a.active.anim-fade .telop-hook .line-3 { animation: hookFade 0.8s ease-out 1.3s forwards; opacity: 0; }
-  .phase-a.active.anim-fade .telop-hook .line-4 { animation: hookFade 0.8s ease-out 1.8s forwards; opacity: 0; }
-  .phase-a.active.anim-fade .telop-hook .line-5 { animation: hookFade 0.8s ease-out 2.3s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-1 { animation: hookSlide 0.5s cubic-bezier(0.16,1,0.3,1) 0s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-2 { animation: hookSlide 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-3 { animation: hookSlide 0.5s cubic-bezier(0.16,1,0.3,1) 0.2s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-4 { animation: hookSlide 0.5s cubic-bezier(0.16,1,0.3,1) 0.3s forwards; opacity: 0; }
+  .phase-a.active.anim-slide .telop-hook .line-5 { animation: hookSlide 0.5s cubic-bezier(0.16,1,0.3,1) 0.4s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-1 { animation: hookZoom 0.6s cubic-bezier(0.34,1.56,0.64,1) 0s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-2 { animation: hookZoom 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.1s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-3 { animation: hookZoom 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-4 { animation: hookZoom 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards; opacity: 0; }
+  .phase-a.active.anim-zoom .telop-hook .line-5 { animation: hookZoom 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.4s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-1 { animation: hookFade 0.5s ease-out 0s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-2 { animation: hookFade 0.5s ease-out 0.1s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-3 { animation: hookFade 0.5s ease-out 0.2s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-4 { animation: hookFade 0.5s ease-out 0.3s forwards; opacity: 0; }
+  .phase-a.active.anim-fade .telop-hook .line-5 { animation: hookFade 0.5s ease-out 0.4s forwards; opacity: 0; }
 
   /* slide/zoom/fade モードでも stats は telopSlideUp で統一 */
   .phase-a.active.anim-slide .hook-stats-big,
   .phase-a.active.anim-zoom .hook-stats-big,
-  .phase-a.active.anim-fade .hook-stats-big { animation: telopSlideUp 0.5s ease-out 0.9s forwards; }
+  .phase-a.active.anim-fade .hook-stats-big { animation: telopSlideUp 0.4s ease-out 0.55s forwards; }
   .phase-a.active.anim-slide .hook-stats-grid,
   .phase-a.active.anim-zoom .hook-stats-grid,
-  .phase-a.active.anim-fade .hook-stats-grid { animation: statsWipe 0.8s ease-out 1.0s backwards; }
+  .phase-a.active.anim-fade .hook-stats-grid { animation: statsWipe 0.6s ease-out 0.65s backwards; }
 
   .hook-stats-big { position: absolute; top: 58%; left: 10px; right: 10px; z-index: 25; opacity: 0; }
-  .phase-a.active.anim-pop .hook-stats-big { animation: telopSlideUp 0.5s ease-out 0.9s forwards; }
-  .phase-a.active.anim-shake .hook-stats-big { animation: telopSlideUp 0.5s ease-out 0.9s forwards; }
+  .phase-a.active.anim-pop .hook-stats-big { animation: telopSlideUp 0.4s ease-out 0.55s forwards; }
+  .phase-a.active.anim-shake .hook-stats-big { animation: telopSlideUp 0.4s ease-out 0.55s forwards; }
   .hook-stats-big .title { text-align: center; color: var(--p); font-weight: 900; font-size: 10px; letter-spacing: 3px; margin-bottom: 6px; }
   .hook-stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; background: linear-gradient(90deg, rgba(249,115,22,0.15), rgba(249,115,22,0.3), rgba(249,115,22,0.15)); border-top: 2px solid rgba(249,115,22,0.6); border-bottom: 2px solid rgba(249,115,22,0.6); padding: 10px 8px; box-shadow: 0 0 20px rgba(249,115,22,0.2); }
-  .phase-a.active.anim-pop .hook-stats-grid { animation: statsWipe 0.8s ease-out 1.0s backwards; }
-  .phase-a.active.anim-shake .hook-stats-grid { animation: statsWipe 0.8s ease-out 1.0s backwards; }
+  .phase-a.active.anim-pop .hook-stats-grid { animation: statsWipe 0.6s ease-out 0.65s backwards; }
+  .phase-a.active.anim-shake .hook-stats-grid { animation: statsWipe 0.6s ease-out 0.65s backwards; }
   .hook-stats-grid .cell { display: flex; flex-direction: column; align-items: center; line-height: 1; gap: 5px; }
   .hook-stats-grid .cell .v { color: #fff; font-family: monospace; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
   .hook-stats-grid .cell .l { color: var(--p); font-size: 10px; font-weight: 900; letter-spacing: 2px; }

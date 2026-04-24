@@ -38,6 +38,18 @@ const App = () => {
   const [recordingCountdown, setRecordingCountdown] = useState(0);
   const [isSquareMode, setIsSquareMode] = useState(false);
   const [showSafeZone, setShowSafeZone] = useState(false);
+  const [quotaWarning, setQuotaWarning] = useState(null);
+
+  // TTS quota 超過イベントをリッスン
+  useEffect(() => {
+    const handler = (ev) => {
+      setQuotaWarning(ev.detail?.message || 'TTS quota超過');
+      // 15秒後に自動で消す
+      setTimeout(() => setQuotaWarning(null), 15000);
+    };
+    window.addEventListener('tts-quota-exceeded', handler);
+    return () => window.removeEventListener('tts-quota-exceeded', handler);
+  }, []);
 
   const {
     isPlaying,
@@ -82,6 +94,18 @@ const App = () => {
   return (
     <div className={`min-h-screen ${isFullscreenMode ? 'bg-black flex justify-center items-center' : 'bg-zinc-100 p-4 md:p-8 flex flex-col md:flex-row gap-6'} font-sans transition-colors duration-500 overflow-hidden`}>
       <GlobalStyles />
+
+      {/* Gemini TTS quota超過 warning */}
+      {quotaWarning && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-amber-500 text-white px-5 py-3 rounded-lg shadow-xl font-bold text-sm max-w-lg flex items-center gap-3 animate-pulse">
+          <span className="text-2xl">⚠️</span>
+          <div className="flex-1">
+            <div className="text-xs font-normal opacity-90">Gemini TTS 制限到達</div>
+            <div>{quotaWarning}</div>
+          </div>
+          <button onClick={() => setQuotaWarning(null)} className="text-white hover:bg-amber-600 rounded p-1 text-xs">✕</button>
+        </div>
+      )}
 
       {!isFullscreenMode && (
         <div className={`w-full md:w-[450px] lg:w-[500px] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden border border-zinc-200 shrink-0 transition-all duration-300 ${isPanelOpen ? 'h-auto md:h-[90vh]' : 'h-auto'}`}>

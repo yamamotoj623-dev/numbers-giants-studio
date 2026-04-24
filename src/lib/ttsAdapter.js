@@ -211,10 +211,11 @@ export class GeminiAdapter {
           const errText = await response.text();
           lastError = new Error(`GAS error ${response.status}: ${errText.substring(0, 200)}`);
           // 4xx(認証等)はリトライしない
-          if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+          // 429 は daily quota の可能性が高く、秒単位リトライでは回復しないので諦める
+          if (response.status === 429 || (response.status >= 400 && response.status < 500)) {
             throw lastError;
           }
-          continue; // 5xx/429 はリトライ
+          continue; // 5xx のみリトライ
         }
         
         const data = await response.json();
@@ -274,7 +275,6 @@ export class GeminiAdapter {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.playbackRate = rate;
-        // mixer の voice 音量を適用 (録画対応: AudioContext 経由せず直接 HTMLAudioElement 再生)
         try {
           const { getMixer } = await import('./mixer.js');
           const mixer = getMixer();
@@ -298,7 +298,7 @@ export class GeminiAdapter {
         };
         await audio.play();
 
-        // Gemini TTS もWeb Speechと同じセーフティネットを敷く
+        // fallback timer
         const estimatedSec = text.length * 0.15 / rate;
         this.fallbackTimer = setTimeout(() => {
           audio.onended = null;
@@ -309,6 +309,24 @@ export class GeminiAdapter {
           resolve();
         }, (estimatedSec * 1000) + 3000);
       } catch (err) {
+        const errStr = (err?.message || String(err)).toLowerCase();
+        // 429 (quota超過) は「警告表示 + 無音でスキップ」で再生継続
+        if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('resource_exhausted')) {
+          console.warn('⚠️ Gemini TTS quota exceeded. Skipping voice for this script. Playback continues.');
+          // window にグローバル flag を立てて UI 側に通知
+          try {
+            window.dispatchEvent(new CustomEvent('tts-quota-exceeded', {
+              detail: { message: 'Gemini TTS 無料枠(1日100回)超過。音声をスキップして再生継続します。8時間後にリセット、または有料プラン化で解消。' }
+            }));
+          } catch (e) {}
+          // 推定再生時間だけ待って onEnd (無音スキップ)
+          const estimatedSec = Math.max(1.5, text.length * 0.15 / rate);
+          setTimeout(() => {
+            onEnd?.();
+            resolve();
+          }, estimatedSec * 1000);
+          return;
+        }
         console.error('GeminiAdapter.speak error:', err);
         onError?.(err);
         resolve();
