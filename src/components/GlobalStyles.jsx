@@ -325,15 +325,15 @@ const CSS_TEXT = `
   .radar-legend-item.sub .label { color: #a1a1aa; }
 
   /* 成績比較テーブル(平常時) - レーダー直下に密着配置 */
-  .stats-table { margin-top: 4px; width: 100%; max-width: 260px; background: rgba(24,24,27,0.88); border: 1px solid rgba(63,63,70,0.6); border-radius: 10px; padding: 7px 10px; opacity: 0; z-index: 15; transition: opacity 0.3s; backdrop-filter: blur(6px); }
+  .stats-table { margin-top: 4px; width: 100%; max-width: 340px; background: rgba(24,24,27,0.88); border: 1px solid rgba(63,63,70,0.6); border-radius: 10px; padding: 6px 8px; opacity: 0; z-index: 15; transition: opacity 0.3s; backdrop-filter: blur(6px); }
   .phase.active .stats-table { animation: telopSlideUp 0.4s ease-out 1.7s forwards; }
   /* テロップ表示時の半透明化は削除 - テロップ位置変更で不要に */
-  .stats-grid-compact { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 10px; }
-  .stats-grid-compact .stat-cell { display: flex; flex-direction: column; line-height: 1.2; gap: 2px; }
-  .stats-grid-compact .lbl { font-size: 8px; color: #71717a; font-weight: 900; letter-spacing: 1px; }
-  .stats-grid-compact .vals { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
-  .stats-grid-compact .main-val { font-family: monospace; font-size: 13px; font-weight: 900; color: var(--p); letter-spacing: -0.3px; line-height: 1; }
-  .stats-grid-compact .sub-val { font-family: monospace; font-size: 9px; font-weight: 700; color: #71717a; letter-spacing: -0.3px; line-height: 1; }
+  .stats-grid-compact { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px 6px; }
+  .stats-grid-compact .stat-cell { display: flex; flex-direction: column; line-height: 1.2; gap: 1px; align-items: center; }
+  .stats-grid-compact .lbl { font-size: 7px; color: #71717a; font-weight: 900; letter-spacing: 0.5px; }
+  .stats-grid-compact .vals { display: flex; flex-direction: column; gap: 1px; align-items: center; }
+  .stats-grid-compact .main-val { font-family: monospace; font-size: 12px; font-weight: 900; color: var(--p); letter-spacing: -0.3px; line-height: 1; }
+  .stats-grid-compact .sub-val { font-family: monospace; font-size: 8px; font-weight: 700; color: #71717a; letter-spacing: -0.3px; line-height: 1; }
 
   /* テロップ配置: 話者側に寄せる(非話者アイコンと被らないように) */
   /* Shorts右サイドのYouTube UI (いいね・コメント・共有) を避けるため右padding大きめ

@@ -155,10 +155,158 @@ B (視聴者代弁者 / speaker:"B" / 右側水色枠):
   ※ 「評価を保留」「両論併記」は禁止
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【レイアウトタイプ】
+【レイアウトタイプ】★今回全面強化 - 全レイアウトで highlight 対応★
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-・radar_compare / timeline / luck_dashboard / spray_chart
-・pitch_heatmap / versus_card / pitch_arsenal / team_context
+
+■ 選択の基準とユースケース:
+・radar_compare  : 総合5角形比較 (野手/投手問わず、主力指標5つ比較)
+・timeline       : 月別推移の折れ線 (朗報型/覚醒型の時系列変化)
+・luck_dashboard : BABIP分析ダッシュボード (擁護型, 不運スコア0-100)
+・spray_chart    : 打球方向マップ (引っ張り/流し分析)
+・pitch_heatmap  : ストライクゾーン9分割 (対左弱点/コース別被打率)
+・versus_card    : 2選手対決フル比較 (ポジション争い)
+・pitch_arsenal  : 球種別投球配分+被打率 (魔球系投手解析)
+・team_context   : 打順/起用法考察 (チーム全体の中での位置づけ)
+
+■ ★全レイアウト共通: highlight指定 で画面中央に大カード表示される★
+  - currentScript.highlight = "isop" のように comparisons[i].id を指定
+  - 画面中央(top 235px)に HighlightCard が表示 (指標名・計算式・値・基準・WHY)
+  - 背景は不透明なので下のチャートは隠れる (=ここぞの瞬間に使う)
+  - highlight 乱用 (全script に指定) は演出が弱くなるので避ける
+  - 推奨: 1動画に 2〜3個の comparison それぞれ 3〜6個のscript で深掘り
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【各レイアウトの layoutData スキーマ】★必ずこの構造で出力★
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ radar_compare (最汎用、layoutData は空 {} でOK)
+  layoutData: {}
+  ※ radarStats (5頂点の値) と comparisons (5項目) で全情報揃う
+
+■ timeline (月別/週別推移)
+  layoutData: {
+    "timeline": {
+      "unit": "month",
+      "metric": "OPS",
+      "points": [
+        {"label":"4月", "main":0.724, "sub":0.598, "highlight": false},
+        {"label":"5月", "main":0.810, "sub":0.621, "highlight": true},
+        {"label":"6月", "main":0.855, "sub":0.580, "highlight": false}
+      ]
+    }
+  }
+
+■ luck_dashboard (擁護型・不運スコア)
+  layoutData: {
+    "luck": {
+      "babip": 0.182,
+      "expectedBabip": 0.290,
+      "exitVelocity": 138.5,
+      "barrelRate": 0.08,
+      "unluckyScore": 82
+    }
+  }
+
+■ spray_chart (打球方向マップ)
+  layoutData: {
+    "spray": {
+      "handedness": "right",
+      "hits": [
+        {"x":0.3, "y":0.4, "type":"HR",  "zone":"left"},
+        {"x":0.5, "y":0.5, "type":"1B",  "zone":"center"},
+        {"x":0.7, "y":0.6, "type":"OUT", "zone":"right"}
+      ],
+      "zoneStats": {
+        "left":   {"avg":0.285, "count":12},
+        "center": {"avg":0.310, "count":18},
+        "right":  {"avg":0.220, "count":8}
+      }
+    }
+  }
+
+■ pitch_heatmap (9分割ヒートマップ)
+  layoutData: {
+    "heatmap": {
+      "mode": "pitcher_against",
+      "grid": [
+        [{"value":0.180,"count":12},{"value":0.220,"count":10},{"value":0.150,"count":8}],
+        [{"value":0.290,"count":15},{"value":0.310,"count":18},{"value":0.250,"count":12}],
+        [{"value":0.320,"count":10},{"value":0.280,"count":14},{"value":0.240,"count":9}]
+      ],
+      "handedness": "right"
+    }
+  }
+
+■ versus_card (2選手対決)
+  layoutData: {
+    "versus": {
+      "overall": {"main":85, "sub":78},
+      "categoryScores": [
+        {"label":"打撃", "main":82, "sub":75},
+        {"label":"守備", "main":88, "sub":70},
+        {"label":"走塁", "main":85, "sub":89}
+      ]
+    }
+  }
+
+■ pitch_arsenal (球種分析)
+  layoutData: {
+    "arsenal": {
+      "pitches": [
+        {"name":"ストレート", "pct":45, "avg":0.280, "velocity":148, "color":"#ef4444"},
+        {"name":"スプリット", "pct":25, "avg":0.125, "velocity":138, "color":"#a855f7"},
+        {"name":"スライダー", "pct":20, "avg":0.200, "velocity":132, "color":"#10b981"},
+        {"name":"カーブ",     "pct":10, "avg":0.350, "velocity":115, "color":"#f59e0b"}
+      ]
+    }
+  }
+
+■ team_context (打順・起用法)
+  layoutData: {
+    "context": {
+      "mode": "lineup",
+      "lineup": [
+        {"order":1, "name":"泉口", "ops":1.013, "isMainPlayer":false},
+        {"order":2, "name":"キャベッジ", "ops":0.780, "isMainPlayer":false},
+        {"order":3, "name":"坂本", "ops":0.650, "isMainPlayer":false},
+        {"order":4, "name":"ダルベック", "ops":0.920, "isMainPlayer":false},
+        {"order":5, "name":"増田陸", "ops":0.724, "isMainPlayer":true}
+      ],
+      "narrative": "5番に増田陸を置くべき3つの理由"
+    }
+  }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【highlight の使い方 - 全レイアウト共通】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ comparisons[i].id を script.highlight に指定で発動
+  例: comparisons: [{id:"isop",...},{id:"isod",...}]
+      scripts: [{..., highlight: "isop"}, ...] ← これで isop の HighlightCard 表示
+
+■ 推奨パターン (1動画):
+  導入 (B誤信) → highlight: null
+  深掘り1 (comp A) → highlight: "compA_id" で 4〜6script
+  深掘り2 (comp B) → highlight: "compB_id" で 4〜6script
+  深掘り3 (comp C) → highlight: "compC_id" で 3〜5script (短め)
+  擁護・結論 → highlight: null
+  アウトロ → highlight: null
+
+■ highlight の効果:
+  - 画面中央に comparison の情報カード (指標名・計算式・値・基準・WHY)
+  - 背景不透明で下のレイアウトは隠れる
+  - テロップは前面に残る (z-index テロップ > カード)
+  - radar_compare ではレーダー縮小+カード
+  - 他レイアウトではチャート上にカード重ねる
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【実装タイミング仕様 (AI は意識不要だが理解推奨)】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ フックテロップ: 0秒で全行即時表示 (1.7秒のdelay は撤廃済み)
+  → hook text を長く書いても表示は速いが、13字以内ルールは別途守ること
+■ テロップ位置: 画面 bottom 20% 固定
+  → 3行までなら画面下端に収まる。4行は書かない
+■ hook選手名バッジ: 画面右上 (top 14px, right 8px)
+  → hook text と被らない位置
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【text と speech の原則】
@@ -239,6 +387,16 @@ B (視聴者代弁者 / speaker:"B" / 右側水色枠):
 ・JSON ブロックのみ出力 (説明文禁止)
 ・schemaVersion "5.0.0" を先頭に
 ・layoutType / pattern / hookAnimation / aspectRatio "9:16" / audio を含める
+・★layoutData: 選択した layoutType に対応するスキーマで必ず出力★
+  - radar_compare なら layoutData: {} (comparisons だけで十分)
+  - timeline なら layoutData: {timeline: {unit, metric, points[]}}
+  - luck_dashboard なら layoutData: {luck: {babip, expectedBabip,...}}
+  - spray_chart なら layoutData: {spray: {handedness, hits[], zoneStats}}
+  - pitch_heatmap なら layoutData: {heatmap: {mode, grid[3x3], handedness}}
+  - versus_card なら layoutData: {versus: {overall, categoryScores[]}}
+  - pitch_arsenal なら layoutData: {arsenal: {pitches[]}}
+  - team_context なら layoutData: {context: {mode, lineup[] or roles[], narrative}}
+  ※ layoutType 選んだのに layoutData 空は不合格
 ・playerType: "batter" or "pitcher"
 ・silhouetteType: 選手特徴に合わせて1つ
   野手: batter_right / batter_left / batter_stance / runner

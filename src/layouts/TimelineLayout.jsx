@@ -53,7 +53,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
   const isHighlight = phase === 'highlight' && highlightComp;
 
   return (
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-2 px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-[30%] px-3">
       <div className="absolute top-1 left-4 z-20 flex flex-col items-start gap-0.5">
         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none ${themeClass.bg} text-white shadow-md`}>{projectData.mainPlayer.label}</span>
       </div>
