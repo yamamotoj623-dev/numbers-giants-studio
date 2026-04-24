@@ -93,25 +93,6 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
       {isHighlight && (
         <HighlightCard comp={highlightComp} projectData={projectData} />
       )}
-
-      {/* 通常時: 比較表 */}
-      {!isHighlight && (
-        <div className="z-20 w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-lg">
-          {projectData.comparisons.slice(0, 5).map((comp) => {
-            const isH = currentScript?.highlight === comp.id;
-            return (
-              <div key={comp.id} className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 ${isH ? `${themeClass.bg}/15 scale-[1.02]` : ''} transition-all duration-300`}>
-                <span className={`text-[11px] font-black ${isH ? 'text-white' : 'text-zinc-400'}`}>{comp.label}</span>
-                <div className="flex items-center gap-3">
-                  <span className={`text-[14px] font-mono font-black ${comp.winner === 'main' ? themeClass.text : 'text-zinc-500'}`}>{comp.valMain}</span>
-                  <span className="text-[9px] text-zinc-600">vs</span>
-                  <span className={`text-[14px] font-mono font-black ${comp.winner === 'sub' ? 'text-zinc-100' : 'text-zinc-600'}`}>{comp.valSub}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

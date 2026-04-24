@@ -74,20 +74,6 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
         <MetricCard label="ギャップ"        value={`-${babipGap}`} color={themeClass.text} sub="本来到達すべき値" />
       </div>
 
-      <div className="bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden z-20">
-        {projectData.comparisons.slice(0, 4).map((comp) => {
-          const isH = currentScript?.highlight === comp.id;
-          return (
-            <div key={comp.id} className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 ${isH ? `${themeClass.bg}/15 scale-[1.02]` : ''} transition-all duration-300`}>
-              <div className="flex flex-col">
-                <span className={`text-[11px] font-black leading-none ${isH ? 'text-white' : 'text-zinc-300'}`}>{comp.label}</span>
-                {isH && <span className="text-[8px] text-zinc-500 mt-0.5">{comp.desc}</span>}
-              </div>
-              <span className={`text-[15px] font-mono font-black ${comp.winner === 'main' ? themeClass.text : 'text-zinc-500'}`}>{comp.valMain}</span>
-            </div>
-          );
-        })}
-      </div>
     </div>
 
     {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}

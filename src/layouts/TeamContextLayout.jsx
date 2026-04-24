@@ -136,17 +136,6 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
         </div>
       )}
 
-      <div className="mt-2 bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden z-20">
-        {projectData.comparisons.slice(0, 2).map(comp => {
-          const isH = currentScript?.highlight === comp.id;
-          return (
-            <div key={comp.id} className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 ${isH ? `${themeClass.bg}/15 scale-[1.02]` : ''} transition-all`}>
-              <span className={`text-[11px] font-black ${isH ? 'text-white' : 'text-zinc-400'}`}>{comp.label}</span>
-              <span className={`text-[14px] font-mono font-black ${comp.winner === 'main' ? themeClass.text : 'text-zinc-500'}`}>{comp.valMain}</span>
-            </div>
-          );
-        })}
-      </div>
     </div>
 
     {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}
