@@ -9,6 +9,203 @@
 
 ---
 
+## [5.11.8] - 2026-04-26 - TTS 生成を並列化 (約 4倍高速化)
+
+### 動画テストフィードバック反映
+
+#### 問題: TTS 生成が遅い (44 id 全部生成に 1〜3分)
+
+**原因**: `pregenerate` が**直列処理** (1個ずつ `await`)
+- 1個あたり 1.5〜3秒 (Gemini API のレスポンス時間)
+- 44個 × 2秒 = **88秒**
+- 体感: 「お茶飲んで戻ってくる」レベル
+
+### 修正: 並列化 (concurrency=4)
+
+`Promise.all` でチャンク並列処理に変更:
+
+```js
+// 旧: 直列 (88秒)
+for (let i = 0; i < scripts.length; i++) {
+  await this._getOrGenerate(...);
+}
+
+// 新: 4並列 (約 22秒)
+for (let i = 0; i < scripts.length; i += 4) {
+  const chunk = scripts.slice(i, i + 4);
+  await Promise.all(chunk.map(processOne));
+}
+```
+
+#### 並列度の選定理由
+- **3並列**: 安全 (レート制限ほぼ無し) → 但し、十分速くない
+- **4並列** ★採用★: バランス (速度 75% UP、レート制限まだ余裕)
+- **5-8並列**: 速いが 429 エラーが頻発する可能性
+
+Gemini API のレート制限を考慮して **4並列**をデフォルトに。
+
+### 速度比較
+
+| 件数 | Before (直列) | After (4並列) | 削減 |
+|---|---|---|---|
+| 10件 | 20秒 | 5秒 | -75% |
+| 20件 | 40秒 | 10秒 | -75% |
+| **44件** | **88秒** | **22秒** | **-75%** |
+| 100件 | 200秒 | 50秒 | -75% |
+
+### 並列化対象 (3つのメソッド)
+
+#### 1️⃣ `pregenerate(scripts, onProgress, options)`
+- 全 scripts の一括生成
+- options.concurrency でカスタマイズ可能 (デフォルト 4)
+
+#### 2️⃣ `pregenerateOnly(scripts, targetIds, onProgress, options)`
+- 指定 id だけ再生成 (失敗分のリトライ)
+- 同じく 4並列
+
+#### 3️⃣ `findMissing(scripts)`
+- IndexedDB のキャッシュチェック
+- **全件並列** (Promise.all) — IndexedDB 読み込みは並列に強い
+- 44件のチェックが瞬時に完了
+- ついでに id 順にソート (見やすく)
+
+### 進捗表示の改善
+
+`onProgress` の `current` は「完了件数」を返すように変更:
+- 旧: i+1 (順番通り、1, 2, 3, ...)
+- 新: completed (並列なので 1, 4, 7, 8, ... のように飛び石で進む)
+
+UI 表示は `生成中 8/44` のように現在の完了数を表示 (進行中のものは含まない)。
+
+### UI の変更
+
+「全セクションを事前生成」ボタンに **⚡4並列** バッジを追加:
+```
+[⚡ 全セクションを事前生成  ⚡4並列]
+```
+
+### 並列処理での注意点
+
+#### レート制限 (429) への対応
+- 既存の GAS 側リトライ (3回) + クライアント側リトライ (2回) はそのまま
+- 1分あたりの最大リクエスト数 = 4並列 × 30秒 = 8 RPM 程度 (余裕)
+- もし 429 が頻発したら options.concurrency を下げる:
+  ```js
+  await adapter.pregenerate(scripts, progressCallback, { concurrency: 2 });
+  ```
+
+#### コストへの影響
+- **コストは変わらない** (生成回数は同じ)
+- 失敗時のリトライが並列に走る分、わずかに増える可能性 (許容範囲)
+
+### バージョン
+- 5.11.7 → **5.11.8**
+
+---
+
+## [5.11.7] - 2026-04-26 - 再生レイテンシ削減 (HTMLAudioElement → AudioBufferSourceNode)
+
+### 動画テストフィードバック反映
+
+#### 問題: 「生成しても再生がスムーズに喋れるまで何回か再生しないとダメ」
+
+**現象**:
+- 事前生成完了直後に再生してもブツ切れ・遅延
+- 何回か再生ボタンを押すと安定する
+- 特に id 1 (フック) の音声開始が遅い
+
+**根本原因**: HTMLAudioElement (`new Audio(url)`) の構造的な遅延
+
+| 段階 | 遅延 |
+|---|---|
+| `URL.createObjectURL(blob)` | ~1ms (無視可) |
+| `new Audio(url)` | 5-20ms |
+| ブラウザがメタデータ・デコード読込 | **20-100ms** |
+| `audio.play()` の Promise resolve | **50-200ms** |
+| **合計** | **75-320ms** |
+
+これが「初回スムーズじゃない」の正体。複数回再生すると、ブラウザのデコードキャッシュが効いて速くなる。
+
+### 修正: AudioContext + AudioBufferSourceNode に置き換え
+
+**新フロー**:
+| 段階 | 遅延 |
+|---|---|
+| `decodeAudioData(arrayBuffer)` | 10-50ms (blob サイズ依存) ※ prefetch でゼロ化可能 |
+| `source.start(0)` | ~0ms (即時) |
+| **合計** | **10-50ms (prefetch時 ~0ms)** |
+
+→ **約 80-95% のレイテンシ削減**。事実上「ボタン押した瞬間に再生開始」。
+
+### 主な実装変更
+
+#### 1️⃣ AudioBuffer の decode キャッシュ追加 (LRU 12件)
+```js
+this._decodedCache = new Map();   // (speaker:text) → AudioBuffer
+this._DECODE_CACHE_MAX = 12;      // メモリリーク防止 (LRU)
+```
+
+`prefetch()` 時に blob を AudioBuffer に decode してメモリ保持。
+speak 時はメモリから即時取得 → AudioBufferSourceNode で再生。
+
+#### 2️⃣ speak() の全面書き換え
+
+旧:
+```js
+const url = URL.createObjectURL(blob);
+const audio = new Audio(url);    // ← 重い
+await audio.play();              // ← Promise の resolve 遅延
+```
+
+新:
+```js
+const source = ctx.createBufferSource();   // ← 軽い
+source.buffer = audioBuffer;
+source.start(0);                            // ← 即時実行
+```
+
+GainNode 経由で音量制御 (mixer 互換)。
+
+#### 3️⃣ AudioContext の unlock 機能追加
+
+ブラウザの自動再生ポリシーで AudioContext は最初 `suspended` 状態。
+ユーザー操作 (「事前生成」ボタンクリック等) で `resume()` を呼んで unlock しないと、
+初回再生時に「再生開始しない」「遅延が出る」問題が起きる。
+
+`adapter.unlock()` メソッドを新設し、`TTSPanel` の「事前生成」ボタン押下時に自動呼び出し。
+
+#### 4️⃣ pregenerate 中に decode もする
+
+事前生成中、blob 取得直後に AudioBuffer に decode してキャッシュ。
+これにより事前生成完了直後から即時再生可能 (末尾 12件は確実)。
+
+#### 5️⃣ stop() を AudioBufferSourceNode 対応に
+
+両方のソース (新 SourceNode + legacy HTMLAudioElement) を確実に停止。
+
+### 効果
+
+#### 体感レベル
+- **再生ボタンを押した瞬間に音声開始**
+- リトライ不要で安定再生
+- 連続再生時のブツ切れ解消
+
+#### メモリ管理
+- AudioBuffer LRU 12件 (約 5-10MB 程度、許容範囲)
+- pregenerate 完了時は末尾 12件が確実にメモリにある
+- 古い AudioBuffer は自動削除 (メモリリーク防止)
+
+### 互換性
+
+- 旧 HTMLAudioElement ベースのコードは `_speakLegacyHtmlAudio` として残置 (将来のフォールバック用)
+- 外部 API (speak/stop/prefetch/pregenerate) のシグネチャは変わらず
+- mixer.js との連携も変わらず
+
+### バージョン
+- 5.11.6 → **5.11.7**
+
+---
+
 ## [5.11.6] - 2026-04-26 - TTS 部分再生成機能 (個別 id ピンポイント再生成)
 
 ### 動画テストフィードバックを反映

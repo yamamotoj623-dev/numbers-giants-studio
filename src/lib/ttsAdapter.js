@@ -181,15 +181,63 @@ export class GeminiAdapter {
   constructor() {
     this.name = 'gemini';
     this.label = 'Gemini 3.1 Flash TTS (本番)';
-    this.currentAudio = null;
+    this.currentAudio = null;       // legacy (HTMLAudioElement、stop でクリア)
     this.fallbackTimer = null;
     this._audioCtx = null;
     this._totalCostUsd = 0;
+
+    // ★v5.11.7: 再生レイテンシ削減のための拡張★
+    this._currentSource = null;       // 現在再生中の AudioBufferSourceNode
+    this._decodedCache = new Map();   // (speaker:text) → AudioBuffer (decode 済み)
+    this._DECODE_CACHE_MAX = 12;      // メモリリーク防止: 最大12件保持 (LRU)
+    this._unlocked = false;           // AudioContext がユーザー操作で resume 済みか
   }
 
   _getAudioCtx() {
     if (!this._audioCtx) this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     return this._audioCtx;
+  }
+
+  /**
+   * AudioContext を「unlock」する (suspended → running)
+   * ブラウザの自動再生ポリシーで初回はユーザー操作が必要。
+   * 「事前生成」ボタンや再生ボタンを押した時に呼んでおくとレイテンシゼロで再生開始可能。
+   */
+  async unlock() {
+    const ctx = this._getAudioCtx();
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+        this._unlocked = true;
+      } catch (e) {
+        console.warn('AudioContext resume failed:', e);
+      }
+    } else {
+      this._unlocked = true;
+    }
+  }
+
+  /**
+   * blob を AudioBuffer に decode する (重い処理、prefetch で先にやっておく)
+   */
+  async _decodeBlob(blob) {
+    const ctx = this._getAudioCtx();
+    const arrayBuffer = await blob.arrayBuffer();
+    return await ctx.decodeAudioData(arrayBuffer);
+  }
+
+  /**
+   * decode キャッシュに入れる (LRU で最大 N 件)
+   */
+  _putDecoded(key, audioBuffer) {
+    if (this._decodedCache.has(key)) {
+      this._decodedCache.delete(key);
+    }
+    this._decodedCache.set(key, audioBuffer);
+    while (this._decodedCache.size > this._DECODE_CACHE_MAX) {
+      const firstKey = this._decodedCache.keys().next().value;
+      this._decodedCache.delete(firstKey);
+    }
   }
 
   async _fetchFromGAS(text, speaker) {
@@ -267,13 +315,24 @@ export class GeminiAdapter {
   /**
    * 次のscriptの音声を事前生成してキャッシュに入れる (speak時のレイテンシ削減)
    * キャッシュ済みなら何もしない。エラーは握りつぶす (prefetchは best effort)
+   *
+   * ★v5.11.7★: blob 取得だけでなく、AudioBuffer に decode までしてキャッシュ。
+   * これで speak 時はメモリ上の AudioBuffer を即時再生できる (レイテンシほぼゼロ)。
    */
   async prefetch(text, speaker) {
     if (!text) return;
     try {
-      await this._getOrGenerate(text, speaker);
+      const fixedText = applyYomigana(text);
+      const cacheKey = `${speaker}:${fixedText}`;
+
+      // 既に decode 済みならスキップ
+      if (this._decodedCache.has(cacheKey)) return;
+
+      const { blob } = await this._getOrGenerate(fixedText, speaker);
+      const audioBuffer = await this._decodeBlob(blob);
+      this._putDecoded(cacheKey, audioBuffer);
     } catch (e) {
-      // ignore
+      // ignore (prefetch は best effort)
     }
   }
 
@@ -285,6 +344,104 @@ export class GeminiAdapter {
       // 読み仮名置換 (難読語ひらがな化)
       const fixedText = applyYomigana(text);
 
+      // AudioContext を確実に running にする
+      const ctx = this._getAudioCtx();
+      if (ctx.state === 'suspended') {
+        try { await ctx.resume(); } catch (e) {}
+      }
+
+      try {
+        // ★v5.11.7: AudioBufferSourceNode で再生 (HTMLAudioElement より低レイテンシ)★
+        const cacheKey = `${speaker}:${fixedText}`;
+        let audioBuffer = this._decodedCache.get(cacheKey);
+
+        if (!audioBuffer) {
+          // decode キャッシュなし → blob 取得して decode (prefetch されてれば一瞬)
+          const { blob } = await this._getOrGenerate(fixedText, speaker);
+          audioBuffer = await this._decodeBlob(blob);
+          this._putDecoded(cacheKey, audioBuffer);
+        }
+
+        // 音量取得
+        let voiceVolume = 1.0;
+        try {
+          const { getMixer } = await import('./mixer.js');
+          const mixer = getMixer();
+          voiceVolume = mixer._effectiveVoiceVolume();
+        } catch (e) {}
+
+        // SourceNode + GainNode で再生
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.playbackRate.value = rate;
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = voiceVolume;
+
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        this._currentSource = source;
+
+        let resolved = false;
+        const cleanup = () => {
+          if (resolved) return;
+          resolved = true;
+          if (this._currentSource === source) this._currentSource = null;
+          clearTimeout(this.fallbackTimer);
+          try { source.disconnect(); } catch (e) {}
+          try { gainNode.disconnect(); } catch (e) {}
+        };
+
+        source.onended = () => {
+          cleanup();
+          onEnd?.();
+          resolve();
+        };
+
+        // 再生開始 (即時実行、レイテンシほぼゼロ)
+        source.start(0);
+
+        // fallback timer (onended が発火しない場合の保険)
+        const estimatedSec = audioBuffer.duration / rate;
+        this.fallbackTimer = setTimeout(() => {
+          if (!resolved) {
+            try { source.stop(); } catch (e) {}
+            cleanup();
+            onEnd?.();
+            resolve();
+          }
+        }, (estimatedSec * 1000) + 1500);
+      } catch (err) {
+        const errStr = (err?.message || String(err)).toLowerCase();
+        // 429 (quota超過) は「警告表示 + 無音でスキップ」で再生継続
+        if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('resource_exhausted')) {
+          console.warn('⚠️ Gemini TTS quota exceeded. Skipping voice for this script. Playback continues.');
+          try {
+            window.dispatchEvent(new CustomEvent('tts-quota-exceeded', {
+              detail: { message: 'Gemini TTS 無料枠(1日100回)超過。音声をスキップして再生継続します。8時間後にリセット、または有料プラン化で解消。' }
+            }));
+          } catch (e) {}
+          const estimatedSec = Math.max(1.5, text.length * 0.15 / rate);
+          setTimeout(() => {
+            onEnd?.();
+            resolve();
+          }, estimatedSec * 1000);
+          return;
+        }
+        console.error('GeminiAdapter.speak error:', err);
+        onError?.(err);
+        resolve();
+      }
+    });
+  }
+
+  // ★削除: 旧 speak の本体★ (上に置き換え済み)
+  _speakLegacyHtmlAudio(text, speaker, opts = {}) {
+    return new Promise(async (resolve) => {
+      const { rate = 1.0, onEnd, onError } = opts;
+      this.stop();
+      const fixedText = applyYomigana(text);
       try {
         const { blob } = await this._getOrGenerate(fixedText, speaker);
         const url = URL.createObjectURL(blob);
@@ -313,7 +470,6 @@ export class GeminiAdapter {
         };
         await audio.play();
 
-        // fallback timer
         const estimatedSec = text.length * 0.15 / rate;
         this.fallbackTimer = setTimeout(() => {
           audio.onended = null;
@@ -324,25 +480,7 @@ export class GeminiAdapter {
           resolve();
         }, (estimatedSec * 1000) + 3000);
       } catch (err) {
-        const errStr = (err?.message || String(err)).toLowerCase();
-        // 429 (quota超過) は「警告表示 + 無音でスキップ」で再生継続
-        if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('resource_exhausted')) {
-          console.warn('⚠️ Gemini TTS quota exceeded. Skipping voice for this script. Playback continues.');
-          // window にグローバル flag を立てて UI 側に通知
-          try {
-            window.dispatchEvent(new CustomEvent('tts-quota-exceeded', {
-              detail: { message: 'Gemini TTS 無料枠(1日100回)超過。音声をスキップして再生継続します。8時間後にリセット、または有料プラン化で解消。' }
-            }));
-          } catch (e) {}
-          // 推定再生時間だけ待って onEnd (無音スキップ)
-          const estimatedSec = Math.max(1.5, text.length * 0.15 / rate);
-          setTimeout(() => {
-            onEnd?.();
-            resolve();
-          }, estimatedSec * 1000);
-          return;
-        }
-        console.error('GeminiAdapter.speak error:', err);
+        console.error('GeminiAdapter._speakLegacyHtmlAudio error:', err);
         onError?.(err);
         resolve();
       }
@@ -351,6 +489,16 @@ export class GeminiAdapter {
 
   stop() {
     clearTimeout(this.fallbackTimer);
+    // ★v5.11.7: AudioBufferSourceNode を停止★
+    if (this._currentSource) {
+      try {
+        this._currentSource.onended = null;
+        this._currentSource.stop();
+        this._currentSource.disconnect();
+      } catch (e) {}
+      this._currentSource = null;
+    }
+    // legacy: HTMLAudioElement (互換のため残す)
     if (this.currentAudio) {
       this.currentAudio.onended = null;
       this.currentAudio.onerror = null;
@@ -359,100 +507,157 @@ export class GeminiAdapter {
     }
   }
 
-  async pregenerate(scripts, onProgress) {
-    let generated = 0, cached = 0, errors = 0, costUsd = 0;
-    const failedIds = [];  // ★失敗 id を記録 (v5.11.6)
-    for (let i = 0; i < scripts.length; i++) {
-      const s = scripts[i];
-      const rawText = s.speech || s.text;
-      const text = applyYomigana(rawText);
-      const speaker = s.speaker || 'A';
-      if (!text) continue;
-      try {
-        const result = await this._getOrGenerate(text, speaker);
-        if (result.wasCached) cached++;
-        else { generated++; costUsd += result.costUsd; }
-        onProgress?.({ current: i + 1, total: scripts.length, generated, cached, errors, costUsd, failedIds: [...failedIds] });
-      } catch (err) {
-        console.error('pregenerate failed for script', s.id, err);
-        errors++;
-        failedIds.push(s.id);
-        onProgress?.({ current: i + 1, total: scripts.length, generated, cached, errors, costUsd, failedIds: [...failedIds] });
-      }
-    }
-    return { generated, cached, errors, costUsd, failedIds };
-  }
-
   /**
-   * ★v5.11.6 新規: scripts のうち、まだキャッシュに無いものだけを返す★
-   * UI で「不足チェック」「不足のみ再生成」のために使う。
+   * scripts を一括事前生成 (★v5.11.8 で並列化、約 4倍高速化★)
    *
-   * @returns {Promise<Array<{id, speaker, text, reason}>>} 不足している script のリスト
+   * @param {Array} scripts - 生成対象の script 配列
+   * @param {Function} onProgress - 進捗コールバック
+   * @param {Object} options - { concurrency: 並列数 (デフォルト 4) }
    */
-  async findMissing(scripts) {
-    const missing = [];
-    for (const s of scripts) {
+  async pregenerate(scripts, onProgress, options = {}) {
+    const concurrency = options.concurrency ?? 4;
+    let generated = 0, cached = 0, errors = 0, costUsd = 0, completed = 0;
+    const failedIds = [];
+
+    // 1件処理 (並列ワーカーから呼ばれる)
+    const processOne = async (s) => {
       const rawText = s.speech || s.text;
       const text = applyYomigana(rawText);
       const speaker = s.speaker || 'A';
       if (!text) {
-        missing.push({ id: s.id, speaker, text: '', reason: 'テキストが空' });
-        continue;
+        completed++;
+        return;
+      }
+      try {
+        const result = await this._getOrGenerate(text, speaker);
+        if (result.wasCached) cached++;
+        else { generated++; costUsd += result.costUsd; }
+
+        // decode もしてキャッシュに保持 (即時再生のため)
+        try {
+          const cacheKey = `${speaker}:${text}`;
+          if (!this._decodedCache.has(cacheKey)) {
+            const audioBuffer = await this._decodeBlob(result.blob);
+            this._putDecoded(cacheKey, audioBuffer);
+          }
+        } catch (decodeErr) {
+          // decode 失敗は致命的ではない (speak 時にもう一度 decode できる)
+        }
+      } catch (err) {
+        console.error('pregenerate failed for script', s.id, err);
+        errors++;
+        failedIds.push(s.id);
+      } finally {
+        completed++;
+        onProgress?.({
+          current: completed,
+          total: scripts.length,
+          generated, cached, errors, costUsd,
+          failedIds: [...failedIds],
+        });
+      }
+    };
+
+    // ★並列化★: チャンクに分けて Promise.all で同時処理
+    // 全部一度に並列だとレート制限 (429) が出やすいので、concurrency 件ずつのバッチに分ける
+    for (let i = 0; i < scripts.length; i += concurrency) {
+      const chunk = scripts.slice(i, i + concurrency);
+      await Promise.all(chunk.map(processOne));
+    }
+
+    return { generated, cached, errors, costUsd, failedIds };
+  }
+
+  /**
+   * ★v5.11.6 新規 / v5.11.8 で並列化: scripts のうち、まだキャッシュに無いものだけを返す★
+   * UI で「不足チェック」「不足のみ再生成」のために使う。
+   *
+   * @returns {Promise<Array<{id, speaker, text, reason}>>} 不足している script のリスト (id 順にソート)
+   */
+  async findMissing(scripts) {
+    // ★全件並列でキャッシュチェック★ (IndexedDB 読み込みは並列に強い)
+    const checks = scripts.map(async (s) => {
+      const rawText = s.speech || s.text;
+      const text = applyYomigana(rawText);
+      const speaker = s.speaker || 'A';
+      if (!text) {
+        return { id: s.id, speaker, text: '', reason: 'テキストが空' };
       }
       try {
         const cached = await getCachedAudio(speaker, text);
         if (!cached) {
-          missing.push({ id: s.id, speaker, text, reason: 'キャッシュ未生成' });
+          return { id: s.id, speaker, text, reason: 'キャッシュ未生成' };
         }
+        return null;  // キャッシュあり = 不足ではない
       } catch (err) {
-        missing.push({ id: s.id, speaker, text, reason: 'キャッシュ確認エラー: ' + err.message });
+        return { id: s.id, speaker, text, reason: 'キャッシュ確認エラー: ' + err.message };
       }
-    }
-    return missing;
+    });
+
+    const results = await Promise.all(checks);
+    return results.filter(r => r !== null).sort((a, b) => a.id - b.id);
   }
 
   /**
-   * ★v5.11.6 新規: 指定された script だけを再生成★
+   * ★v5.11.6 新規 / v5.11.8 で並列化: 指定された script だけを再生成★
    * findMissing で取得したリストを渡せば、不足分だけ生成できる。
    *
    * @param {Array} scripts 全 scripts (id ベースで参照)
    * @param {Array<number>} targetIds 再生成したい script の id 配列
    * @param {Function} onProgress 進捗コールバック
+   * @param {Object} options { concurrency: 並列数 (デフォルト 4) }
    * @returns {Promise<{generated, errors, costUsd, failedIds}>}
    */
-  async pregenerateOnly(scripts, targetIds, onProgress) {
+  async pregenerateOnly(scripts, targetIds, onProgress, options = {}) {
+    const concurrency = options.concurrency ?? 4;
     const targets = scripts.filter(s => targetIds.includes(s.id));
-    let generated = 0, errors = 0, costUsd = 0;
+    let generated = 0, errors = 0, costUsd = 0, completed = 0;
     const failedIds = [];
 
-    for (let i = 0; i < targets.length; i++) {
-      const s = targets[i];
+    const processOne = async (s) => {
       const rawText = s.speech || s.text;
       const text = applyYomigana(rawText);
       const speaker = s.speaker || 'A';
       if (!text) {
         errors++;
         failedIds.push(s.id);
-        onProgress?.({ current: i + 1, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
-        continue;
+        completed++;
+        onProgress?.({ current: completed, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+        return;
       }
       try {
-        // ★キャッシュは無視して強制的に生成する★
+        // キャッシュは無視して強制的に生成する
         const data = await this._fetchFromGAS(text, speaker);
         const pcmBytes = base64ToBytes(data.audioBase64);
         const wavBlob = pcmToWav(pcmBytes, data.sampleRate || 24000);
         await saveCachedAudio(speaker, text, wavBlob);
         generated++;
         costUsd += data.estimatedCostUsd || 0;
-        onProgress?.({ current: i + 1, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+
+        // decode もしてキャッシュに (即時再生のため)
+        try {
+          const cacheKey = `${speaker}:${text}`;
+          const audioBuffer = await this._decodeBlob(wavBlob);
+          this._putDecoded(cacheKey, audioBuffer);
+        } catch (e) {}
       } catch (err) {
         console.error('pregenerateOnly failed for script', s.id, err);
         errors++;
         failedIds.push(s.id);
-        onProgress?.({ current: i + 1, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+      } finally {
+        completed++;
+        onProgress?.({ current: completed, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
       }
+    };
+
+    // ★並列化★
+    for (let i = 0; i < targets.length; i += concurrency) {
+      const chunk = targets.slice(i, i + concurrency);
+      await Promise.all(chunk.map(processOne));
     }
+
     return { generated, errors, costUsd, failedIds };
+  }
   }
 
   getTotalCostUsd() {

@@ -52,6 +52,8 @@ export function TTSPanel({
     setProgress({ current: 0, total: projectData.scripts.length });
     try {
       const adapter = getAdapter('gemini');
+      // ★v5.11.7: AudioContext を unlock (再生時のレイテンシをゼロに)★
+      if (adapter.unlock) await adapter.unlock();
       const result = await adapter.pregenerate(projectData.scripts, (p) => setProgress(p));
       setTotalCost(prev => prev + result.costUsd);
       setPregenStatus(result.errors > 0 ? 'partial' : 'done');
@@ -219,7 +221,11 @@ export function TTSPanel({
                 ) : pregenStatus === 'partial' ? (
                   <><AlertCircle size={14}/> 一部失敗 (下で再生成)</>
                 ) : (
-                  <><Zap size={14}/> 全セクションを事前生成</>
+                  <>
+                    <Zap size={14}/>
+                    全セクションを事前生成
+                    <span className="text-[9px] opacity-70 font-normal">⚡4並列</span>
+                  </>
                 )}
               </button>
 
