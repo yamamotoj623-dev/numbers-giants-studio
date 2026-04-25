@@ -39,13 +39,7 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-[30%] px-3">
-      <div className="absolute top-1 left-4 z-20 flex flex-col items-start gap-0.5">
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none ${themeClass.bg} text-white shadow-md`}>{projectData.mainPlayer.label}</span>
-      </div>
-      <div className="absolute top-1 right-4 z-20 flex flex-col items-end gap-0.5">
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none bg-zinc-700 text-zinc-300 shadow-md`}>不運度分析</span>
-      </div>
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[30%] px-3">
 
       <div className="mt-8 mb-2 bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-xl border border-zinc-700/50 p-3 shadow-2xl z-20">
         <div className="flex items-center justify-between mb-2">

@@ -67,16 +67,8 @@ export function PitchHeatmapLayout({ projectData, currentScript, animationKey , 
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-[30%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[30%] px-3">
 
-      <div className="absolute top-1 left-4 z-20">
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none ${themeClass.bg} text-white shadow-md`}>{projectData.mainPlayer.label}</span>
-      </div>
-      <div className="absolute top-1 right-4 z-20">
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded leading-none bg-zinc-700 text-zinc-300 shadow-md">
-          {data.handedness === 'left' ? '対左打者' : '対右打者'}
-        </span>
-      </div>
 
       <div className="mt-8 mb-2 bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
         <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">

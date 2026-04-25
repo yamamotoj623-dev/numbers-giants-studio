@@ -65,6 +65,16 @@ const CSS_TEXT = `
   .brand-logo-fixed .sub { color: var(--p); font-weight: 700; font-size: 6px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 2px; opacity: 0.6; }
 
   .content { position: absolute; inset: 0; z-index: 10; }
+
+  /* レイアウト切替時のフェードアニメーション */
+  .layout-fade-wrap {
+    width: 100%; height: 100%;
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    transition: opacity 0.28s ease-out;
+  }
+  .layout-fade-wrap.fade-in { opacity: 1; }
+  .layout-fade-wrap.fade-out { opacity: 0; }
   .phase { display: none; position: absolute; inset: 0; }
   .phase.active { display: block; }
 
@@ -282,11 +292,11 @@ const CSS_TEXT = `
   /* ================================================================ */
   /* フェーズB — タイミング短縮+テロップ中央+透過 */
   /* ================================================================ */
-  .phase-b-header { position: absolute; top: 50px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 10px; }
-  .phase-b-header .num { width: 34px; height: 34px; background: var(--p); color: #fff; font-weight: 900; font-size: 17px; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px var(--p-glow); }
-  .phase-b-header .name { color: var(--p); font-size: 30px; font-weight: 900; letter-spacing: -1px; line-height: 1; text-shadow: 0 0 12px var(--p-glow); }
+  .phase-b-header { position: absolute; top: 12px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 5px; pointer-events: none; }
+  .phase-b-header .num { width: 20px; height: 20px; background: var(--p); color: #fff; font-weight: 900; font-size: 11px; border-radius: 5px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px var(--p-glow); }
+  .phase-b-header .name { color: var(--p); font-size: 14px; font-weight: 900; letter-spacing: -0.3px; line-height: 1; text-shadow: 0 0 8px var(--p-glow); }
 
-  .radar-outer { position: absolute; top: 90px; bottom: 42%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 15px; }
+  .radar-outer { position: absolute; top: 40px; bottom: 42%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 15px; }
   .radar-svg-box { width: 100%; max-width: 220px; position: relative; }
   .radar-svg-box svg { width: 100%; height: auto; display: block; }
 
@@ -407,11 +417,11 @@ const CSS_TEXT = `
   /* ================================================================ */
   /* フェーズC — 情報量削減+数値上部配置 */
   /* ================================================================ */
-  .phase-c-header { position: absolute; top: 50px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 9px; }
-  .phase-c-header .num { width: 30px; height: 30px; background: var(--p); color: #fff; font-weight: 900; font-size: 15px; border-radius: 7px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px var(--p-glow); }
-  .phase-c-header .name { color: var(--p); font-size: 26px; font-weight: 900; letter-spacing: -0.9px; line-height: 1; text-shadow: 0 0 10px var(--p-glow); }
+  .phase-c-header { position: absolute; top: 12px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 5px; pointer-events: none; }
+  .phase-c-header .num { width: 20px; height: 20px; background: var(--p); color: #fff; font-weight: 900; font-size: 11px; border-radius: 5px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px var(--p-glow); }
+  .phase-c-header .name { color: var(--p); font-size: 14px; font-weight: 900; letter-spacing: -0.3px; line-height: 1; text-shadow: 0 0 8px var(--p-glow); }
 
-  .hl-radar-outer { position: absolute; top: 100px; left: 0; right: 0; height: 125px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
+  .hl-radar-outer { position: absolute; top: 50px; left: 0; right: 0; height: 125px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
   .hl-radar-svg-box { width: 140px; height: 110px; position: relative; transform-origin: center; }
   .phase.active .hl-radar-svg-box { animation: radarShrink 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
   .hl-radar-svg-box svg { width: 100%; height: 100%; display: block; }

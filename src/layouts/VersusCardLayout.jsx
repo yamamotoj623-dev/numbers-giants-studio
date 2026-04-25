@@ -41,7 +41,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey , ph
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-[30%] px-2">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[30%] px-2">
 
       <div className="grid grid-cols-2 gap-2 mb-2 mt-2 z-20">
         <PlayerCard

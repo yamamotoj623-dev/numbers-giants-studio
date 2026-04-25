@@ -11,6 +11,8 @@
  * - pitcher_left: 左投手ワインドアップ
  * - pitcher_set: セットポジション
  * - catcher: キャッチャー構え
+ * - team_huddle: チーム円陣 (チーム全体テーマ用)
+ * - team_stadium: 球場/スタンド (打線・順位・チームテーマ用)
  */
 
 import React from 'react';
@@ -226,11 +228,62 @@ const SILHOUETTE_MAP = {
   pitcher_left: PitcherLeft,
   pitcher_set: PitcherSet,
   catcher: Catcher,
+  team_huddle: TeamHuddle,
+  team_stadium: TeamStadium,
 };
+
+// チーム円陣 (3人並んだ後ろ姿、チーム全体テーマ向け)
+function TeamHuddle() {
+  return (
+    <svg viewBox="0 0 200 200">
+      <g fill={COLOR}>
+        {/* 左の選手 */}
+        <ellipse cx="55" cy="55" rx="14" ry="16"/>
+        <path d="M 41 75 L 69 75 L 73 130 L 37 130 Z"/>
+        <path d="M 37 130 L 33 180 L 28 188 L 32 192 L 48 188 L 52 130 Z"/>
+        <path d="M 58 130 L 62 180 L 70 188 L 67 192 L 53 188 Z"/>
+        {/* 中央の選手 (一番大きい) */}
+        <ellipse cx="100" cy="48" rx="16" ry="18"/>
+        <path d="M 84 70 L 116 70 L 120 130 L 80 130 Z"/>
+        <path d="M 80 130 L 76 185 L 70 192 L 75 196 L 92 192 L 95 130 Z"/>
+        <path d="M 105 130 L 110 185 L 118 192 L 115 196 L 100 192 Z"/>
+        {/* 右の選手 */}
+        <ellipse cx="145" cy="55" rx="14" ry="16"/>
+        <path d="M 131 75 L 159 75 L 163 130 L 127 130 Z"/>
+        <path d="M 127 130 L 123 180 L 118 188 L 122 192 L 138 188 L 142 130 Z"/>
+        <path d="M 148 130 L 152 180 L 160 188 L 157 192 L 143 188 Z"/>
+      </g>
+    </svg>
+  );
+}
+
+// 球場・スタンド (打線・順位・チームテーマ向け)
+function TeamStadium() {
+  return (
+    <svg viewBox="0 0 200 200">
+      <g fill={COLOR}>
+        {/* スタンド屋根 */}
+        <path d="M 20 40 Q 100 15 180 40 L 180 55 Q 100 28 20 55 Z"/>
+        {/* スタンド本体 */}
+        <path d="M 20 55 Q 100 28 180 55 L 180 110 L 20 110 Z" opacity="0.85"/>
+        {/* スタンドの座席ライン */}
+        <path d="M 30 75 Q 100 52 170 75" stroke={COLOR} strokeWidth="1.5" fill="none" opacity="0.4"/>
+        <path d="M 30 90 Q 100 67 170 90" stroke={COLOR} strokeWidth="1.5" fill="none" opacity="0.4"/>
+        {/* グラウンド (ダイヤモンド) */}
+        <path d="M 100 130 L 145 155 L 100 180 L 55 155 Z" opacity="0.7"/>
+        {/* ピッチャーマウンド */}
+        <ellipse cx="100" cy="155" rx="6" ry="3" opacity="0.9"/>
+        {/* ホームベース */}
+        <path d="M 95 178 L 105 178 L 105 184 L 100 188 L 95 184 Z"/>
+      </g>
+    </svg>
+  );
+}
 
 // プレイヤータイプからデフォルトシルエット推測
 function getDefaultSilhouette(playerType) {
   if (playerType === 'pitcher') return 'pitcher_right';
+  if (playerType === 'team') return 'team_stadium';
   return 'batter_right';
 }
 
@@ -253,4 +306,6 @@ export const SILHOUETTE_OPTIONS = [
   { id: 'pitcher_left', label: '左投手 ワインドアップ', hint: '左投手・脚上げ全力投球' },
   { id: 'pitcher_set', label: '投手 セットポジション', hint: 'リリーフ投手・走者あり' },
   { id: 'catcher', label: 'キャッチャー 構え', hint: '捕手・守備' },
+  { id: 'team_huddle', label: 'チーム円陣', hint: 'チーム全体テーマ・複数選手' },
+  { id: 'team_stadium', label: '球場・スタンド', hint: '打線/順位/チーム全体テーマ' },
 ];

@@ -147,11 +147,20 @@ export function PreviewFrame({
             </div>
           </div>
           <div className="hook-player-pill">
-            <div className="num">{projectData.mainPlayer?.number || ''}</div>
-            <div className="info">
-              <div className="pos">NPB / 巨人</div>
-              <div className="name">{projectData.mainPlayer?.name || ''}</div>
-            </div>
+            {projectData?.playerType === 'team' ? (
+              <div className="info">
+                <div className="pos">読売ジャイアンツ</div>
+                <div className="name">{projectData.mainPlayer?.name || '巨人'}</div>
+              </div>
+            ) : (
+              <>
+                <div className="num">{projectData.mainPlayer?.number || ''}</div>
+                <div className="info">
+                  <div className="pos">NPB / 巨人</div>
+                  <div className="name">{projectData.mainPlayer?.name || ''}</div>
+                </div>
+              </>
+            )}
           </div>
           <div className="hook-telop-wrap">
             <div className={`telop-hook ${getHookTextClass(currentScript?.text)}`}>
@@ -179,10 +188,12 @@ export function PreviewFrame({
             <div className="ph-date">{projectData.period || ''}</div>
           )}
 
-          {/* ヘッダー (選手名) */}
+          {/* ヘッダー (選手名 or チーム名) */}
           {(phase === 'normal' || phase === 'highlight') && (
             <div className={phase === 'normal' ? 'phase-b-header' : 'phase-c-header'}>
-              <div className="num">{projectData.mainPlayer?.number || ''}</div>
+              {projectData?.playerType !== 'team' && (
+                <div className="num">{projectData.mainPlayer?.number || ''}</div>
+              )}
               <div className="name">{projectData.mainPlayer?.name || ''}</div>
             </div>
           )}
@@ -318,14 +329,25 @@ function renderHookStatCell(projectData, key, label) {
 }
 
 function renderHookStatsCells(projectData) {
-  const isPitcher = projectData?.playerType === 'pitcher';
-  if (isPitcher) {
+  const playerType = projectData?.playerType;
+  if (playerType === 'pitcher') {
     return (
       <>
         {renderHookStatCell(projectData, 'era', 'ERA')}
         {renderHookStatCell(projectData, 'whip', 'WHIP')}
         {renderHookStatCell(projectData, 'so', 'K')}
         {renderHookStatCell(projectData, 'win', 'W')}
+      </>
+    );
+  }
+  if (playerType === 'team') {
+    // チームテーマ: 順位/勝率/得点/失点 を表示
+    return (
+      <>
+        {renderHookStatCell(projectData, 'rank', '順位')}
+        {renderHookStatCell(projectData, 'winRate', '勝率')}
+        {renderHookStatCell(projectData, 'runs', '得点')}
+        {renderHookStatCell(projectData, 'runsAllowed', '失点')}
       </>
     );
   }

@@ -1,9 +1,15 @@
 /**
  * layoutType に応じて適切なレイアウトコンポーネントを呼び分けるルータ
- * 未対応のlayoutTypeは radar_compare にフォールバック（v4.24.0互換）
+ *
+ * 優先順位:
+ *   1. currentScript.layoutType (script単位の切替指示)
+ *   2. projectData.layoutType    (動画全体のデフォルト)
+ *   3. radar_compare             (フォールバック)
+ *
+ * 切替時はフェードアニメで視聴体験を滑らかに保つ
  */
 
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { RadarCompareLayout } from './RadarCompareLayout.jsx';
 import { TimelineLayout } from './TimelineLayout.jsx';
 import { LuckDashboardLayout } from './LuckDashboardLayout.jsx';
@@ -25,7 +31,33 @@ const LAYOUT_COMPONENTS = {
 };
 
 export function LayoutRouter(props) {
-  const layoutType = props.projectData?.layoutType || 'radar_compare';
-  const Layout = LAYOUT_COMPONENTS[layoutType] || RadarCompareLayout;
-  return <Layout {...props} />;
+  // script 優先 → projectData → fallback
+  const scriptLayout = props.currentScript?.layoutType;
+  const projectLayout = props.projectData?.layoutType;
+  const desiredLayout = scriptLayout || projectLayout || 'radar_compare';
+
+  // フェード切替: 表示中のlayoutTypeをstateで管理
+  const [activeLayout, setActiveLayout] = useState(desiredLayout);
+  const [fadeState, setFadeState] = useState('in');
+  const prevLayoutRef = useRef(desiredLayout);
+
+  useEffect(() => {
+    if (desiredLayout !== prevLayoutRef.current) {
+      setFadeState('out');
+      const t = setTimeout(() => {
+        setActiveLayout(desiredLayout);
+        prevLayoutRef.current = desiredLayout;
+        setFadeState('in');
+      }, 280);
+      return () => clearTimeout(t);
+    }
+  }, [desiredLayout]);
+
+  const Layout = LAYOUT_COMPONENTS[activeLayout] || RadarCompareLayout;
+
+  return (
+    <div className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'}`}>
+      <Layout {...props} />
+    </div>
+  );
 }

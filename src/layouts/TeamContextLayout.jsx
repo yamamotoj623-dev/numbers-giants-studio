@@ -50,16 +50,8 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-1 pb-[30%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[35%] px-3">
 
-      <div className="absolute top-1 left-4 z-20">
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none ${themeClass.bg} text-white shadow-md`}>{projectData.mainPlayer.label}</span>
-      </div>
-      <div className="absolute top-1 right-4 z-20">
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded leading-none bg-zinc-700 text-zinc-300 shadow-md">
-          {data.mode === 'lineup' ? '打線考察' : '役割分析'}
-        </span>
-      </div>
 
       {data.narrative && (
         <div className="mt-8 mb-2 bg-zinc-900/95 rounded-xl border border-zinc-700/50 overflow-hidden shadow-lg backdrop-blur-sm z-20 p-3">
