@@ -253,7 +253,7 @@ export function PreviewFrame({
             </div>
           )}
 
-          {/* アバター (平常・ハイライトのみ) */}
+          {/* アバター (平常・ハイライトのみ) — 数原(A) / もえか(B) のラベル付き */}
           {(phase === 'normal' || phase === 'highlight') && (
             <>
               <div
@@ -262,6 +262,7 @@ export function PreviewFrame({
                 key={`avatar-a-${currentIndex}`}
               >
                 <div className="circle"><span className="emoji">{currentEmojiA}</span></div>
+                <div className="avatar-name">数原</div>
               </div>
               <div
                 className={`avatar-hl b ${currentScript?.speaker === 'B' ? 'active' : 'passive'}`}
@@ -269,6 +270,7 @@ export function PreviewFrame({
                 key={`avatar-b-${currentIndex}`}
               >
                 <div className="circle"><span className="emoji">{currentEmojiB}</span></div>
+                <div className="avatar-name">もえか</div>
               </div>
             </>
           )}

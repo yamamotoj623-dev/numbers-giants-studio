@@ -53,9 +53,11 @@ export function OutroPanel({ projectData }) {
       <div className="outro-avatars">
         <div className="outro-avatar a">
           <div className="circle"><span className="emoji">{emojiA}</span></div>
+          <div className="outro-avatar-name">数原</div>
         </div>
         <div className="outro-avatar b">
           <div className="circle"><span className="emoji">{emojiB}</span></div>
+          <div className="outro-avatar-name">もえか</div>
         </div>
       </div>
 

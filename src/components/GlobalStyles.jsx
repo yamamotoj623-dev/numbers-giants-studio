@@ -6,7 +6,7 @@
 import React from 'react';
 
 const CSS_TEXT = `
-  :root { --p: #f97316; --p-glow: rgba(249,115,22,0.6); --indigo: #4f46e5; --sky: #0ea5e9; --like: #ef4444; }
+  :root { --p: #f97316; --p-glow: rgba(249,115,22,0.6); --indigo: #4f46e5; --sky: #0ea5e9; --rose: #fb7185; --rose-glow: rgba(251,113,133,0.6); --like: #ef4444; }
   * { box-sizing: border-box; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; }
   body { background: #f4f4f5; font-family: -apple-system, "Segoe UI", "Noto Sans JP", sans-serif; padding: 20px 10px 40px; }
 
@@ -364,7 +364,7 @@ const CSS_TEXT = `
   /* speaker-a: オレンジ枠 */
   .telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); box-shadow: 0 4px 16px rgba(249,115,22,0.35), 0 0 24px rgba(249,115,22,0.15); }
   /* speaker-b: 水色枠 */
-  .telop-bg[data-speaker="b"] { border-color: rgba(14,165,233,0.85); box-shadow: 0 4px 16px rgba(14,165,233,0.35), 0 0 24px rgba(14,165,233,0.15); }
+  .telop-bg[data-speaker="b"] { border-color: rgba(251,113,133,0.85); box-shadow: 0 4px 16px rgba(251,113,133,0.35), 0 0 24px rgba(251,113,133,0.15); }
 
   /* 吹き出し尻尾: 話者アバター方向に出す */
   .telop-bg::before, .telop-bg::after { content: ''; position: absolute; width: 0; height: 0; border-style: solid; display: none; }
@@ -388,7 +388,7 @@ const CSS_TEXT = `
     display: block;
     right: 30px; bottom: -14px;
     border-width: 14px 0 0 12px;
-    border-color: rgba(14,165,233,0.85) transparent transparent transparent;
+    border-color: rgba(251,113,133,0.85) transparent transparent transparent;
   }
   .telop-bg[data-speaker="b"]::after {
     display: block;
@@ -586,10 +586,32 @@ const CSS_TEXT = `
   .avatar-hl.b { right: 72px; }
   .avatar-hl.active { transform: scale(1.1); animation: avatarTalk 0.6s ease-in-out infinite; }
   .avatar-hl.passive { transform: scale(0.88); opacity: 0.4; }
-  .avatar-hl .circle { width: 46px; height: 46px; border-radius: 50%; background: #18181b; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 2px solid #52525b; }
+  .avatar-hl .circle { width: 46px; height: 46px; border-radius: 50%; background: #18181b; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 2px solid #52525b; position: relative; }
   .avatar-hl.a.active .circle { border-color: var(--p); box-shadow: 0 0 16px var(--p-glow); }
-  .avatar-hl.b.active .circle { border-color: var(--sky); box-shadow: 0 0 16px rgba(14,165,233,0.6); }
+  .avatar-hl.b.active .circle { border-color: var(--rose); box-shadow: 0 0 16px rgba(251,113,133,0.6); }
   .avatar-hl .emoji { font-size: 22px; line-height: 1; }
+
+  /* ★アバター名ラベル (v5.11.5 新規) — 数原 / もえか をアイコン下に表示★ */
+  .avatar-hl .avatar-name {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    background: rgba(24,24,27,0.85);
+    padding: 2px 7px;
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+    transition: all 0.3s;
+  }
+  .avatar-hl.a .avatar-name { color: var(--p); border: 1px solid rgba(249,115,22,0.4); }
+  .avatar-hl.b .avatar-name { color: var(--rose); border: 1px solid rgba(251,113,133,0.4); }
+  .avatar-hl.a.active .avatar-name { color: var(--p); border-color: var(--p); box-shadow: 0 0 8px var(--p-glow); }
+  .avatar-hl.b.active .avatar-name { color: var(--rose); border-color: var(--rose); box-shadow: 0 0 8px rgba(251,113,133,0.5); }
+  .avatar-hl.passive .avatar-name { opacity: 0.5; }
 
   /* ================================================================ */
   /* フェーズD — テロップ上部(アバター右)、summary縮小、CTA強調 */
@@ -600,23 +622,27 @@ const CSS_TEXT = `
   .outro-date .ping { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--p); animation: pulse 2s infinite; }
 
   .outro-avatars { position: absolute; top: 40px; left: 14px; display: flex; gap: 8px; z-index: 35; }
-  .outro-avatar { display: flex; align-items: center; transition: all 0.3s; }
+  .outro-avatar { display: flex; flex-direction: column; align-items: center; gap: 3px; transition: all 0.3s; }
   .outro-avatar .circle { width: 42px; height: 42px; border-radius: 50%; background: #27272a; display: flex; align-items: center; justify-content: center; border: 2px solid #52525b; position: relative; transition: all 0.3s; }
   .outro-avatar.active .circle { transform: scale(1.1); }
   .outro-avatar.passive { opacity: 0.5; transform: scale(0.9); }
   .outro-avatar.a.active .circle { border-color: var(--p); box-shadow: 0 0 14px var(--p-glow); }
-  .outro-avatar.b.active .circle { border-color: var(--sky); box-shadow: 0 0 14px rgba(14,165,233,0.6); }
+  .outro-avatar.b.active .circle { border-color: var(--rose); box-shadow: 0 0 14px rgba(251,113,133,0.6); }
   .outro-avatar .emoji { font-size: 22px; line-height: 1; }
+  /* ★アウトロアバター名ラベル (v5.11.5 新規)★ */
+  .outro-avatar-name { font-size: 9px; font-weight: 900; letter-spacing: 0.5px; line-height: 1; padding: 2px 5px; border-radius: 4px; background: rgba(24,24,27,0.7); }
+  .outro-avatar.a .outro-avatar-name { color: var(--p); }
+  .outro-avatar.b .outro-avatar-name { color: var(--rose); }
 
   /* アウトロのテロップ: ABアバターの右横に横長で配置 */
   .telop-wrap-outro { position: absolute; top: 46px; left: 118px; right: 50px; display: flex; align-items: center; z-index: 36; pointer-events: none; min-height: 42px; }
   .telop-wrap-outro .telop-bg { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border-radius: 12px; padding: 7px 12px; border: 2px solid rgba(255,255,255,0.15); position: relative; width: 100%; max-width: none; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
   .telop-wrap-outro .telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); box-shadow: 0 4px 12px rgba(249,115,22,0.35); }
-  .telop-wrap-outro .telop-bg[data-speaker="b"] { border-color: rgba(14,165,233,0.85); box-shadow: 0 4px 12px rgba(14,165,233,0.35); }
+  .telop-wrap-outro .telop-bg[data-speaker="b"] { border-color: rgba(251,113,133,0.85); box-shadow: 0 4px 12px rgba(251,113,133,0.35); }
   /* 尻尾をアバター方向(左)に向ける */
   .telop-wrap-outro .telop-bg::before { content: ''; position: absolute; left: -10px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-style: solid; border-width: 10px 12px 10px 0; border-color: transparent; display: block; }
   .telop-wrap-outro .telop-bg[data-speaker="a"]::before { border-right-color: rgba(249,115,22,0.85); }
-  .telop-wrap-outro .telop-bg[data-speaker="b"]::before { border-right-color: rgba(14,165,233,0.85); }
+  .telop-wrap-outro .telop-bg[data-speaker="b"]::before { border-right-color: rgba(251,113,133,0.85); }
   .telop-wrap-outro .telop-bg::after { content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-style: solid; border-width: 7px 9px 7px 0; border-color: transparent rgba(0,0,0,0.6) transparent transparent; display: block; }
   /* アウトロtelopは横長なのでサイズを少し控えめに */
   .telop-wrap-outro .telop-normal { font-size: 16px !important; line-height: 1.2; text-align: left; }
