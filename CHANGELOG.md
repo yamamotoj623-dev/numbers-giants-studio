@@ -9,6 +9,81 @@
 
 ---
 
+## [5.11.0] - 2026-04-25 - レイアウト過剰演出を全廃 + Knowledge File 参照を強制化
+
+### 動画テストフィードバック (3つの致命的問題) を一気に修正
+
+#### 🚨 問題1: Knowledge File が Gemini に参照されていない
+- character-bible.md / layout-direction.md / yomigana-dictionary.csv を Custom Gem にアップロードしても、プロンプトに「これらを参照しろ」という明示指示が無いため、Gemini が**毎回見ていない**
+- 結果: A/B のキャラ名が反映されない、レイアウト方向性が活かされない、誤読が発生
+
+**修正**: docs/gemini-custom-prompt.md の冒頭に `<knowledge_file_mandatory>` セクションを新設。3つのファイル名・役割・優先順位を明記し、「**毎回必ず参照**」「プロンプト本文と矛盾するなら Knowledge File を**優先**」と強制化。
+
+#### 🚨 問題2: player_spotlight が選手名を二重表示
+- 画面上部の `phase-b-header` に既に `mainPlayer.name` が表示されている
+- player_spotlight 内でもさらに選手名・番号を表示していた → **同じ選手名が2箇所連続**で表示
+- スポットライトとしての主役感が出ない (役割を果たせない)
+
+**修正 (PlayerSpotlight v4)**:
+- ★選手名・番号を完全削除★ (ヘッダーで自動表示されるので重複防止)
+- ★シルエット画像も廃止★ (技術的に画像生成できないので、データ主役に振り切る)
+- **プライマリ指標を画面の主役**として巨大表示 (60px、テーマ色のグロー)
+- 比較値 (compareValue) を右下に併記
+- 期間ラベルを上部に控えめに表示
+
+#### 🚨 問題3: versus_card の過剰演出 (バー/スコア/装飾バッジ)
+- バー比較が見にくい (どちらが強いか直感的に分からない)
+- WIN/REF/-差●/互角 等の装飾バッジが選手名にかぶる
+- 0-100 のスコア計算が意味不明 (どう計算したか視聴者に伝わらない)
+
+**修正 (VersusCard v4)**: 過剰演出を**全廃**して**シンプル化**。
+- ★バー廃止★
+- ★0-100 スコア廃止★
+- ★装飾バッジ全廃止★ (WIN, REF, -差●, 互角, mood)
+- ★純粋な数字 vs 数字★ のみ。勝者の数字をテーマ色で強調するだけ
+- 中央の矢印 (◀▶) で勝者を指す
+
+設計原則: **「対決感」は装飾ではなく、数字のコントラストで生まれる**
+
+### PitchArsenal の細かい修正
+
+#### 「武器」バッジ廃止 + 行強調
+- 「武器」バッジが場所を取って「スプリット」が「スプリ…」に切れる原因の一つだった
+- **廃止**: バッジ → 該当行全体に背景色 (テーマ色 15% + 左ボーダー)
+- 球種名のフォント色もテーマ色に変える (最良の被打率の行が一目で分かる)
+- 列幅: `1.4fr_46px_50px_50px` → `1.7fr_44px_44px_44px` (球種名列を 1.7fr に拡大)
+- 「スプリット」「フォーシーム」など長い球種名がフル表示される
+
+### Gemini プロンプトのスキーマ修正
+
+#### versus 新スキーマ (v4 シンプル)
+```
+旧: { mood, overall:{main,sub}, categoryScores:[{label, main, sub, rawMain, rawSub}] }
+新: { categoryScores:[{label, rawMain, rawSub, lowerBetter?}] }
+```
+- `mood`, `overall`, 各 `main`/`sub` (0-100) を廃止
+- `rawMain`/`rawSub` (実数値) のみ
+- `lowerBetter:true` で防御率/WHIP の判定方向反転
+
+#### spotlight 新スキーマ (v4)
+```
+旧: { players:[{id, name, number, label, silhouette, primaryStat, stats, comment}] }
+新: { players:[{id, label, primaryStat, stats, comment}] }
+```
+- `name`/`number` 廃止 (ヘッダー重複防止)
+- `silhouette` 廃止 (画像生成困難)
+
+### layout-direction.md の更新
+- player_spotlight の改修方針を v4 仕様 (データ主役、name/silhouette 廃止) に書き換え
+- versus_card の改修方針を v4 仕様 (シンプル化、過剰演出全廃) に書き換え
+- 動画テストでの実証を反映
+
+### バージョン
+- 5.10.1 → **5.11.0**
+- package.json, src/lib/config.js 同期
+
+---
+
 ## [5.10.1] - 2026-04-25 - フォント強調 3種類体系 + プロンプト一本化 + 35-45 体制
 
 ### v5.10.1 の総まとめ

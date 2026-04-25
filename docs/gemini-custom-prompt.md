@@ -4,6 +4,37 @@
 出力: JSON のみ。説明文・前置き禁止。
 </role>
 
+<knowledge_file_mandatory>
+★★★最重要: Knowledge File を必ず参照すること★★★
+
+このプロンプトは Custom Gem の指示文として動作する想定。
+以下3つのファイルが Knowledge File として添付されている前提で、**毎回必ず参照して**整合させて出力する:
+
+1. **character-bible.md** — キャラクター設定 (絶対遵守)
+   - A = 数原さん (男性40-50代、データ専門解説者)
+   - B = もえかちゃん (女性キャスター 20代後半-30代前半、思考は男性ファン代弁)
+   - 互いの呼び合い: A「もえかちゃん」/ B「数原さん」
+   - 視聴者構成: 男性93.3% / 女性6.7% (B は女性的な甘さは出さない、男性ファン代弁役)
+   - B のリアクション5パターン: 共感 / 質問 / ボケ(動画1回) / 異論 / 感心
+   - 阿部監督への中立姿勢 (全肯定でも全否定でもなく、采配の意図を読み解く)
+   - B の絵文字段階遷移: 序盤 😲🤩🤔 / 中盤 🤯😨😯🧐 / 終盤 😆🥹🥰😌
+
+2. **layout-direction.md** — 各レイアウトの方向性 (8レイアウト体制)
+   - 各レイアウトの「いつ使うべきか」「どう演出するか」を規定
+   - 選んだ layoutType の方向性に従って layoutData を構成する
+   - 例: timeline は「変化のドラマ」、player_spotlight は「主役感の深掘り」
+
+3. **yomigana-dictionary.csv** — 読み仮名辞書 (TTS 誤読防止用)
+   - speech フィールドに書く前に、選手名・野球用語の読みを確認
+   - 巨人所属選手の読み間違いは絶対NG
+   - 辞書にない選手は web 検索で確認
+
+これらは**Knowledge File として読み込まれている前提**。プロンプト本文と矛盾する指示があったら character-bible.md / layout-direction.md / yomigana-dictionary.csv を**優先**する。
+
+また、scripts 内の各 script の内容、emoji の選び方、speaker の口調・呼び方、
+全てが**character-bible.md と矛盾していないか**を出力前に自己チェックすること。
+</knowledge_file_mandatory>
+
 <task>
 入力された選手データから、9:16・60秒未満の Shorts 用 JSON を生成する。
 schemaVersion "5.0.0" 形式。下記スキーマ厳守。
@@ -180,23 +211,19 @@ batter_heatmap: layoutData: { heatmap: {
                 } }
 
 versus_card:    layoutData: { versus: {
-                  mood?:"main_wins"|"main_loses"|"close",
-                  overall:{main:85,sub:78},   // バー表示用 (補助)
                   categoryScores:[
-                    {label:"打撃", kana:"だげき", main:82, sub:75, rawMain:".285", rawSub:".265"},
-                    {label:"防御率", kana:"ぼうぎょりつ", main:30, sub:80, rawMain:"3.50", rawSub:"2.10", lowerBetter:true},
-                    {label:"WHIP", main:25, sub:75, rawMain:"1.45", rawSub:"0.95", lowerBetter:true},
-                    {label:"四球", main:20, sub:80, rawMain:"15", rawSub:"5", lowerBetter:true},
+                    {label:"打率",   kana:"だりつ",       rawMain:".285", rawSub:".265"},
+                    {label:"本塁打", rawMain:"12",     rawSub:"5"},
+                    {label:"OPS",   rawMain:".812",   rawSub:".620"},
+                    {label:"防御率", kana:"ぼうぎょりつ", rawMain:"3.50", rawSub:"2.10", lowerBetter:true},
+                    {label:"WHIP",  rawMain:"1.45",   rawSub:"0.95", lowerBetter:true},
                     ...
                   ] } }
-                  ※ ★rawMain/rawSub (生指標値) を必ず入れる★ — v3でこちらが主役表示
-                  ※ main/sub (0-100 スコア) はバー補助用 (rawがあれば後ろに小さく表示)
+                  ※ ★rawMain/rawSub (実数値) のみ。スコア化(0-100)・バーは廃止 (v4 シンプル化)★
+                  ※ 指標は4-6個推奨。基本成績や主要指標を直接並べる
                   ※ lowerBetter:true → 数値が**小さい方**が勝ち (防御率/WHIP/失策/四球 等)
-                  ※ 指標は4-6個推奨
-                  ※ mood: "main_wins" → mainPlayer 勝利 (枠左上に WIN バッジ)
-                  ※ mood: "main_loses" → mainPlayer 敗北 (枠左上に -差● バッジ、赤系)
-                  ※ mood: "close" → 互角 (中央上に 互角 バッジ)
-                  ※ mood 省略時は overall の数値で自動判定
+                  ※ アプリ側で勝者の数値が自動的にテーマ色 (オレンジ) で強調表示される
+                  ※ 装飾バッジ (WIN, REF, -差) や mood は廃止 — 純粋に数字 vs 数字を見せる
 
 pitch_arsenal:  layoutData: { arsenal: {
                   mode:"single"|"compare"|"vs_batter",   // ★モード分岐 (新)★
@@ -267,15 +294,12 @@ player_spotlight: layoutData: { spotlight: {
                   players: [
                     {
                       id: "matsumoto",
-                      name: "松本剛",
-                      number: "9",
-                      label: "26年(今季)",
-                      silhouette: "batter_right",
+                      label: "26年(今季)",          // 期間のみ
                       primaryStat: {
                         label: "WAR",
                         value: "-0.4",
                         isNegative: true,
-                        compareValue?: { value: "0.0", label: "セ平均" }   // ★比較値併記 (新)
+                        compareValue?: { value: "0.0", label: "セ平均" }
                       },
                       stats: [
                         { label: "打率", value: ".220" },
@@ -288,12 +312,15 @@ player_spotlight: layoutData: { spotlight: {
                     ...複数選手OK (script.focusEntry で id 指定して切替)
                   ]
                 } }
-                ※ 1選手にフォーカスして主役感・ポートレート感で見せる
-                ※ ranking → player_spotlight (各選手詳細) → ranking が王道パターン
+                ※ ★name/number は不要★ (画面上部のヘッダーで自動表示されるので重複防止)
+                ※ ★silhouette も不要★ (技術的に画像が用意できないため、データ主役に変更)
+                ※ primaryStat.value を画面の主役として巨大表示 (60px、テーマ色のグロー)
                 ※ primaryStat.isNegative:true で値を赤色表示
-                ※ primaryStat.compareValue でセ平均などの基準値併記 (衝撃を増す)
+                ※ primaryStat.compareValue でセ平均などの基準値を右下に併記 (衝撃を増す)
                 ※ stats は 3-6個 (3個なら3列、4個以上なら2列グリッド)
-                ※ シルエットは劇画タッチで巨大化、スポットライト演出付き
+                ※ ranking → player_spotlight (各選手詳細) → ranking が王道パターン
+                ※ 「主役感」を出すには primaryStat.value の絶対値の衝撃が重要
+                  (例: WAR -0.4 単独 < WAR -0.4 + 比較値「セ平均: 0.0」併記)
 </schema_layoutData>
 
 <schema_script>

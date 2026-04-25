@@ -91,7 +91,7 @@ function SingleOrCompareView({ data, themeClass }) {
       </div>
 
       <div className="bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden backdrop-blur-sm z-20">
-        <div className="px-3 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30 grid grid-cols-[1.4fr_46px_50px_50px] gap-2 items-center">
+        <div className="px-2.5 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30 grid grid-cols-[1.7fr_44px_44px_44px] gap-1.5 items-center">
           <span className="text-[12px] font-black text-zinc-500 tracking-widest">球種</span>
           <span className="text-[12px] font-black text-zinc-500 tracking-widest text-right">配分</span>
           <span className="text-[12px] font-black text-zinc-500 tracking-widest text-right">球速</span>
@@ -100,14 +100,17 @@ function SingleOrCompareView({ data, themeClass }) {
         {pitches.map((pitch, i) => {
           const isBest = pitch.avg === Math.min(...pitches.map(p => p.avg));
           const cmp = data.comparePitches?.find(p => p.name === pitch.name);
-          // 比較時の変化矢印
           const pctDelta = cmp ? pitch.pct - cmp.pct : null;
           return (
-            <div key={i} className="px-3 py-2 border-b border-zinc-800 last:border-b-0 grid grid-cols-[1.4fr_46px_50px_50px] gap-2 items-center">
-              <div className="flex items-center gap-2">
+            // ★isBest なら行全体に背景色 (テーマ色のうっすら)、武器バッジ廃止★
+            <div key={i} className={`px-2.5 py-2 border-b border-zinc-800 last:border-b-0 grid grid-cols-[1.7fr_44px_44px_44px] gap-1.5 items-center ${
+              isBest ? `${themeClass.bg}/15 border-l-4 ${themeClass.border}` : ''
+            }`}>
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: pitch.color, boxShadow: `0 0 6px ${pitch.color}` }} />
-                <span className="text-[13px] font-black text-white leading-tight">{pitch.name}</span>
-                {isBest && <span className="text-[10px] bg-amber-500 text-black font-black px-1 py-0.5 rounded flex-shrink-0">武器</span>}
+                <span className={`text-[13px] font-black leading-tight ${isBest ? themeClass.text : 'text-white'}`}>
+                  {pitch.name}
+                </span>
               </div>
               <div className="text-right">
                 <div className="text-[12px] font-mono font-black text-zinc-300">{pitch.pct}%</div>
@@ -126,7 +129,9 @@ function SingleOrCompareView({ data, themeClass }) {
                 {cmp && <div className="text-[10px] font-mono text-zinc-500 leading-none">→{cmp.velocity}</div>}
               </div>
               <div className="text-right">
-                <div className={`text-[12px] font-mono font-black ${isBest ? 'text-amber-400' : pitch.avg > 0.280 ? 'text-red-400' : 'text-zinc-300'}`}>
+                <div className={`text-[12px] font-mono font-black ${
+                  isBest ? themeClass.text : pitch.avg > 0.280 ? 'text-red-400' : 'text-zinc-300'
+                }`}>
                   {pitch.avg.toFixed(3).replace(/^0/, '')}
                 </div>
                 {cmp && <div className="text-[10px] font-mono text-zinc-500 leading-none">→{cmp.avg.toFixed(3).replace(/^0/, '')}</div>}

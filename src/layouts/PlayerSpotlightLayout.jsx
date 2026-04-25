@@ -1,20 +1,19 @@
 /**
- * layoutType: player_spotlight (v3)
- * 1選手の主役感を演出するレイアウト。
+ * layoutType: player_spotlight (v4)
+ * 1選手のデータを「主役感」で見せるレイアウト。
  *
- * v3 改修点 (重要):
- * - シルエット枠を「番号バッジ + 選手名タイポ」のヒーローカード風に置き換え (画像なし前提)
- * - 選手名の重複表示を削除 (1箇所のみ)
- * - playerType (batter/pitcher) で stats のデフォルトを切替
+ * v4 改修点 (重要):
+ * - ★選手名・番号は表示しない★ (画面上部の phase-b-header に既に表示されているため重複防止)
+ * - プライマリ指標を画面の「主役」として巨大表示
+ * - 比較値併記でドラマ性
+ * - サブ指標は補助情報として小さく
  *
  * layoutData.spotlight スキーマ:
  * {
  *   players: [
  *     {
  *       id: "matsumoto",
- *       name: "松本剛",
- *       number: "9",
- *       label: "26年(今季)",
+ *       label: "26年(今季)",       ← 期間表示
  *       primaryStat: {
  *         label: "WAR",
  *         value: "-0.4",
@@ -29,6 +28,10 @@
  *     }
  *   ]
  * }
+ *
+ * ※ 選手名/番号は projectData.mainPlayer から自動表示されるので、
+ *    layoutData.spotlight の中で name/number を指定する必要はない (ただし、
+ *    player.id で focusEntry 切替には使う)。
  */
 
 import React from 'react';
@@ -46,7 +49,6 @@ function getDefaultStats(playerType, mainPlayerStats) {
       { label: '勝',    value: mainPlayerStats?.win || '-' },
     ];
   }
-  // batter / team / その他はデフォルトで打者扱い
   return [
     { label: '打率', value: mainPlayerStats?.avg || '-' },
     { label: 'OPS',  value: mainPlayerStats?.ops || '-' },
@@ -64,7 +66,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
 
-  // 互換性レイヤ: 二重ネスト ({spotlight:{spotlight:{...}}}) を解除
+  // 互換性レイヤ: 二重ネスト解除
   const _rawData = projectData.layoutData?.spotlight;
   const _unwrapped = (_rawData && typeof _rawData === 'object' && _rawData.spotlight && Array.isArray(_rawData.spotlight.players))
     ? _rawData.spotlight
@@ -74,10 +76,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
     players: [
       {
         id: 'sample',
-        name: projectData.mainPlayer?.name || '選手名',
-        number: projectData.mainPlayer?.number || '',
         label: projectData.mainPlayer?.label || '',
-        // ★playerType で stats のデフォルトを切替★
         stats: getDefaultStats(projectData.playerType, projectData.mainPlayer?.stats),
       },
     ],
@@ -96,80 +95,59 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
     ? player.stats
     : getDefaultStats(projectData.playerType, projectData.mainPlayer?.stats);
 
+  // 期間ラベル (label が無ければ projectData.mainPlayer.label にフォールバック)
+  const periodLabel = player.label || projectData.mainPlayer?.label || '';
+
   return (
     <>
       <div key={`zoom-${animationKey}-${player.id || 'p'}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[34%] px-3">
 
-        {/* ★スポットライト感の背景★ */}
+        {/* スポットライト感の背景 */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: `radial-gradient(ellipse at 50% 30%, ${themeClass.glow}25 0%, transparent 60%)`,
+          background: `radial-gradient(ellipse at 50% 35%, ${themeClass.glow}25 0%, transparent 60%)`,
         }} />
 
-        {/* ★ヒーローカード★ 選手名は1箇所だけ、シルエット画像は廃止し代わりに巨大ナンバー */}
-        <div className="z-20 mb-3 relative bg-zinc-900/80 rounded-2xl border border-zinc-700/50 overflow-hidden backdrop-blur-sm shadow-2xl"
-             style={{
-               background: `linear-gradient(135deg, rgba(24,24,27,0.95) 0%, ${themeClass.glow}20 100%)`,
-               boxShadow: `0 0 32px ${themeClass.glow}30`,
-             }}>
-          {/* 大きな背景番号 (装飾) */}
-          {player.number && (
-            <div className="absolute right-2 top-1 text-[88px] font-black opacity-[0.08] leading-none select-none pointer-events-none"
-                 style={{ color: themeClass.primary }}>
-              {player.number}
-            </div>
-          )}
-
-          <div className="relative p-3">
-            {/* 番号バッジ + 選手名 (★1箇所だけ表示★) */}
-            <div className="flex items-center gap-2 mb-1">
-              {player.number && (
-                <span className={`w-9 h-9 ${themeClass.bg} text-white font-black text-[16px] rounded-md flex items-center justify-center shadow-lg flex-shrink-0`}
-                      style={{ boxShadow: `0 0 12px ${themeClass.glow}, 0 0 0 2px ${themeClass.glow}40` }}>
-                  {player.number}
-                </span>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className={`${themeClass.text} text-[24px] font-black tracking-tighter leading-none truncate`}
-                     style={{ textShadow: `0 0 14px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)` }}>
-                  {player.name}
-                </div>
-                {player.label && (
-                  <div className={`text-[10px] font-bold tracking-widest opacity-70 mt-0.5 ${themeClass.text}`}>
-                    {player.label}
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* 期間ラベル (中央上部、控えめに) */}
+        {periodLabel && (
+          <div className={`z-20 text-center text-[12px] font-bold tracking-widest mb-3 ${themeClass.text} opacity-80`}>
+            ── {periodLabel} ──
           </div>
-        </div>
+        )}
 
-        {/* プライマリ指標 (画面中央に巨大、比較値併記) */}
+        {/* ★プライマリ指標★ 画面のメイン主役、巨大表示 */}
         {player.primaryStat && (
-          <div className="z-20 mb-3 bg-zinc-900/80 rounded-xl border-2 border-zinc-700/60 p-3 backdrop-blur-sm"
-               style={{ boxShadow: `0 0 24px ${themeClass.glow}30` }}>
-            <div className="flex items-end justify-between">
+          <div className="z-20 mb-4 bg-zinc-900/78 rounded-2xl border-2 border-zinc-700/60 p-4 backdrop-blur-sm relative overflow-hidden"
+               style={{ boxShadow: `0 0 32px ${themeClass.glow}40` }}>
+            {/* 装飾: 背景に薄くラベル文字 */}
+            <div className="absolute -top-3 right-2 text-[42px] font-black opacity-[0.06] leading-none select-none pointer-events-none"
+                 style={{ color: themeClass.primary }}>
+              {player.primaryStat.label}
+            </div>
+
+            <div className="relative flex items-end justify-between">
               <div className="flex flex-col">
-                <span className="text-[11px] font-black text-zinc-300 tracking-widest mb-1">
+                <span className="text-[12px] font-black text-zinc-300 tracking-widest mb-1">
                   {player.primaryStat.label}
                 </span>
-                <span className={`text-[48px] font-mono font-black tracking-tighter leading-none ${
+                {/* ★巨大数値★ */}
+                <span className={`text-[60px] font-mono font-black tracking-tighter leading-none ${
                   isNeg ? 'text-red-400' : themeClass.text
                 }`} style={{
                   textShadow: isNeg
-                    ? '0 0 20px rgba(248,113,113,0.7), 0 2px 4px rgba(0,0,0,0.8)'
-                    : `0 0 20px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)`
+                    ? '0 0 24px rgba(248,113,113,0.7), 0 2px 4px rgba(0,0,0,0.8)'
+                    : `0 0 24px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)`
                 }}>
                   {player.primaryStat.value}
                 </span>
               </div>
 
-              {/* 比較値併記 (右寄せ) */}
+              {/* 比較値 (右下) */}
               {compareValue && (
                 <div className="flex flex-col items-end pb-2">
-                  <span className="text-[10px] font-bold text-zinc-500 tracking-wider">
+                  <span className="text-[10px] font-bold text-zinc-500 tracking-wider mb-0.5">
                     {compareValue.label}
                   </span>
-                  <span className="text-[20px] font-mono font-bold text-zinc-300">
+                  <span className="text-[24px] font-mono font-bold text-zinc-300">
                     {compareValue.value}
                   </span>
                 </div>
@@ -178,7 +156,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
           </div>
         )}
 
-        {/* サブ指標グリッド (4個なら2x2、3個なら1x3) */}
+        {/* サブ指標グリッド */}
         {displayStats.length > 0 && (
           <div className={`z-20 grid gap-1.5 mb-2 ${displayStats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {displayStats.map((stat, i) => (
