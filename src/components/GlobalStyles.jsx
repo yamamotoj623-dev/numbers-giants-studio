@@ -628,16 +628,16 @@ const CSS_TEXT = `
   /* アウトロスタック: テロップがトップに移動したので底面にフィット */
   .outro-stack { position: absolute; top: 100px; bottom: 14%; left: 10px; right: 44px; display: flex; flex-direction: column; gap: 7px; z-index: 20; }
 
-  /* サマリー縮小 flex:2.3→1.3 / padding 14→9 / font 20→16 */
-  /* CTA: summary と同等サイズまで縮小 */
-  .outro-summary { flex: 1.4; background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(39,39,42,0.85)); border-radius: 12px; border: 1px solid rgba(249,115,22,0.35); padding: 9px 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: center; }
-  .outro-summary-label { font-size: 9px; color: var(--p); font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 5px; }
-  .outro-summary-title { text-align: center; font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 7px; line-height: 1.25; letter-spacing: -0.6px; }
+  /* === Outro v2 (v5.11.2 改修) === */
+  /* まとめパネル (文字を大きく) */
+  .outro-summary { flex: 1.5; background: linear-gradient(180deg, rgba(24,24,27,0.95), rgba(39,39,42,0.85)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.35); padding: 12px 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: center; }
+  .outro-summary-label { font-size: 10px; color: var(--p); font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 7px; }
+  .outro-summary-title { text-align: center; font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 10px; line-height: 1.25; letter-spacing: -0.6px; }
   .outro-summary-title .accent { color: var(--p); }
-  .outro-points { display: flex; flex-direction: column; gap: 4px; }
-  .outro-point { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: #d4d4d8; font-weight: 700; line-height: 1.3; opacity: 0; transform: translateX(-12px); }
-  .outro-point .check { color: var(--p); font-weight: 900; font-size: 14px; flex-shrink: 0; display: inline-block; opacity: 0; transform: scale(0) rotate(-45deg); line-height: 1.3; }
-  .outro-point strong { color: #fff; font-weight: 900; }
+  .outro-points { display: flex; flex-direction: column; gap: 6px; }
+  .outro-point { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: #d4d4d8; font-weight: 700; line-height: 1.35; opacity: 0; transform: translateX(-12px); }
+  .outro-point .check { color: var(--p); font-weight: 900; font-size: 16px; flex-shrink: 0; display: inline-block; opacity: 0; transform: scale(0) rotate(-45deg); line-height: 1.35; }
+  .outro-point strong { color: #fff; font-weight: 900; font-size: 15px; }
 
   .phase-d.active .outro-point { animation: pointSlideIn 0.4s ease-out forwards; }
   .phase-d.active .outro-point:nth-child(1) { animation-delay: 0.3s; }
@@ -648,30 +648,26 @@ const CSS_TEXT = `
   .phase-d.active .outro-point:nth-child(2) .check { animation-delay: 0.75s; }
   .phase-d.active .outro-point:nth-child(3) .check { animation-delay: 1.05s; }
 
-  /* CTA主役: flex大幅拡大 (actionsボタンは削除、YouTube側ボタンで代替) */
-  /* CTA: 控えめに。summaryと同等サイズ */
-  .outro-cta { flex: 1.2; background: linear-gradient(135deg, var(--p) 0%, #c2410c 100%); border-radius: 12px; padding: 10px 14px; overflow: hidden; box-shadow: 0 6px 18px rgba(249,115,22,0.4); position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-  .phase-d.active .outro-cta { animation: ctaJiggle 3s ease-in-out 1.3s infinite; }
-  .outro-cta::after { content: ''; position: absolute; top: -40%; right: -15%; width: 110px; height: 110px; background: rgba(255,255,255,0.15); border-radius: 50%; }
-  .outro-cta-q { font-size: 17px; color: #fff; font-weight: 900; text-align: center; letter-spacing: -0.4px; line-height: 1.25; position: relative; z-index: 1; }
-  .outro-cta-q .big { font-size: 1.5em; display: inline-block; color: #FFD700; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); margin: 0 2px; }
-  .outro-cta-hint { text-align: center; font-size: 11px; color: rgba(255,255,255,0.95); font-weight: 900; margin-top: 6px; position: relative; z-index: 1; letter-spacing: 0.8px; }
+  /* いいね/登録 アクションボタン (★v5.11.2 で復活、目立たせ★) */
+  .outro-actions { flex: 1; display: flex; gap: 10px; }
+  .outro-action { flex: 1; background: rgba(24,24,27,0.92); border: 2px solid; border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); justify-content: center; position: relative; overflow: hidden; }
+  .outro-action .icon { font-size: 32px; line-height: 1; }
+  .outro-action .lbl { font-size: 13px; font-weight: 900; letter-spacing: 0.3px; line-height: 1.2; text-align: center; }
 
-  /* アクションボタン: 非表示 (YouTube側のいいね/登録ボタンで代替) */
-  .outro-actions { display: none; }
-  .outro-action { flex: 1; background: rgba(39,39,42,0.9); border: 2px solid; border-radius: 12px; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); justify-content: center; position: relative; overflow: hidden; }
-  .outro-action .icon { font-size: 26px; line-height: 1; }
-  .outro-action .lbl { font-size: 12px; font-weight: 900; letter-spacing: 0.5px; line-height: 1; }
-  .outro-action.like { border-color: var(--like); }
-  .outro-action.like .icon { color: var(--like); filter: drop-shadow(0 0 8px rgba(239,68,68,0.6)); animation: pulse-like 1s infinite; }
-  .outro-action.like .lbl { color: var(--like); }
-  @keyframes pulse-like { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
-  .outro-action.sub { border-color: var(--like); background: linear-gradient(180deg, rgba(239,68,68,0.2), rgba(39,39,42,0.9)); }
-  .outro-action.sub .icon { color: var(--like); filter: drop-shadow(0 0 8px rgba(239,68,68,0.6)); }
+  /* いいねボタン: 赤系 + 鼓動アニメ */
+  .outro-action.like { border-color: var(--like); background: linear-gradient(180deg, rgba(239,68,68,0.18), rgba(24,24,27,0.92)); }
+  .outro-action.like .icon { color: var(--like); filter: drop-shadow(0 0 10px rgba(239,68,68,0.7)); animation: pulse-like 1.2s ease-in-out infinite; }
+  .outro-action.like .lbl { color: #fff; }
+  @keyframes pulse-like { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+
+  /* 登録ボタン: 赤系 + 光る帯 */
+  .outro-action.sub { border-color: var(--like); background: linear-gradient(180deg, rgba(239,68,68,0.25), rgba(24,24,27,0.92)); }
+  .outro-action.sub .icon { color: var(--like); filter: drop-shadow(0 0 10px rgba(239,68,68,0.7)); animation: pulse-like 1.2s ease-in-out 0.6s infinite; }
   .outro-action.sub .lbl { color: #fff; }
-
-  .outro-action.sub::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); width: 50%; z-index: 2; pointer-events: none; }
+  .outro-action.sub::before { content: ''; position: absolute; top: 0; left: -50%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); z-index: 2; pointer-events: none; }
   .phase-d.active .outro-action.sub::before { animation: shineSweep 2.5s ease-in-out 1.5s infinite; }
+
+  /* (旧 outro-cta は v2 で廃止) */
 
   /* 出典: NPB+・スポーツナビに戻す */
   .source { position: absolute; bottom: 10px; right: 10px; color: #71717a; font-size: 8px; font-weight: 700; letter-spacing: 1px; z-index: 40; }

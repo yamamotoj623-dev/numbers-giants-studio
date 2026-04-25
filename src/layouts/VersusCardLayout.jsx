@@ -43,7 +43,11 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
     ? _rawData.versus
     : _rawData;
 
-  const data = _unwrapped || {
+  // データ有効性判定: versus は categoryScores[] が必要
+  const _hasValidData = _unwrapped && typeof _unwrapped === 'object' &&
+    Array.isArray(_unwrapped.categoryScores) && _unwrapped.categoryScores.length > 0;
+
+  const data = _hasValidData ? _unwrapped : {
     categoryScores: [
       { label: '打率', rawMain: '.285', rawSub: '.265' },
       { label: '本塁打', rawMain: '12', rawSub: '5' },

@@ -26,6 +26,7 @@ import { TeamContextLayout } from './TeamContextLayout.jsx';
 import { RankingLayout } from './RankingLayout.jsx';
 import { PlayerSpotlightLayout } from './PlayerSpotlightLayout.jsx';
 import { BatterHeatmapLayout } from './BatterHeatmapLayout.jsx';
+import { LayoutErrorBoundary } from '../components/LayoutErrorBoundary.jsx';
 
 const LAYOUT_COMPONENTS = {
   radar_compare: RadarCompareLayout,
@@ -94,7 +95,12 @@ export function LayoutRouter(props) {
 
   return (
     <div className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'}`}>
-      <Layout {...props} />
+      {/* ★Error Boundary でラップ★
+          レイアウトコンポーネントが throw してもアプリ全体が真っ白にならないように。
+          activeLayout を key にすることで、レイアウト切替時にバウンダリ状態をリセット */}
+      <LayoutErrorBoundary key={activeLayout} layoutType={activeLayout}>
+        <Layout {...props} />
+      </LayoutErrorBoundary>
     </div>
   );
 }

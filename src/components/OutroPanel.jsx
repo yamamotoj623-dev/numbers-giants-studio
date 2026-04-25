@@ -1,14 +1,18 @@
 /**
- * OutroPanel v5.0.0 UI確定版
- * デモv15のフェーズDと1対1対応
+ * OutroPanel v2 (改修)
  *
- * 構造:
+ * v2 改修点 (動画テストフィードバック反映):
+ * - ★まとめの文字サイズを大きく★ (16px → 20px、12px → 14px)
+ * - ★いいね/登録ボタンを目立つように★ (display:none を廃止し、視覚的に強調)
+ * - ★コメントで教えて文言を削除★ (ダサい、いいね/登録誘導に振り切る)
+ * - ★二者択一の唐突な疑問は廃止★ (Gemini プロンプト側のルール変更と連動)
+ *
+ * 構造 (v2):
  * - .outro-date (右上・日付)
  * - .outro-avatars (左上・A/Bアバター)
  * - .outro-stack
- *   - .outro-summary (分析まとめタイトル + 3点チェックリスト)
- *   - .outro-cta (視聴者への問いかけ)
- *   - .outro-actions (いいね・登録ボタン)
+ *   - .outro-summary (分析まとめ、文字大きく、3点チェックリスト)
+ *   - .outro-actions (★復活★ いいね・登録ボタン)
  */
 
 import React from 'react';
@@ -35,12 +39,7 @@ export function OutroPanel({ projectData }) {
   const emojiA = '👨‍🏫';
   const emojiB = '🥰';
 
-  // CTA
-  const ctaTitle = projectData.outroCta?.title || `${playerName}の今季`;
-  const ctaBig = projectData.outroCta?.big || '予想';
-  const ctaSuffix = projectData.outroCta?.suffix || 'は？';
-
-  // summary title
+  // summary title (デフォルトは選手名+「の分析」)
   const summaryTitle = projectData.outroSummary?.title || `${playerName}の分析`;
   const summaryAccent = projectData.outroSummary?.accent || 'ポイント';
 
@@ -61,6 +60,7 @@ export function OutroPanel({ projectData }) {
       </div>
 
       <div className="outro-stack">
+        {/* まとめ (文字大きく) */}
         <div className="outro-summary">
           <div className="outro-summary-label">▼ 今日の分析まとめ</div>
           <div className="outro-summary-title">
@@ -77,11 +77,16 @@ export function OutroPanel({ projectData }) {
           </div>
         </div>
 
-        <div className="outro-cta">
-          <div className="outro-cta-q">
-            {ctaTitle}<span className="big">{ctaBig}</span>{ctaSuffix}
+        {/* ★復活★ いいね/登録ボタン */}
+        <div className="outro-actions">
+          <div className="outro-action like">
+            <span className="icon">👍</span>
+            <span className="lbl">役立ったら<br/>いいね！</span>
           </div>
-          <div className="outro-cta-hint">💬 コメントで教えて！</div>
+          <div className="outro-action sub">
+            <span className="icon">🔔</span>
+            <span className="lbl">チャンネル<br/>登録お願い！</span>
+          </div>
         </div>
       </div>
     </>

@@ -106,7 +106,11 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
     ? _rawData.ranking
     : _rawData;
 
-  const data = _unwrapped || {
+  // データ有効性判定: ranking は metrics[] が必要
+  const _hasValidData = _unwrapped && typeof _unwrapped === 'object' &&
+    Array.isArray(_unwrapped.metrics) && _unwrapped.metrics.length > 0;
+
+  const data = _hasValidData ? _unwrapped : {
     mode: 'single',
     mood: 'neutral',
     metrics: [

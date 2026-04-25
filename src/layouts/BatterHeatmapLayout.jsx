@@ -108,7 +108,11 @@ export function BatterHeatmapLayout({ projectData, currentScript, animationKey, 
     ? _rawData.heatmap
     : _rawData;
 
-  const data = _unwrapped || {
+  // データ有効性判定: heatmap は zones[] か vsRight/vsLeft のいずれかが必要
+  const _hasValidData = _unwrapped && typeof _unwrapped === 'object' &&
+    (Array.isArray(_unwrapped.zones) || Array.isArray(_unwrapped.vsRight) || Array.isArray(_unwrapped.vsLeft));
+
+  const data = _hasValidData ? _unwrapped : {
     mode: 'single',
     zones: [
       0.180, 0.240, 0.290,

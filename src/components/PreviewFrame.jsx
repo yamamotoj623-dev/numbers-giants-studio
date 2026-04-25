@@ -209,9 +209,13 @@ export function PreviewFrame({
             phase={phase}
           />
 
-          {/* テロップ (currentIndexでkey更新→id変化のたびにtelopSlideUp発火) */}
+          {/* テロップ
+              ★連続同speakerバグ対策 (v5.11.1)★
+              外側 wrapper の key を speaker だけにすると、A→A→A の連続でリマウントされず
+              .telop-bg のアニメーション (backwards) が発火せず**テロップが切り替わらない**バグになる。
+              currentIndex を key に含めることで、id 変化のたびに外側もリマウント → アニメ毎回発火 */}
           {phase === 'normal' && (
-            <div className="telop-wrap-normal" key={`telop-n-${currentScript?.speaker || 'a'}`}>
+            <div className="telop-wrap-normal" key={`telop-n-${currentScript?.speaker || 'a'}-${currentIndex}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
                 <div
                   className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
@@ -223,7 +227,7 @@ export function PreviewFrame({
             </div>
           )}
           {phase === 'highlight' && (
-            <div className="telop-wrap-hl" key={`telop-h-${currentScript?.speaker || 'a'}`}>
+            <div className="telop-wrap-hl" key={`telop-h-${currentScript?.speaker || 'a'}-${currentIndex}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
                 <div
                   className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
@@ -237,7 +241,7 @@ export function PreviewFrame({
 
           {/* アウトロのテロップ */}
           {phase === 'outro' && currentScript?.text && (
-            <div className="telop-wrap-outro" key={`telop-o-${currentScript?.speaker || 'a'}`}>
+            <div className="telop-wrap-outro" key={`telop-o-${currentScript?.speaker || 'a'}-${currentIndex}`}>
               <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
                 <div
                   className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}

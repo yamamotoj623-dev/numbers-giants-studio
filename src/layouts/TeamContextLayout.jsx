@@ -223,7 +223,11 @@ export function TeamContextLayout({ projectData, currentScript, animationKey, ph
     ? _rawData.context
     : _rawData;
 
-  const data = _unwrapped || {
+  // データ有効性判定: context は batting / pitching / stats のいずれかが必要
+  const _hasValidData = _unwrapped && typeof _unwrapped === 'object' &&
+    (_unwrapped.batting || _unwrapped.pitching || _unwrapped.management || Array.isArray(_unwrapped.stats));
+
+  const data = _hasValidData ? _unwrapped : {
     mode: 'single',
     teamName: '巨人',
     batting: {

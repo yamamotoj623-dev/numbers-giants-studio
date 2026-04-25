@@ -224,7 +224,11 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey, p
     ? _rawData.arsenal
     : _rawData;
 
-  const data = _unwrapped || {
+  // データが有効か判定: arsenal は pitches[] か vsBatter のいずれかが必要
+  const _hasValidData = _unwrapped && typeof _unwrapped === 'object' &&
+    (Array.isArray(_unwrapped.pitches) || (_unwrapped.vsBatter && (_unwrapped.vsBatter.vsRight || _unwrapped.vsBatter.vsLeft)));
+
+  const data = _hasValidData ? _unwrapped : {
     mode: 'single',
     pitches: [
       { name: 'ストレート', pct: 48, avg: 0.255, velocity: 147, color: '#ef4444' },

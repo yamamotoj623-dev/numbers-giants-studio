@@ -72,7 +72,11 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
     ? _rawData.spotlight
     : _rawData;
 
-  const data = _unwrapped || {
+  // データ有効性判定: spotlight は players[] が必要
+  const _hasValidData = _unwrapped && typeof _unwrapped === 'object' &&
+    Array.isArray(_unwrapped.players) && _unwrapped.players.length > 0;
+
+  const data = _hasValidData ? _unwrapped : {
     players: [
       {
         id: 'sample',
