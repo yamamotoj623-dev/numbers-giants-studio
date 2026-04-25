@@ -33,8 +33,17 @@ const LAYOUT_COMPONENTS = {
 };
 
 export function LayoutRouter(props) {
-  // script 優先 → projectData → fallback
-  const scriptLayout = props.currentScript?.layoutType;
+  // ★継承ロジック: scriptsを遡って直近の layoutType 指定を探す★
+  // これにより layoutType:"timeline" を一度指定したら、後続のscriptで未指定でも timeline が継続
+  const scripts = props.projectData?.scripts || [];
+  const currentIndex = props.currentIndex ?? 0;
+  let scriptLayout = null;
+  for (let i = currentIndex; i >= 0; i--) {
+    if (scripts[i]?.layoutType) {
+      scriptLayout = scripts[i].layoutType;
+      break;
+    }
+  }
   const projectLayout = props.projectData?.layoutType;
   const desiredLayout = scriptLayout || projectLayout || 'radar_compare';
 
