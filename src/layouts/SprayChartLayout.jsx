@@ -67,7 +67,7 @@ export function SprayChartLayout({ projectData, currentScript, animationKey , ph
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[30%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[30%] px-3">
 
 
       <div className="mt-8 mb-3 bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">

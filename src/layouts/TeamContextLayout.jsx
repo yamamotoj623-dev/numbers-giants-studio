@@ -50,7 +50,7 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[35%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[35%] px-3">
 
 
       {data.narrative && (

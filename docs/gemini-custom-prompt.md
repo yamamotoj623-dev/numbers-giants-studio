@@ -22,6 +22,17 @@ schemaVersion "5.0.0" 形式。下記スキーマ厳守。
 ✅「増田陸\n四球ゼロ\n29打席」(11字、感情+数字)
 ✅「田中マー君\n別人」(7字、変化ワード)
 ❌「本当の勝者」「現在地」「可能性」「○○2世」(結論ぼかし、予想系)
+❌「〜だった!?」「驚愕の」「ヤバい」(釣り動画認定で逆効果)
+
+★hook の構造順序が超重要 (実データで継続率16%まで悪化した実例あり):
+- 強ワード+具体数字を1〜2行目に置く (3行目は脱落者多発)
+- ❌ 「阿部巨人\nバント捨てて\n大正解」(14字。結論「大正解」が3行目=遅い)
+- ✅ 「犠打80→18\n得点1.3倍」(11字。数字+対比が即見える)
+
+★hook の数字とstats(画面下に出る4項目)は意味的に一致させる:
+- hookが「チームのバント激減=大正解」なら stats=犠打数/得点/勝率/勝ち越し
+- hookが「個人のIsoP急上昇」なら stats=AVG/OPS/HR/RBI
+- ★hookとstatsが矛盾するとミーハー脱落 (例: hook「大正解」なのに stats AVG.228)
 
 # 2. ミーハー優先: 英語指標は「現象を日本語で言ってから」
 順序: 現象 → 補足で英語名 → B が理解確認
@@ -50,6 +61,7 @@ schemaVersion "5.0.0" 形式。下記スキーマ厳守。
   擁護型: luck_dashboard → spray_chart → radar_compare
   対決型: versus_card → pitch_arsenal → versus_card
   チーム型: team_context → timeline → versus_card (vs他球団)
+  順位/比較型: ranking → versus_card → radar_compare (順位提示→個別深掘り)
 
 # 5. テーマ別 playerType と推奨シルエット
 - 個人 (打者): playerType="batter" / silhouette="batter_right" 等
@@ -116,6 +128,25 @@ pitch_arsenal:  layoutData: { arsenal: { pitches:[
 team_context:   layoutData: { context: { mode:"lineup",
                   lineup:[{order:1,name:"泉口",ops:1.013,isMainPlayer:false}, ...],
                   narrative:"短文" } }
+
+ranking:        layoutData: { ranking: { mode:"single"|"multi",
+                  metrics:[
+                    {
+                      id:"ops",
+                      label:"OPS",
+                      kana:"オーピーエス",
+                      unit:"",
+                      entries:[
+                        {rank:1, name:"泉口", value:"1.013", isMainPlayer:false},
+                        {rank:2, name:"ダルベック", value:".980", isMainPlayer:false},
+                        {rank:3, name:"増田陸", value:".724", isMainPlayer:true},
+                        ...10位まで
+                      ]
+                    },
+                    ※ mode:"multi" なら指標を複数 (例: OPS+打率+本塁打 でタブ切替)
+                    ※ currentScript.highlight に metric.id を指定するとそのタブにフォーカス
+                    ※ isMainPlayer:true の選手は強調表示+「◀注目」マーク
+                  ] } }
 </schema_layoutData>
 
 <schema_script>
@@ -208,14 +239,19 @@ script配分(25-30個):
 出力前に以下を自己チェック:
 1. JSON が有効か (構文エラーなし)
 2. id:1 の text が改行込み13字以内か
-3. scripts 総数が25-30個か
-4. 末尾scriptが二択疑問か (定型CTA禁止)
-5. 全主張に数字根拠があるか
-6. 「本当の」「現在地」「可能性」「コメントで教えて」が含まれていないか
-7. 動画内で 2-3 レイアウト切替してるか
-8. 使う layoutType の layoutData が全部入っているか
-9. 専門用語の前に日本語の現象表現があるか
-10. text 内に絵文字を入れてないか
+3. ★id:1 の hook で強ワード+具体数字が1〜2行目に来てるか (3行目に結論置くのはNG)★
+4. ★mainPlayer.stats が hook のテーマと矛盾していないか
+   (例: hook「打線の采配」なら stats=チーム勝率/犠打/得点、選手のAVG等は出さない)★
+5. scripts 総数が25-30個か
+6. 末尾scriptが二択疑問か (定型CTA禁止)
+7. 全主張に数字根拠があるか
+8. 「本当の」「現在地」「可能性」「コメントで教えて」「だった!?」「驚愕の」「ヤバい」が含まれていないか
+9. 動画内で 2-3 レイアウト切替してるか
+10. 使う layoutType の layoutData が全部入っているか
+11. 専門用語の前に日本語の現象表現があるか
+12. text 内に絵文字を入れてないか
+13. ★playerType=team なら mainPlayer.stats は {rank, winRate, runs, runsAllowed, games, hr} 形式★
+14. ★playerType=team なら silhouetteType は team_stadium or team_huddle★
 
 JSON のみ出力。説明文・前置き・後書き全て禁止。
 </final_constraints>

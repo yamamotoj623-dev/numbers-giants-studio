@@ -78,7 +78,7 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey , 
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[35%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[35%] px-3">
 
 
       <div className="mt-8 mb-2 bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
@@ -104,10 +104,10 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey , 
 
       <div className="bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden z-20">
         <div className="px-3 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30 grid grid-cols-[1fr_50px_50px_45px] gap-2 items-center">
-          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">球種</span>
-          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest text-right">配分</span>
-          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest text-right">球速</span>
-          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest text-right">被打率</span>
+          <span className="text-[9px] font-black text-zinc-500 tracking-widest">球種</span>
+          <span className="text-[9px] font-black text-zinc-500 tracking-widest text-right">配分</span>
+          <span className="text-[9px] font-black text-zinc-500 tracking-widest text-right">球速</span>
+          <span className="text-[9px] font-black text-zinc-500 tracking-widest text-right">被打率</span>
         </div>
         {data.pitches.map((pitch, i) => {
           const isBest = pitch.avg === Math.min(...data.pitches.map(p => p.avg));

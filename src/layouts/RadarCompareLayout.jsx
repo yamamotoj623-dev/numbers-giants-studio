@@ -161,7 +161,7 @@ function HighlightView({ projectData, comp }) {
         <div className="hl-context-row">
           {comp.desc && (
             <div className="hl-why-compact">
-              <div className="label">WHY</div>
+              <div className="label">理由</div>
               <div className="text">{renderWhyText(comp.desc)}</div>
             </div>
           )}

@@ -82,9 +82,8 @@ const CSS_TEXT = `
   /* アニメ */
   /* ================================================================ */
   @keyframes hookLineIn {
-    0% { opacity: 0; transform: translateY(20px) scale(0.85); filter: blur(4px); }
-    60% { opacity: 1; transform: translateY(-3px) scale(1.05); filter: blur(0); }
-    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    0% { opacity: 0; transform: translateY(8px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   @keyframes hookShake {
@@ -233,11 +232,11 @@ const CSS_TEXT = `
   .phase-a.active.anim-pop .telop-hook .line-5 { animation: hookLineIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.4s forwards; }
 
   /* シェイクモード（1行ずつシェイクイン、1.5秒の長尺シェイク） */
-  .phase-a.active.anim-shake .telop-hook .line-1 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-2 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.1s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-3 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.2s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-4 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.3s forwards; }
-  .phase-a.active.anim-shake .telop-hook .line-5 { animation: hookShake 1.5s cubic-bezier(0.36,0.07,0.19,0.97) 0.4s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-1 { animation: hookShake 0.7s cubic-bezier(0.36,0.07,0.19,0.97) 0s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-2 { animation: hookShake 0.7s cubic-bezier(0.36,0.07,0.19,0.97) 0.05s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-3 { animation: hookShake 0.7s cubic-bezier(0.36,0.07,0.19,0.97) 0.1s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-4 { animation: hookShake 0.7s cubic-bezier(0.36,0.07,0.19,0.97) 0.15s forwards; }
+  .phase-a.active.anim-shake .telop-hook .line-5 { animation: hookShake 0.7s cubic-bezier(0.36,0.07,0.19,0.97) 0.2s forwards; }
 
   /* hookAnimation オーバーライド用の追加パターン */
   @keyframes hookSlide {
@@ -246,9 +245,9 @@ const CSS_TEXT = `
     100% { opacity: 1; transform: translateX(0); }
   }
   @keyframes hookZoom {
-    0% { opacity: 0; transform: scale(3); filter: blur(8px); }
-    60% { opacity: 1; transform: scale(0.95); filter: blur(0); }
-    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+    0% { opacity: 0; transform: scale(2); }
+    60% { opacity: 1; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
   }
   @keyframes hookFade {
     0% { opacity: 0; }
@@ -348,19 +347,19 @@ const CSS_TEXT = `
   /* テロップ配置: 話者側に寄せる(非話者アイコンと被らないように) */
   /* Shorts右サイドのYouTube UI (いいね・コメント・共有) を避けるため右padding大きめ
      左: ロゴエリア 14px + 余白 / 右: 12% (セーフゾーン想定) */
-  .telop-wrap-normal { position: absolute; bottom: 20%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 44px 0 14px; align-items: center; }
-  .telop-wrap-hl { position: absolute; bottom: 20%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 44px 0 72px; align-items: center; }
+  .telop-wrap-normal { position: absolute; bottom: 20%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 14px; align-items: center; }
+  .telop-wrap-hl { position: absolute; bottom: 20%; left: 0; right: 0; display: flex; flex-direction: column; z-index: 30; pointer-events: none; padding: 0 14px; align-items: center; }
 
   /* デフォルト配置=中央 */
   .telop-wrap-normal, .telop-wrap-hl { align-items: center; }
-  /* speaker-a(左アナリスト)が喋る場合: テロップを左寄りに */
+  /* speaker-a(左アナリスト)が喋る場合: 左寄り、Aアバター(left:14px+46px幅)を避けて padding-left: 70px */
   .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 75px; padding-right: 115px; }
-  /* speaker-b(右ファン)が喋る場合: テロップを右寄りに（Bアバターright:14px+46px幅+余白） */
+  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 70px; padding-right: 14px; }
+  /* speaker-b(右ファン)が喋る場合: 右寄り、Bアバター(right:14px+46px幅)を避けて padding-right: 70px */
   .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 115px; padding-right: 90px; }
+  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 14px; padding-right: 70px; }
 
-  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 210px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 270px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
 
   /* speaker-a: オレンジ枠 */
   .telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); box-shadow: 0 4px 16px rgba(249,115,22,0.35), 0 0 24px rgba(249,115,22,0.15); }
@@ -437,8 +436,9 @@ const CSS_TEXT = `
   /* 上部: バッジ・kana・IsoD を1行に圧縮 */
   .hl-header-compact { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; min-width: 0; }
   .hl-radar-badge { font-size: 9px; font-weight: 900; color: #fff; background: var(--p); padding: 3px 8px; border-radius: 12px; flex-shrink: 0; white-space: nowrap; }
+  .hl-label-group { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: 1; min-width: 0; }
   .hl-label-compact { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; flex-shrink: 0; }
-  .hl-kana-compact { font-size: 9px; font-weight: 700; color: var(--p); letter-spacing: 0.5px; line-height: 1.15; overflow-wrap: anywhere; word-break: break-all; flex: 1; min-width: 0; text-align: right; }
+  .hl-kana-compact { font-size: 10px; font-weight: 700; color: var(--p); letter-spacing: 0.5px; line-height: 1; }
 
   /* コンパクト計算式 */
   .hl-formula-compact { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; padding: 3px 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(63,63,70,0.6); border-radius: 6px; }

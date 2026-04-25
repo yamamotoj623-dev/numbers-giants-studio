@@ -39,11 +39,11 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[30%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[30%] px-3">
 
       <div className="mt-8 mb-2 bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-xl border border-zinc-700/50 p-3 shadow-2xl z-20">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-black text-zinc-400 tracking-widest">UNLUCKY SCORE</span>
+          <span className="text-[10px] font-black text-zinc-400 tracking-widest">不運度スコア</span>
           <span className="text-[9px] text-zinc-500">0-100</span>
         </div>
         <div className="flex items-baseline gap-2 mb-2">
@@ -79,7 +79,7 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
 function MetricCard({ label, value, color, sub }) {
   return (
     <div className="bg-zinc-900/80 border border-zinc-700/50 rounded-lg p-2">
-      <div className="text-[8px] font-black text-zinc-500 tracking-widest uppercase mb-0.5">{label}</div>
+      <div className="text-[8px] font-black text-zinc-500 tracking-widest mb-0.5">{label}</div>
       <div className={`text-[18px] font-mono font-black tracking-tighter ${color}`}>{value}</div>
       {sub && <div className="text-[7px] text-zinc-500 mt-0.5">{sub}</div>}
     </div>

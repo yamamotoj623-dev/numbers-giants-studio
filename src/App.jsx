@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack, Volume2, VolumeX } from 'lucide-react';
+import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack, Volume2, VolumeX, Download, Loader2 } from 'lucide-react';
 
 import { APP_VERSION } from './lib/config';
 import { defaultBatterData } from './data/defaultBatter';
 import { defaultPitcherData } from './data/defaultPitcher';
 import { usePlaybackEngine } from './hooks/usePlaybackEngine';
+import { useVideoRecorder } from './hooks/useVideoRecorder';
 import { GlobalStyles } from './components/GlobalStyles.jsx';
 import { PreviewFrame } from './components/PreviewFrame.jsx';
 import { TTSPanel } from './components/TTSPanel.jsx';
@@ -61,6 +62,41 @@ const App = () => {
     reset,
   } = usePlaybackEngine(projectData, { ttsEngine, speechRate, isVoiceEnabled, isSEEnabled, isBgmEnabled });
 
+  // 動画録画
+  const { isRecording, errorMessage: recordError, startRecording, stopRecording } = useVideoRecorder();
+  const [recordRequested, setRecordRequested] = useState(false);
+
+  // 録画中に再生が終わったら自動停止
+  useEffect(() => {
+    if (recordRequested && isRecording && !isPlaying && elapsedTime > 1) {
+      // 再生が止まり、かつ少しでも経過してる → 終了したと判断
+      const t = setTimeout(() => {
+        stopRecording();
+        setRecordRequested(false);
+      }, 500);  // 末尾余韻
+      return () => clearTimeout(t);
+    }
+  }, [isPlaying, elapsedTime, isRecording, recordRequested, stopRecording]);
+
+  const handleRecordVideo = async () => {
+    if (isRecording) {
+      stopRecording();
+      setRecordRequested(false);
+      return;
+    }
+    if (isPlaying) togglePlay();  // 再生中なら一旦停止
+    reset();
+    const playerName = projectData?.mainPlayer?.name || 'shorts';
+    const today = new Date().toISOString().slice(0, 10);
+    const filename = `${playerName}_${today}.webm`.replace(/[\\/:*?"<>|\s]/g, '_');
+    const ok = await startRecording({ filename });
+    if (ok) {
+      setRecordRequested(true);
+      // 少し待って自動再生
+      setTimeout(() => togglePlay(), 300);
+    }
+  };
+
   const loadTemplate = (type) => {
     const tpl = type === 'batter' ? defaultBatterData : defaultPitcherData;
     setProjectData(tpl);
@@ -104,6 +140,26 @@ const App = () => {
             <div>{quotaWarning}</div>
           </div>
           <button onClick={() => setQuotaWarning(null)} className="text-white hover:bg-amber-600 rounded p-1 text-xs">✕</button>
+        </div>
+      )}
+
+      {/* 録画状態 / エラー */}
+      {(isRecording || recordError) && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[9999] ${isRecording ? 'bg-red-500' : 'bg-rose-600'} text-white px-5 py-3 rounded-lg shadow-xl font-bold text-sm max-w-lg flex items-center gap-3`}>
+          {isRecording ? (
+            <>
+              <Loader2 size={20} className="animate-spin"/>
+              <div className="flex-1">
+                <div className="text-xs font-normal opacity-90">動画録画中…</div>
+                <div>動画は再生終了後に自動でダウンロードされます</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-xl">⚠️</span>
+              <div className="flex-1">{recordError}</div>
+            </>
+          )}
         </div>
       )}
 
@@ -248,6 +304,13 @@ const App = () => {
               </div>
               <button onClick={reset} className="text-zinc-400 hover:text-zinc-800 bg-zinc-100 hover:bg-zinc-200 p-3 rounded-full transition">
                 <RotateCcw size={18}/>
+              </button>
+              <button
+                onClick={handleRecordVideo}
+                className={`p-3 rounded-full transition ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
+                title={isRecording ? '録画停止 (自動停止します)' : '動画ダウンロード (画面共有→自動再生→自動保存)'}
+              >
+                {isRecording ? <Loader2 size={18} className="animate-spin"/> : <Download size={18}/>}
               </button>
             </div>
 

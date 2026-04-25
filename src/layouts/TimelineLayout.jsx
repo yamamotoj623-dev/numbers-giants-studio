@@ -53,7 +53,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
   const isHighlight = phase === 'highlight' && highlightComp;
 
   return (
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-center relative z-10 w-full pt-7 pb-[30%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[30%] px-3">
       {/* ハイライト時はチャートを上に縮小、下にHighlightCard */}
       <div className={`z-20 ${isHighlight ? 'mb-1' : 'mb-3'} w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-500`} style={isHighlight ? { transform: 'scale(0.7)', transformOrigin: 'top center' } : {}}>
         <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">

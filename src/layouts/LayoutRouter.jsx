@@ -18,6 +18,7 @@ import { PitchHeatmapLayout } from './PitchHeatmapLayout.jsx';
 import { VersusCardLayout } from './VersusCardLayout.jsx';
 import { PitchArsenalLayout } from './PitchArsenalLayout.jsx';
 import { TeamContextLayout } from './TeamContextLayout.jsx';
+import { RankingLayout } from './RankingLayout.jsx';
 
 const LAYOUT_COMPONENTS = {
   radar_compare: RadarCompareLayout,
@@ -28,6 +29,7 @@ const LAYOUT_COMPONENTS = {
   versus_card: VersusCardLayout,
   pitch_arsenal: PitchArsenalLayout,
   team_context: TeamContextLayout,
+  ranking: RankingLayout,
 };
 
 export function LayoutRouter(props) {

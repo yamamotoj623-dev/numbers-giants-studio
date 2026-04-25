@@ -168,7 +168,7 @@ export function PreviewFrame({
             </div>
           </div>
           <div className="hook-stats-big">
-            <div className="title">▼ SEASON STATS</div>
+            <div className="title">▼ 今季成績</div>
             <div className="hook-stats-grid">
               {renderHookStatsCells(projectData)}
             </div>
