@@ -66,11 +66,31 @@ export function useVideoRecorder({ getAudioStream } = {}) {
       ]);
 
       // 4. MediaRecorder セットアップ
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-        ? 'video/webm;codecs=vp9,opus'
-        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
-          ? 'video/webm;codecs=vp8,opus'
-          : 'video/webm';
+      // ★Chrome系は mp4 直接出力対応済み (2024-)。mp4 を最優先に試す★
+      const mp4Candidates = [
+        'video/mp4;codecs=avc1.64003E,mp4a.40.2',  // H.264 High + AAC (YouTube直アップ可)
+        'video/mp4;codecs=avc1,mp4a',
+        'video/mp4',
+      ];
+      const webmCandidates = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+      ];
+      let mimeType = '';
+      let extension = 'mp4';
+      for (const t of mp4Candidates) {
+        if (MediaRecorder.isTypeSupported(t)) { mimeType = t; extension = 'mp4'; break; }
+      }
+      if (!mimeType) {
+        for (const t of webmCandidates) {
+          if (MediaRecorder.isTypeSupported(t)) { mimeType = t; extension = 'webm'; break; }
+        }
+      }
+      if (!mimeType) {
+        setErrorMessage('録画形式が選べませんでした。ブラウザを更新してお試しください。');
+        return false;
+      }
 
       const recorder = new MediaRecorder(combinedStream, {
         mimeType,
@@ -79,6 +99,9 @@ export function useVideoRecorder({ getAudioStream } = {}) {
       });
       recorderRef.current = recorder;
       chunksRef.current = [];
+
+      // 出力ファイル名の拡張子を実際のフォーマットに合わせる
+      const finalFilename = filename.replace(/\.(mp4|webm)$/i, '') + '.' + extension;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -95,7 +118,7 @@ export function useVideoRecorder({ getAudioStream } = {}) {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = filename;
+          a.download = finalFilename;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);

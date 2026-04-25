@@ -88,7 +88,7 @@ const App = () => {
     reset();
     const playerName = projectData?.mainPlayer?.name || 'shorts';
     const today = new Date().toISOString().slice(0, 10);
-    const filename = `${playerName}_${today}.webm`.replace(/[\\/:*?"<>|\s]/g, '_');
+    const filename = `${playerName}_${today}.mp4`.replace(/[\\/:*?"<>|\s]/g, '_');
     const ok = await startRecording({ filename });
     if (ok) {
       setRecordRequested(true);
