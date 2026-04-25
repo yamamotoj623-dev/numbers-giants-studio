@@ -79,7 +79,7 @@ function SingleOrCompareView({ data, themeClass }) {
 
   return (
     <>
-      <div className="mb-2 bg-zinc-900/85 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
+      <div className="mb-2 bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
         <div className="px-3 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30">
           <span className={`${themeClass.text} text-[12px] font-black`}>
             球種配分 & 被打率 {isCompare && <span className="text-zinc-400 ml-1 text-[10px]">(vs {data.compareLabel || '比較'})</span>}
@@ -90,8 +90,8 @@ function SingleOrCompareView({ data, themeClass }) {
         </div>
       </div>
 
-      <div className="bg-zinc-900/85 rounded-xl border border-zinc-700/50 overflow-hidden backdrop-blur-sm z-20">
-        <div className="px-3 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30 grid grid-cols-[1fr_56px_56px_56px] gap-2 items-center">
+      <div className="bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden backdrop-blur-sm z-20">
+        <div className="px-3 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30 grid grid-cols-[1.4fr_46px_50px_50px] gap-2 items-center">
           <span className="text-[12px] font-black text-zinc-500 tracking-widest">球種</span>
           <span className="text-[12px] font-black text-zinc-500 tracking-widest text-right">配分</span>
           <span className="text-[12px] font-black text-zinc-500 tracking-widest text-right">球速</span>
@@ -103,10 +103,10 @@ function SingleOrCompareView({ data, themeClass }) {
           // 比較時の変化矢印
           const pctDelta = cmp ? pitch.pct - cmp.pct : null;
           return (
-            <div key={i} className="px-3 py-2 border-b border-zinc-800 last:border-b-0 grid grid-cols-[1fr_56px_56px_56px] gap-2 items-center">
+            <div key={i} className="px-3 py-2 border-b border-zinc-800 last:border-b-0 grid grid-cols-[1.4fr_46px_50px_50px] gap-2 items-center">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: pitch.color, boxShadow: `0 0 6px ${pitch.color}` }} />
-                <span className="text-[13px] font-black text-white truncate">{pitch.name}</span>
+                <span className="text-[13px] font-black text-white leading-tight">{pitch.name}</span>
                 {isBest && <span className="text-[10px] bg-amber-500 text-black font-black px-1 py-0.5 rounded flex-shrink-0">武器</span>}
               </div>
               <div className="text-right">
@@ -154,7 +154,7 @@ function VsBatterView({ data, themeClass }) {
 
       <div className="grid grid-cols-2 gap-2 z-20">
         {/* 対右打者 */}
-        <div className="bg-zinc-900/85 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
+        <div className="bg-zinc-900/78 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
           <div className="px-2 py-1 bg-zinc-800/40 border-b border-zinc-700/50 text-center">
             <span className="text-[11px] font-black text-zinc-200">対右打者</span>
           </div>
@@ -175,7 +175,7 @@ function VsBatterView({ data, themeClass }) {
         </div>
 
         {/* 対左打者 */}
-        <div className="bg-zinc-900/85 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
+        <div className="bg-zinc-900/78 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
           <div className="px-2 py-1 bg-zinc-800/40 border-b border-zinc-700/50 text-center">
             <span className="text-[11px] font-black text-zinc-200">対左打者</span>
           </div>
@@ -212,7 +212,14 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey, p
   const isHighlight = phase === 'highlight' && highlightComp;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
-  const data = projectData.layoutData?.arsenal || {
+
+  // 互換性レイヤ: 二重ネスト ({arsenal:{arsenal:{...}}}) を解除
+  const _rawData = projectData.layoutData?.arsenal;
+  const _unwrapped = (_rawData && typeof _rawData === 'object' && _rawData.arsenal)
+    ? _rawData.arsenal
+    : _rawData;
+
+  const data = _unwrapped || {
     mode: 'single',
     pitches: [
       { name: 'ストレート', pct: 48, avg: 0.255, velocity: 147, color: '#ef4444' },

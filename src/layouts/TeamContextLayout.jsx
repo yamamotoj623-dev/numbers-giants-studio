@@ -81,7 +81,7 @@ function TeamSingleView({ data, themeClass }) {
 
       {/* 打線ブロック */}
       {data.batting && (
-        <div className="z-20 mb-1.5 bg-zinc-900/85 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
+        <div className="z-20 mb-1.5 bg-zinc-900/78 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
           <div className={`px-2.5 py-1 ${themeClass.bg}/20 border-b border-zinc-700/50 flex items-center justify-between`}>
             <span className={`${themeClass.text} text-[11px] font-black tracking-widest`}>【打線】</span>
             {data.batting.note && (
@@ -105,7 +105,7 @@ function TeamSingleView({ data, themeClass }) {
 
       {/* 投手ブロック */}
       {data.pitching && (
-        <div className="z-20 mb-1.5 bg-zinc-900/85 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
+        <div className="z-20 mb-1.5 bg-zinc-900/78 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
           <div className="px-2.5 py-1 bg-sky-900/20 border-b border-zinc-700/50 flex items-center justify-between">
             <span className="text-sky-300 text-[11px] font-black tracking-widest">【投手】</span>
             {data.pitching.note && (
@@ -129,7 +129,7 @@ function TeamSingleView({ data, themeClass }) {
 
       {/* 采配ブロック */}
       {data.management && (
-        <div className="z-20 bg-zinc-900/85 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
+        <div className="z-20 bg-zinc-900/78 rounded-lg border border-zinc-700/50 overflow-hidden backdrop-blur-sm">
           <div className="px-2.5 py-1 bg-zinc-800/40 border-b border-zinc-700/50 flex items-center justify-between">
             <span className="text-zinc-300 text-[11px] font-black tracking-widest">【采配】</span>
             {data.management.note && (
@@ -162,7 +162,7 @@ function TeamCompareView({ data, themeClass }) {
         </span>
       </div>
 
-      <div className="z-20 bg-zinc-900/85 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm">
+      <div className="z-20 bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm">
         {data.stats?.map((stat, i) => {
           const mainBetter = stat.mainBetter;
           return (
@@ -216,7 +216,14 @@ export function TeamContextLayout({ projectData, currentScript, animationKey, ph
   const isHighlight = phase === 'highlight' && highlightComp;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
-  const data = projectData.layoutData?.context || {
+
+  // 互換性レイヤ: 二重ネスト ({context:{context:{...}}}) を解除
+  const _rawData = projectData.layoutData?.context;
+  const _unwrapped = (_rawData && typeof _rawData === 'object' && _rawData.context)
+    ? _rawData.context
+    : _rawData;
+
+  const data = _unwrapped || {
     mode: 'single',
     teamName: '巨人',
     batting: {

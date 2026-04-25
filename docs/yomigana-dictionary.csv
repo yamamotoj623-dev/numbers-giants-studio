@@ -3,7 +3,7 @@ category,kanji,yomi,note
 # 読み仮名辞書『数字で見るG党』 v3
 # 取得日: 2026-04-25
 # 出典: NPB公式 (https://npb.jp/bis/teams/) 各球団 2026年度 選手一覧
-# 用途: TTS (Gemini Charon/Puck) 誤読防止
+# 用途: TTS (Gemini Charon=A 数原さん / Kore=B もえかちゃん) 誤読防止
 # 仕組み: speech フィールドの完全一致置換 (kanji → yomi)
 # 注意: 「.276」など数値の動的読み上げは AI 側の speech 生成ルールで対応
 # ===================================================================

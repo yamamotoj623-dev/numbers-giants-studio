@@ -101,7 +101,14 @@ export function BatterHeatmapLayout({ projectData, currentScript, animationKey, 
   const isHighlight = phase === 'highlight' && highlightComp;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
-  const data = projectData.layoutData?.heatmap || {
+
+  // 互換性レイヤ: 二重ネスト ({heatmap:{heatmap:{...}}}) を解除
+  const _rawData = projectData.layoutData?.heatmap;
+  const _unwrapped = (_rawData && typeof _rawData === 'object' && _rawData.heatmap)
+    ? _rawData.heatmap
+    : _rawData;
+
+  const data = _unwrapped || {
     mode: 'single',
     zones: [
       0.180, 0.240, 0.290,
@@ -124,7 +131,7 @@ export function BatterHeatmapLayout({ projectData, currentScript, animationKey, 
         </div>
 
         {/* メインコンテンツ */}
-        <div className="z-20 bg-zinc-900/85 rounded-xl border border-zinc-700/50 p-3 backdrop-blur-sm shadow-2xl">
+        <div className="z-20 bg-zinc-900/78 rounded-xl border border-zinc-700/50 p-3 backdrop-blur-sm shadow-2xl">
           {mode === 'vs_handedness' ? (
             <div className="grid grid-cols-2 gap-2">
               <HeatmapGrid zones={data.vsRight} label="対右投手" themeClass={themeClass} />

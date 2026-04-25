@@ -1,8 +1,13 @@
 /**
- * layoutType: player_spotlight (v2)
- * 1選手の主役感・ポートレート感を演出するレイアウト。
+ * layoutType: player_spotlight (v3)
+ * 1選手の主役感を演出するレイアウト。
  *
- * layoutData.spotlight スキーマ (v2):
+ * v3 改修点 (重要):
+ * - シルエット枠を「番号バッジ + 選手名タイポ」のヒーローカード風に置き換え (画像なし前提)
+ * - 選手名の重複表示を削除 (1箇所のみ)
+ * - playerType (batter/pitcher) で stats のデフォルトを切替
+ *
+ * layoutData.spotlight スキーマ:
  * {
  *   players: [
  *     {
@@ -10,35 +15,45 @@
  *       name: "松本剛",
  *       number: "9",
  *       label: "26年(今季)",
- *       silhouette: "batter_right",
  *       primaryStat: {
  *         label: "WAR",
  *         value: "-0.4",
  *         isNegative: true,
- *         compareValue?: { value: "0.0", label: "セ平均" }    // ★比較値併記 (新)
+ *         compareValue?: { value: "0.0", label: "セ平均" }
  *       },
  *       stats: [
- *         { label: "打率",  value: ".220", sub?: "(.265)" },
- *         { label: "OPS",   value: ".590" },
+ *         { label: "打率",  value: ".220" },
  *         ...
  *       ],
- *       comment: "外野守備が課題。打撃も復調せず",
+ *       comment: "..."
  *     }
  *   ]
  * }
- *
- * v2 改修点:
- * - シルエットを劇画タッチで巨大化 (110px → 140px)
- * - サインカード風の選手名表示
- * - プライマリ指標の比較値併記対応
- * - スポットライト感のある背景演出
  */
 
 import React from 'react';
 import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
-import { Silhouette } from '../components/Silhouettes.jsx';
+
+// 投手/打者で stats の自動デフォルトを切替
+function getDefaultStats(playerType, mainPlayerStats) {
+  if (playerType === 'pitcher') {
+    return [
+      { label: '防御率', value: mainPlayerStats?.era || '-' },
+      { label: 'WHIP',  value: mainPlayerStats?.whip || '-' },
+      { label: '奪三振', value: mainPlayerStats?.so || '-' },
+      { label: '勝',    value: mainPlayerStats?.win || '-' },
+    ];
+  }
+  // batter / team / その他はデフォルトで打者扱い
+  return [
+    { label: '打率', value: mainPlayerStats?.avg || '-' },
+    { label: 'OPS',  value: mainPlayerStats?.ops || '-' },
+    { label: '本塁打', value: mainPlayerStats?.hr || '-' },
+    { label: '打点', value: mainPlayerStats?.rbi || '-' },
+  ];
+}
 
 export function PlayerSpotlightLayout({ projectData, currentScript, animationKey, phase = 'normal' }) {
   if (phase === 'hook') return null;
@@ -48,113 +63,126 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   const isHighlight = phase === 'highlight' && highlightComp;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
-  const data = projectData.layoutData?.spotlight || {
+
+  // 互換性レイヤ: 二重ネスト ({spotlight:{spotlight:{...}}}) を解除
+  const _rawData = projectData.layoutData?.spotlight;
+  const _unwrapped = (_rawData && typeof _rawData === 'object' && _rawData.spotlight && Array.isArray(_rawData.spotlight.players))
+    ? _rawData.spotlight
+    : _rawData;
+
+  const data = _unwrapped || {
     players: [
       {
         id: 'sample',
         name: projectData.mainPlayer?.name || '選手名',
         number: projectData.mainPlayer?.number || '',
         label: projectData.mainPlayer?.label || '',
-        silhouette: projectData.silhouetteType,
-        primaryStat: { label: 'OPS', value: '.724', isNegative: false },
-        stats: [
-          { label: '打率', value: '.276' },
-          { label: 'HR',   value: '5' },
-          { label: '打点', value: '18' },
-          { label: '盗塁', value: '2' },
-        ],
+        // ★playerType で stats のデフォルトを切替★
+        stats: getDefaultStats(projectData.playerType, projectData.mainPlayer?.stats),
       },
     ],
   };
 
   const focusId = currentScript?.focusEntry;
-  const player = (focusId && data.players.find(p => p.id === focusId || p.name === focusId))
-    || data.players[0];
+  const player = (focusId && data.players?.find(p => p.id === focusId || p.name === focusId))
+    || data.players?.[0]
+    || {};
 
-  const sil = player.silhouette || projectData.silhouetteType || 'batter_right';
   const isNeg = player.primaryStat?.isNegative;
   const compareValue = player.primaryStat?.compareValue;
 
+  // stats が無いか空なら playerType で自動補完
+  const displayStats = (player.stats && player.stats.length > 0)
+    ? player.stats
+    : getDefaultStats(projectData.playerType, projectData.mainPlayer?.stats);
+
   return (
     <>
-      <div key={`zoom-${animationKey}-${player.id}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[32%] px-3">
+      <div key={`zoom-${animationKey}-${player.id || 'p'}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[34%] px-3">
 
-        {/* ★スポットライト感の背景★ シルエット背後にうっすらラジアルグラデ */}
+        {/* ★スポットライト感の背景★ */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: `radial-gradient(ellipse at 30% 35%, ${themeClass.glow}22 0%, transparent 55%)`,
+          background: `radial-gradient(ellipse at 50% 30%, ${themeClass.glow}25 0%, transparent 60%)`,
         }} />
 
-        {/* 選手番号 + 名前 (サインカード風) */}
-        <div className="z-20 flex items-center justify-center gap-2 mb-1.5">
+        {/* ★ヒーローカード★ 選手名は1箇所だけ、シルエット画像は廃止し代わりに巨大ナンバー */}
+        <div className="z-20 mb-3 relative bg-zinc-900/80 rounded-2xl border border-zinc-700/50 overflow-hidden backdrop-blur-sm shadow-2xl"
+             style={{
+               background: `linear-gradient(135deg, rgba(24,24,27,0.95) 0%, ${themeClass.glow}20 100%)`,
+               boxShadow: `0 0 32px ${themeClass.glow}30`,
+             }}>
+          {/* 大きな背景番号 (装飾) */}
           {player.number && (
-            <span className={`w-10 h-10 ${themeClass.bg} text-white font-black text-[18px] rounded-md flex items-center justify-center shadow-lg`}
-                  style={{ boxShadow: `0 4px 12px ${themeClass.glow}, 0 0 0 2px ${themeClass.glow}40` }}>
+            <div className="absolute right-2 top-1 text-[88px] font-black opacity-[0.08] leading-none select-none pointer-events-none"
+                 style={{ color: themeClass.primary }}>
               {player.number}
-            </span>
+            </div>
           )}
-          <span className={`${themeClass.text} text-[26px] font-black tracking-tighter leading-none`}
-                style={{ textShadow: `0 0 16px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)` }}>
-            {player.name}
-          </span>
+
+          <div className="relative p-3">
+            {/* 番号バッジ + 選手名 (★1箇所だけ表示★) */}
+            <div className="flex items-center gap-2 mb-1">
+              {player.number && (
+                <span className={`w-9 h-9 ${themeClass.bg} text-white font-black text-[16px] rounded-md flex items-center justify-center shadow-lg flex-shrink-0`}
+                      style={{ boxShadow: `0 0 12px ${themeClass.glow}, 0 0 0 2px ${themeClass.glow}40` }}>
+                  {player.number}
+                </span>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className={`${themeClass.text} text-[24px] font-black tracking-tighter leading-none truncate`}
+                     style={{ textShadow: `0 0 14px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)` }}>
+                  {player.name}
+                </div>
+                {player.label && (
+                  <div className={`text-[10px] font-bold tracking-widest opacity-70 mt-0.5 ${themeClass.text}`}>
+                    {player.label}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-        {player.label && (
-          <div className={`z-20 text-center text-[11px] font-bold tracking-widest opacity-80 mb-2 ${themeClass.text}`}>
-            ── {player.label} ──
+
+        {/* プライマリ指標 (画面中央に巨大、比較値併記) */}
+        {player.primaryStat && (
+          <div className="z-20 mb-3 bg-zinc-900/80 rounded-xl border-2 border-zinc-700/60 p-3 backdrop-blur-sm"
+               style={{ boxShadow: `0 0 24px ${themeClass.glow}30` }}>
+            <div className="flex items-end justify-between">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black text-zinc-300 tracking-widest mb-1">
+                  {player.primaryStat.label}
+                </span>
+                <span className={`text-[48px] font-mono font-black tracking-tighter leading-none ${
+                  isNeg ? 'text-red-400' : themeClass.text
+                }`} style={{
+                  textShadow: isNeg
+                    ? '0 0 20px rgba(248,113,113,0.7), 0 2px 4px rgba(0,0,0,0.8)'
+                    : `0 0 20px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)`
+                }}>
+                  {player.primaryStat.value}
+                </span>
+              </div>
+
+              {/* 比較値併記 (右寄せ) */}
+              {compareValue && (
+                <div className="flex flex-col items-end pb-2">
+                  <span className="text-[10px] font-bold text-zinc-500 tracking-wider">
+                    {compareValue.label}
+                  </span>
+                  <span className="text-[20px] font-mono font-bold text-zinc-300">
+                    {compareValue.value}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* シルエット (劇画タッチ・巨大) + プライマリ指標 */}
-        <div className="z-20 grid grid-cols-[140px_1fr] gap-3 mb-3 items-center">
-          {/* シルエット枠 */}
-          <div className="w-full h-[140px] flex items-center justify-center relative overflow-hidden rounded-xl border border-zinc-700/40"
-               style={{
-                 background: `linear-gradient(135deg, ${themeClass.glow}15 0%, rgba(0,0,0,0.4) 100%)`,
-                 boxShadow: `inset 0 0 40px ${themeClass.glow}30`
-               }}>
-            {/* スポットライトの円 */}
-            <div className="absolute inset-0" style={{
-              background: `radial-gradient(circle at center, ${themeClass.glow}40 0%, transparent 65%)`,
-            }} />
-            <div className="relative z-10 transform scale-110">
-              <Silhouette type={sil} themeClass={themeClass} />
-            </div>
-          </div>
-
-          {/* プライマリ指標 (画面中央に巨大) */}
-          {player.primaryStat && (
-            <div className="bg-zinc-900/95 rounded-xl border-2 border-zinc-700/60 p-3 flex flex-col items-center justify-center"
-                 style={{ boxShadow: `0 0 24px ${themeClass.glow}30` }}>
-              <div className="text-[11px] font-black text-zinc-300 tracking-widest mb-1">
-                {player.primaryStat.label}
-              </div>
-              <div className={`text-[46px] font-mono font-black tracking-tighter leading-none ${
-                isNeg ? 'text-red-400' : themeClass.text
-              }`} style={{
-                textShadow: isNeg
-                  ? '0 0 20px rgba(248,113,113,0.7), 0 2px 4px rgba(0,0,0,0.8)'
-                  : `0 0 20px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)`
-              }}>
-                {player.primaryStat.value}
-              </div>
-              {/* 比較値併記 (新) */}
-              {compareValue && (
-                <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-zinc-400">
-                  <span className="opacity-70">{compareValue.label}:</span>
-                  <span className="text-zinc-300">{compareValue.value}</span>
-                </div>
-              )}
-              {player.primaryStat.note && !compareValue && (
-                <div className="text-[9px] font-bold text-zinc-400 mt-1">{player.primaryStat.note}</div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* サブ指標グリッド */}
-        {player.stats && player.stats.length > 0 && (
-          <div className={`z-20 grid gap-1.5 mb-2 ${player.stats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-            {player.stats.map((stat, i) => (
-              <div key={i} className="bg-zinc-900/85 border border-zinc-700/50 rounded-lg p-2 backdrop-blur-sm">
+        {/* サブ指標グリッド (4個なら2x2、3個なら1x3) */}
+        {displayStats.length > 0 && (
+          <div className={`z-20 grid gap-1.5 mb-2 ${displayStats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {displayStats.map((stat, i) => (
+              <div key={i} className="bg-zinc-900/78 border border-zinc-700/50 rounded-lg p-2 backdrop-blur-sm">
                 <div className="text-[10px] font-black text-zinc-300 tracking-widest mb-0.5">{stat.label}</div>
                 <div className="text-[18px] font-mono font-black text-white tracking-tighter">{stat.value}</div>
                 {stat.sub && <div className="text-[9px] text-zinc-500">{stat.sub}</div>}
@@ -165,7 +193,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
         {/* コメント */}
         {player.comment && (
-          <div className={`z-20 bg-zinc-900/85 border-l-4 ${themeClass.border} rounded p-2 backdrop-blur-sm`}>
+          <div className={`z-20 bg-zinc-900/78 border-l-4 ${themeClass.border} rounded p-2 backdrop-blur-sm`}>
             <div className="text-[11px] font-bold text-zinc-200 leading-snug">{player.comment}</div>
           </div>
         )}

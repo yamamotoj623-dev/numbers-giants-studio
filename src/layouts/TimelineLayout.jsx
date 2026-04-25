@@ -44,35 +44,65 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
   const highlightComp = useHighlightComp(projectData, currentScript);
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
   const primaryColor = themeClass.primary;
-  const rawData = projectData.layoutData?.timeline || {
-    unit: 'month',
-    metric: 'OPS',
-    points: [
-      { label: '4月', value: 0.724 },
-      { label: '5月', value: 0.810, highlight: true },
-      { label: '6月', value: 0.755 },
-    ],
-  };
+
+  // ★最重要: 互換性レイヤ (Geminiが二重ネストで吐く問題への対応) ★
+  // パターン1 (正): { points: [...] }
+  // パターン2 (Gemini誤): { timeline: { points: [...] } }
+  // パターン3 (旧): { points: [{main, sub}] }
+  const rawData = (() => {
+    let raw = projectData.layoutData?.timeline;
+
+    // 二重ネスト検出: 内側に timeline キーがあったら 1階層下りる
+    if (raw && typeof raw === 'object' && raw.timeline && Array.isArray(raw.timeline.points)) {
+      raw = raw.timeline;
+    }
+
+    // データ無効ならデフォルト
+    if (!raw || !Array.isArray(raw.points) || raw.points.length === 0) {
+      return {
+        unit: 'month',
+        metric: 'OPS',
+        points: [
+          { label: '4月', value: 0.724 },
+          { label: '5月', value: 0.810, highlight: true },
+          { label: '6月', value: 0.755 },
+        ],
+      };
+    }
+    return raw;
+  })();
 
   // === 互換性レイヤ ===
   // 旧スキーマ points[].main / sub を新スキーマ value / compareLine に変換
   const data = (() => {
-    const points = rawData.points.map(p => {
-      // 旧 main → 新 value
-      const value = p.value !== undefined ? p.value : p.main;
-      return { ...p, value };
-    });
+    const points = (rawData.points || [])
+      .map(p => {
+        if (!p || typeof p !== 'object') return null;
+        // 旧 main → 新 value
+        const rawValue = p.value !== undefined ? p.value : p.main;
+        const value = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
+        // 数値変換失敗は除外
+        if (typeof value !== 'number' || isNaN(value)) return null;
+        return { ...p, value };
+      })
+      .filter(p => p !== null);
+
     let compareLine = rawData.compareLine;
     // 旧 sub → compareLine 自動生成
-    if (!compareLine && rawData.points.some(p => p.sub !== undefined)) {
+    if (!compareLine && (rawData.points || []).some(p => p && p.sub !== undefined)) {
       compareLine = rawData.points
-        .filter(p => p.sub !== undefined)
-        .map(p => ({ label: p.label, value: p.sub }));
+        .filter(p => p && p.sub !== undefined)
+        .map(p => ({ label: p.label, value: typeof p.sub === 'string' ? parseFloat(p.sub) : p.sub }))
+        .filter(p => typeof p.value === 'number' && !isNaN(p.value));
     }
+
     return {
       unit: rawData.unit || 'month',
       metric: rawData.metric || '',
-      points,
+      points: points.length > 0 ? points : [
+        { label: '-', value: 0 },
+        { label: '-', value: 0 },
+      ],  // 安全フォールバック (空配列を渡さない)
       compareLine,
     };
   })();
@@ -141,7 +171,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
   return (
     <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[32%] px-3">
       {/* ハイライト時はチャートを上に縮小 */}
-      <div className={`z-20 ${isHighlight ? 'mb-1' : 'mb-3'} w-full bg-zinc-900/85 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-500`} style={isHighlight ? { transform: 'scale(0.55)', transformOrigin: 'top center' } : {}}>
+      <div className={`z-20 ${isHighlight ? 'mb-1' : 'mb-3'} w-full bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-500`} style={isHighlight ? { transform: 'scale(0.55)', transformOrigin: 'top center' } : {}}>
         <div className="px-4 py-2.5 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">
           <span className={`${themeClass.text} text-[14px] font-black`}>{data.metric} 推移</span>
           <span className="text-zinc-400 text-[11px] font-bold">{UNIT_LABEL[data.unit] || '月別'}</span>

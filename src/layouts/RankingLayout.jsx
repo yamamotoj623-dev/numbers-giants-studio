@@ -99,7 +99,14 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
   const isHighlight = phase === 'highlight' && highlightComp;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
-  const data = projectData.layoutData?.ranking || {
+
+  // 互換性レイヤ: Geminiが二重ネスト ({ranking:{ranking:{...}}}) で出すことがあるため解除
+  const _rawData = projectData.layoutData?.ranking;
+  const _unwrapped = (_rawData && typeof _rawData === 'object' && _rawData.ranking && Array.isArray(_rawData.ranking.metrics))
+    ? _rawData.ranking
+    : _rawData;
+
+  const data = _unwrapped || {
     mode: 'single',
     mood: 'neutral',
     metrics: [
@@ -119,10 +126,20 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
   const mood = data.mood || 'neutral';
   const moodStyle = MOOD_STYLES[mood] || MOOD_STYLES.neutral;
 
+  // metrics が無い/空なら処理スキップ (空表示)
+  const metrics = Array.isArray(data.metrics) ? data.metrics : [];
+  if (metrics.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-zinc-500 text-[12px]">
+        ランキングデータが空です
+      </div>
+    );
+  }
+
   // currentScript.highlight が metric.id と一致するなら、そのmetric を選択
   const focusedMetricId = currentScript?.highlight;
-  const activeMetric = (focusedMetricId && data.metrics.find(m => m.id === focusedMetricId))
-    || data.metrics[0];
+  const activeMetric = (focusedMetricId && metrics.find(m => m.id === focusedMetricId))
+    || metrics[0];
 
   // 動画 (全体) の中で最終的に「◀注目」マークが付くのは focusEntry で指定された1人のみ
   const focusedName = currentScript?.focusEntry || null;
@@ -131,9 +148,9 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
     <>
       <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[32%] px-3">
         {/* タブ切替 (複数指標時のみ) */}
-        {data.mode === 'multi' && data.metrics.length > 1 && (
+        {data.mode === "multi" && metrics.length > 1 && (
           <div className="z-20 flex gap-1.5 mb-3 overflow-x-auto">
-            {data.metrics.map(metric => (
+            {metrics.map(metric => (
               <button
                 key={metric.id}
                 className={`text-[12px] font-black px-3 py-1.5 rounded-full whitespace-nowrap transition flex-shrink-0 ${
@@ -158,7 +175,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
         </div>
 
         {/* ランキング表 */}
-        <div className={`z-20 w-full bg-zinc-900/85 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm ${
+        <div className={`z-20 w-full bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm ${
           mood === 'best' ? 'shadow-yellow-500/20' :
           mood === 'worst' ? 'shadow-red-500/20' : ''
         }`}>
