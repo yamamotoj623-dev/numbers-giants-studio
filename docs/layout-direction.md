@@ -26,10 +26,10 @@
 | **radar_compare** | 全体像の提示 (5指標) | 現状維持 (汎用形) |
 | **timeline** | 変化のドラマ | シンプル化、日週月年の軸切替 |
 | **ranking** | 序列の衝撃 | mood切替、チーム順位対応 |
-| **player_spotlight** | 個人の主役感 | ポートレート化、比較値併記 |
-| **versus_card** | 1対1対決 | mood切替で勝敗両対応 |
+| **player_spotlight** | 個人の主役感 | データ主役 (選手名重複・シルエット廃止)、比較値併記 |
+| **versus_card** | 1対1対決 | シンプル化 (バー・スコア・装飾バッジ全廃)、純粋な数字比較 |
 | **team_context** | チームの表情 | 3要素ブロック、巨人vsセ平均モード |
-| **pitch_arsenal** | 投手の手の内 | 構成変化比較、左右別比較 |
+| **pitch_arsenal** | 投手の手の内 | 構成変化比較、左右別比較、武器バッジ→行強調 |
 | **batter_heatmap** (新名称) | 打者の打率ゾーン | 旧 pitch_heatmap をリネーム |
 
 ### 削除するレイアウト
@@ -51,7 +51,7 @@
 15-30秒│ 深掘り1 (なぜ)    │ 「もっと知りたい」       │ timeline / player_spotlight
 30-45秒│ 深掘り2 (角度変え)│ 「他にもあるのか」       │ versus_card / pitch_arsenal / batter_heatmap
 45-55秒│ 結論・転換         │ 「それで?」              │ versus_card / radar_compare
-55-60秒│ 締め (二択疑問)    │ 「自分はどう思う?」      │ (アウトロ画面)
+55-60秒│ 自然な締め or 文脈ある二択 │ 「自分はどう思う?」      │ (アウトロ画面)
 ```
 
 ### 各レイアウトのアーク上の主戦場
@@ -518,13 +518,22 @@ primaryStat.compareValue で「リーグ平均」「セ平均」「同年齢の 
 
 **改修方針**:
 
-#### 構成変化の比較 (新、強化)
-既存の `comparePitches` (昨季 vs 今季) を**強化**:
+#### v5.11.2 のシンプル化 (動画テストフィードバック反映)
+- **「武器」バッジ廃止** — バッジが場所を取って「スプリット」が「スプリ…」に切れる原因だった
+- **行全体の強調に変更** — 最良の被打率の行に背景色 (テーマ色 15%) と左ボーダーを適用
+  - 球種名のフォント色もテーマ色に
+  - 「最良の球種」が一目で分かる、邪魔なバッジなし
+- **列幅の調整** — `1.4fr_46px_50px_50px` → `1.7fr_44px_44px_44px`
+  - 球種名の列を 1.7fr に拡大
+  - 「スプリット」「フォーシーム」など長い名前がフル表示
+
+#### 構成変化の比較 (compare モード)
+既存の `comparePitches` (昨季 vs 今季) を強化:
 - 球種ごとの**使用率の変化**を矢印で表示 (「直球 50% → 35% ▼15%」)
 - 増えた球種は**緑の矢印 ↑**、減った球種は**赤の矢印 ▼**
 - 視聴者が「**何が変わったか**」を瞬時に把握できる
 
-#### 左右別比較 (新)
+#### 左右別比較 (vs_batter モード)
 **右打者 vs 左打者**で配球を変えているか比較:
 
 | 球種 | 対右打者 | 対左打者 | 違い |
@@ -675,14 +684,15 @@ mode: "vs_handedness"  // 対右投 / 対左投 の左右並び (新)
 
 | 優先度 | レイアウト | 主な改修内容 |
 |---|---|---|
-| 1 | **timeline** | unit 拡張 (day/week/month/year)、シンプル化、ドラマ演出 |
+| 1 | **timeline** | unit 拡張 (day/week/month/year)、シンプル化、ドラマ演出、二重ネスト解除 |
 | 2 | **ranking** | mood 切替 (best/worst/neutral)、注目1人制、チームエントリ対応 |
-| 3 | **player_spotlight** | ポートレート化、比較値併記 |
-| 4 | **versus_card** | mood 切替 (main_wins/main_loses/close)、敗者強調 |
+| 3 | **player_spotlight** | データ主役 (選手名重複・シルエット廃止)、比較値併記 |
+| 4 | **versus_card** | シンプル化 (バー・スコア・装飾バッジ全廃)、純粋な数字比較 |
 | 5 | **team_context** | 3要素ブロック化、mode: compare 追加 |
-| 6 | **pitch_arsenal** | mode 拡張 (single/compare/vs_batter)、左右別 |
+| 6 | **pitch_arsenal** | mode 拡張 (single/compare/vs_batter)、武器バッジ→行強調、列幅調整 |
 | 7 | **batter_heatmap** | 旧 pitch_heatmap をリネーム、打率ヒート化、左右別 |
 | - | **削除** | luck_dashboard, spray_chart |
+| - | **共通基盤** | Error Boundary、データ有効性ガード、二重ネスト解除レイヤ |
 
 ---
 
@@ -692,14 +702,14 @@ mode: "vs_handedness"  // 対右投 / 対左投 の左右並び (新)
 
 | レイアウト | 完了基準 |
 |---|---|
-| timeline | unit 4種対応 / sub 任意化 / ハイライト点で線太・光 / 上昇下降で色変化 |
+| timeline | unit 4種対応 / sub 任意化 / ハイライト点で線太・光 / 上昇下降で色変化 / 二重ネスト解除レイヤ |
 | ranking | mood 3種切替 / 注目選手の脈動 / 圏外マーカー強化 / チームエントリ対応 |
-| player_spotlight | シルエット劇画化 / プライマリ指標巨大化 / 比較値併記 |
-| versus_card | mood 3種切替 / main_loses 時の警告マーク / 中央 VS 強化 |
+| player_spotlight | データ主役 (選手名重複・シルエット廃止) / プライマリ指標巨大化 (60px) / 比較値併記 |
+| versus_card | シンプル化 (バー・スコア・装飾バッジ全廃) / 純粋な数字比較 / 勝者矢印 (◀▶) |
 | team_context | 3要素ブロック / mode 2種 / スタジアム背景 |
-| pitch_arsenal | mode 3種 (single/compare/vs_batter) |
+| pitch_arsenal | mode 3種 (single/compare/vs_batter) / 武器バッジ廃止→行強調 / 列幅調整 |
 | batter_heatmap | 旧 pitch_heatmap からのリネーム / mode 2種 (single/vs_handedness) |
-| 全レイアウト共通 | テロップ被り回避 / テロップ枠の透明度調整 |
+| 全レイアウト共通 | テロップ被り回避 / テロップ枠の透明度調整 / Error Boundary でラップ / データ有効性ガード (_hasValidData) |
 
 ---
 
