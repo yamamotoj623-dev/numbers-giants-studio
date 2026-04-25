@@ -1,44 +1,95 @@
 /**
- * layoutType: ranking
- * 順位/ランキング表示レイアウト
+ * layoutType: ranking (v2)
+ * 順位/ランキング表示レイアウト。「衝撃」を与える役割。
  *
- * 用途:
- * - 「打率TOP10」「OPS順位」「セ・リーグ順位表」など
- * - 複数指標のランキングをタブで切替表示
- *
- * layoutData 構造:
+ * layoutData.ranking スキーマ (v2):
  * {
- *   ranking: {
- *     mode: "single" | "multi",      // single: 1指標、multi: 複数指標タブ切替
- *     metrics: [
- *       {
- *         id: "ops",
- *         label: "OPS",
- *         kana: "オーピーエス" (省略可),
- *         unit: "" (省略可),
- *         entries: [
- *           {rank: 1, name: "泉口", value: "1.013", isMainPlayer: false},
- *           {rank: 2, name: "ダルベック", value: ".980", isMainPlayer: false},
- *           {rank: 3, name: "増田陸", value: ".724", isMainPlayer: true},
- *           ...
- *         ]
- *       },
- *       {
- *         id: "avg",
- *         label: "打率",
- *         entries: [...]
- *       }
- *     ]
- *   }
+ *   mode: "single" | "multi",          // single: 1指標、multi: 複数指標タブ切替
+ *   mood?: "best" | "worst" | "neutral",  // ★トーン切替 (新)
+ *   showCutoff?: boolean,              // 圏外マーカーを表示するか
+ *   metrics: [
+ *     {
+ *       id: "ops",
+ *       label: "OPS",
+ *       kana: "オーピーエス" (省略可),
+ *       unit: "" (省略可),
+ *       entries: [
+ *         {
+ *           rank: 1,
+ *           name: "泉口",
+ *           value: "1.013",
+ *           sub: "12試合",         // 補足情報 (省略可)
+ *           isMainPlayer?: bool,    // 注目選手 (動画全体で複数可、★currentScript.focusEntry が優先)
+ *           isTeam?: bool          // チームエントリ (新、シルエット非表示など)
+ *         },
+ *         ...
+ *       ]
+ *     }
+ *   ]
  * }
  *
- * currentScript.highlight に metric.id を指定すると、そのタブにフォーカス
+ * 注意: 同時刻に強調 (◀注目) されるのは currentScript.focusEntry で指定された1人のみ。
+ *      isMainPlayer は背景色の弱い強調のみで、◀注目マークは付かない。
+ *
+ * mood の効果:
+ * - "best":   1位に👑、ベスト3に金/銀/銅、明るいトーン
+ * - "worst":  1位に⚠️、ワースト3に▼マーク、暗い赤トーン
+ * - "neutral": 中性 (デフォルト)
  */
 
 import React from 'react';
 import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
+
+// mood ごとのスタイル定義
+const MOOD_STYLES = {
+  best: {
+    titleSuffix: 'ランキング',
+    headerColor: 'text-yellow-400',
+    rank1Color: 'text-yellow-400',
+    rank2Color: 'text-zinc-200',
+    rank3Color: 'text-amber-400',
+    rankOtherColor: 'text-zinc-500',
+    rank1Icon: '👑',
+    rank2Icon: '🥈',
+    rank3Icon: '🥉',
+    barColor: '#fbbf24', // gold
+    glowColor: 'rgba(251,191,36,0.6)',
+    rowBg: 'from-yellow-900/15 to-amber-900/10',
+    accentText: 'text-yellow-300',
+  },
+  worst: {
+    titleSuffix: 'ワースト',
+    headerColor: 'text-red-400',
+    rank1Color: 'text-red-400',
+    rank2Color: 'text-red-300',
+    rank3Color: 'text-orange-400',
+    rankOtherColor: 'text-zinc-500',
+    rank1Icon: '⚠️',
+    rank2Icon: '▼',
+    rank3Icon: '▼',
+    barColor: '#ef4444', // red
+    glowColor: 'rgba(239,68,68,0.6)',
+    rowBg: 'from-red-900/15 to-zinc-900/10',
+    accentText: 'text-red-300',
+  },
+  neutral: {
+    titleSuffix: 'ランキング',
+    headerColor: '',
+    rank1Color: 'text-yellow-400',
+    rank2Color: 'text-zinc-300',
+    rank3Color: 'text-orange-300',
+    rankOtherColor: 'text-zinc-500',
+    rank1Icon: '',
+    rank2Icon: '',
+    rank3Icon: '',
+    barColor: null,
+    glowColor: null,
+    rowBg: '',
+    accentText: '',
+  },
+};
 
 export function RankingLayout({ projectData, currentScript, animationKey, phase = 'normal' }) {
   if (phase === 'hook') return null;
@@ -50,28 +101,35 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
   const data = projectData.layoutData?.ranking || {
     mode: 'single',
+    mood: 'neutral',
     metrics: [
       {
         id: 'ops',
         label: 'OPS',
         unit: '',
         entries: [
-          {rank: 1, name: '選手A', value: '1.013', isMainPlayer: false},
-          {rank: 2, name: '選手B', value: '.980', isMainPlayer: false},
+          {rank: 1, name: '選手A', value: '1.013'},
+          {rank: 2, name: '選手B', value: '.980'},
           {rank: 3, name: '選手C', value: '.724', isMainPlayer: true},
         ],
       },
     ],
   };
 
+  const mood = data.mood || 'neutral';
+  const moodStyle = MOOD_STYLES[mood] || MOOD_STYLES.neutral;
+
   // currentScript.highlight が metric.id と一致するなら、そのmetric を選択
   const focusedMetricId = currentScript?.highlight;
   const activeMetric = (focusedMetricId && data.metrics.find(m => m.id === focusedMetricId))
     || data.metrics[0];
 
+  // 動画 (全体) の中で最終的に「◀注目」マークが付くのは focusEntry で指定された1人のみ
+  const focusedName = currentScript?.focusEntry || null;
+
   return (
     <>
-      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[28%] px-3">
+      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[32%] px-3">
         {/* タブ切替 (複数指標時のみ) */}
         {data.mode === 'multi' && data.metrics.length > 1 && (
           <div className="z-20 flex gap-1.5 mb-3 overflow-x-auto">
@@ -90,76 +148,140 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
           </div>
         )}
 
-        {/* タイトル */}
+        {/* タイトル (mood で色変化) */}
         <div className="z-20 mb-3 text-center">
-          <span className={`text-[18px] font-black ${themeClass.text}`}>
-            {activeMetric.label}{activeMetric.kana ? <span className="text-[11px] opacity-80 ml-1">{activeMetric.kana}</span> : null} ランキング
+          <span className={`text-[18px] font-black ${moodStyle.headerColor || themeClass.text}`}>
+            {activeMetric.label}
+            {activeMetric.kana ? <span className="text-[11px] opacity-80 ml-1">{activeMetric.kana}</span> : null}
+            <span className="ml-1">{moodStyle.titleSuffix}</span>
           </span>
         </div>
 
-        {/* ランキング表 (最大10件、注目選手は圏外でも自動含める) */}
-        <div className="z-20 w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm">
+        {/* ランキング表 */}
+        <div className={`z-20 w-full bg-zinc-900/85 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm ${
+          mood === 'best' ? 'shadow-yellow-500/20' :
+          mood === 'worst' ? 'shadow-red-500/20' : ''
+        }`}>
           {(() => {
             const all = activeMetric.entries || [];
             const top10 = all.slice(0, 10);
-            const mainOutside = all.find(e => e.isMainPlayer && !top10.includes(e));
+            // 注目選手が圏外なら追加表示
+            const mainOutside = focusedName
+              ? all.find(e => e.name === focusedName && !top10.includes(e))
+              : all.find(e => e.isMainPlayer && !top10.includes(e));
             const display = mainOutside ? [...top10, mainOutside] : top10;
 
-            // バーの長さ計算用 (絶対値の最大)
+            // バーの長さ計算用
             const numericVals = display
               .map(e => parseFloat(String(e.value).replace(/[^\d.\-]/g, '')))
               .filter(v => !isNaN(v));
             const maxAbs = Math.max(...numericVals.map(Math.abs), 0.01);
-
-            // currentScript.highlight が選手名と一致する場合、その選手をフォーカス
-            const focusedName = currentScript?.focusEntry || null;
 
             return display.map((entry, idx) => {
               const isTop3 = entry.rank <= 3;
               const isMain = entry.isMainPlayer;
               const isFocused = focusedName && entry.name === focusedName;
               const isCutoff = mainOutside && idx === display.length - 1;
-              const rowClass = isFocused
-                ? `${themeClass.bg}/30 border-2 ${themeClass.border} shadow-2xl`
-                : isMain
-                  ? `${themeClass.bg}/15 border ${themeClass.border}`
-                  : (idx % 2 === 0 ? 'bg-zinc-800/40' : 'bg-zinc-900/40');
+
+              // 行の背景色
+              let rowClass;
+              if (isFocused) {
+                // ★最強調★ focusEntry に指定された1選手のみ
+                if (mood === 'best') {
+                  rowClass = 'bg-gradient-to-r from-yellow-700/40 to-amber-800/30 border-2 border-yellow-400 shadow-2xl shadow-yellow-500/30';
+                } else if (mood === 'worst') {
+                  rowClass = 'bg-gradient-to-r from-red-900/40 to-zinc-900/40 border-2 border-red-500 shadow-2xl shadow-red-500/30';
+                } else {
+                  rowClass = `${themeClass.bg}/30 border-2 ${themeClass.border} shadow-2xl`;
+                }
+              } else if (isMain) {
+                // ★中強調★ 注目選手フラグ付きだが今は焦点でない選手
+                rowClass = `${themeClass.bg}/15 border ${themeClass.border}/50`;
+              } else {
+                // 通常行 (mood に応じたうっすら背景)
+                const baseBg = idx % 2 === 0 ? 'bg-zinc-800/40' : 'bg-zinc-900/40';
+                rowClass = mood !== 'neutral'
+                  ? `${baseBg} bg-gradient-to-r ${moodStyle.rowBg}`
+                  : baseBg;
+              }
+
               const numVal = parseFloat(String(entry.value).replace(/[^\d.\-]/g, ''));
               const barPct = isNaN(numVal) ? 0 : Math.min(Math.abs(numVal) / maxAbs * 100, 100);
               const isNegative = !isNaN(numVal) && numVal < 0;
+
+              // 順位表示の色とアイコン
+              const rankColor =
+                entry.rank === 1 ? moodStyle.rank1Color :
+                entry.rank === 2 ? moodStyle.rank2Color :
+                entry.rank === 3 ? moodStyle.rank3Color :
+                moodStyle.rankOtherColor;
+              const rankIcon =
+                entry.rank === 1 ? moodStyle.rank1Icon :
+                entry.rank === 2 ? moodStyle.rank2Icon :
+                entry.rank === 3 ? moodStyle.rank3Icon : '';
+
+              // バー色
+              const barColor = isNegative ? '#ef4444'
+                : (isFocused && moodStyle.barColor) ? moodStyle.barColor
+                : moodStyle.barColor || themeClass.glow;
+
               return (
                 <React.Fragment key={`${entry.rank}-${entry.name}`}>
-                  {isCutoff && <div className="text-center text-zinc-600 text-[12px] py-1">⋯</div>}
-                  <div className={`flex items-center px-3 py-2 border-b border-zinc-800 ${rowClass} ${isFocused ? 'scale-[1.04] z-10 relative' : ''} transition-transform duration-300`}>
-                    {/* 順位 */}
-                    <div className={`w-8 flex-shrink-0 text-center font-black text-[17px] ${
-                      entry.rank === 1 ? 'text-yellow-400' :
-                      entry.rank === 2 ? 'text-zinc-300' :
-                      entry.rank === 3 ? 'text-orange-300' :
-                      'text-zinc-500'
-                    }`}>
-                      {entry.rank}
-                      {entry.rank === 1 && <span className="text-[9px] ml-0.5">👑</span>}
+                  {isCutoff && (
+                    <div className="text-center text-zinc-500 text-[11px] py-1.5 bg-zinc-950/50 font-bold border-y border-zinc-800">
+                      ⋯ 圏外 ⋯
                     </div>
+                  )}
+                  <div
+                    className={`flex items-center px-3 py-2 border-b border-zinc-800 ${rowClass} ${
+                      isFocused ? 'scale-[1.04] z-10 relative' : ''
+                    } transition-all duration-300`}
+                    style={isFocused && moodStyle.glowColor ? {
+                      animation: 'pulse 2s ease-in-out infinite'
+                    } : {}}
+                  >
+                    {/* 順位 */}
+                    <div className={`w-9 flex-shrink-0 text-center font-black text-[17px] ${rankColor}`}>
+                      {entry.rank}
+                      {rankIcon && <span className="text-[10px] ml-0.5">{rankIcon}</span>}
+                    </div>
+
                     {/* 選手名 + サブ情報 */}
                     <div className="flex-1 px-2 min-w-0">
-                      <div className={`text-[15px] font-black truncate ${isFocused ? 'text-white' : (isMain ? themeClass.text : 'text-zinc-300')}`}>
+                      <div className={`text-[15px] font-black truncate ${
+                        isFocused
+                          ? (mood === 'best' ? 'text-yellow-200' : mood === 'worst' ? 'text-red-200' : 'text-white')
+                          : (isMain ? themeClass.text : 'text-zinc-300')
+                      }`}>
+                        {entry.isTeam && <span className="text-[10px] mr-1 opacity-70">[ チーム ]</span>}
                         {entry.name}
-                        {isFocused && <span className={`ml-1.5 text-[10px] ${themeClass.text}`}>◀ 注目</span>}
+                        {isFocused && (
+                          <span className={`ml-1.5 text-[10px] ${moodStyle.accentText || themeClass.text}`}
+                                style={{ animation: 'pulse 1.2s ease-in-out infinite' }}>
+                            ◀ 注目
+                          </span>
+                        )}
                       </div>
                       {entry.sub && <div className="text-[10px] font-bold text-zinc-500 truncate leading-tight">{entry.sub}</div>}
                     </div>
+
                     {/* 値 + バー */}
                     <div className="flex-shrink-0 flex flex-col items-end" style={{ width: 80 }}>
                       <div className={`text-[16px] font-mono font-black leading-none ${
-                        isFocused || isMain ? themeClass.text : (isTop3 ? 'text-white' : 'text-zinc-400')
+                        isFocused
+                          ? (mood === 'best' ? 'text-yellow-300' : mood === 'worst' ? 'text-red-300' : themeClass.text)
+                          : (isMain ? themeClass.text : (isTop3 ? 'text-white' : 'text-zinc-400'))
                       }`}>
                         {entry.value}{activeMetric.unit || ''}
                       </div>
                       <div className="w-full h-1 bg-zinc-800 rounded-full mt-1 overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${isNegative ? 'bg-red-500' : themeClass.bg}`}
-                          style={{ width: `${barPct}%`, boxShadow: isFocused ? `0 0 6px ${themeClass.glow}` : 'none' }}
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${barPct}%`,
+                            background: barColor,
+                            boxShadow: isFocused ? `0 0 6px ${moodStyle.glowColor || themeClass.glow}` : 'none'
+                          }}
                         />
                       </div>
                     </div>

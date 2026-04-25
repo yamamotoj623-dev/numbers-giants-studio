@@ -9,6 +9,204 @@
 
 ---
 
+## [5.8.0] - 2026-04-25 - 全レイアウト改修完了 + 8レイアウト体制
+
+### 8レイアウト体制への再編
+v5.6 まで10レイアウトだったものを **8レイアウト + 2削除 + 1リネーム**に再編。
+全レイアウトが「ストーリーアーク上の役割」を持つ設計に統一。
+
+### 残されたレイアウト (8つ、すべて改修済み)
+1. **radar_compare** — 全体像の提示 (現状維持、汎用形)
+2. **timeline** — 変化のドラマ (v5.7.0 で改修完了)
+3. **ranking** — 序列の衝撃 (v5.7.0 で改修完了)
+4. **player_spotlight** — 個人の主役感 ← ★今回改修★
+5. **versus_card** — 1対1対決 ← ★今回改修★
+6. **team_context** — チームの表情 ← ★今回改修★
+7. **pitch_arsenal** — 投手の手の内 ← ★今回改修★
+8. **batter_heatmap** — 打者の癖 ← ★今回新規 (旧 pitch_heatmap リネーム)★
+
+### 削除されたレイアウト
+- **luck_dashboard** — BABIP・打球速度のデータ取得困難、概念伝わりにくい
+- **spray_chart** — 個別打球データの取得困難
+
+### LayoutRouter v2
+- 廃止レイアウトのリダイレクト機構:
+  - `luck_dashboard` → `radar_compare` + console警告
+  - `spray_chart` → `radar_compare` + console警告
+  - `pitch_heatmap` → `batter_heatmap` + console警告
+- 旧データを使う JSON でもアプリが動作 (互換性レイヤ)
+- 警告は最初の1回のみ (Set でガード)
+
+### PlayerSpotlight v2 (主役感の強化)
+- **シルエットを劇画タッチで巨大化** (110px → 140px枠、scale 1.1)
+- **スポットライト演出**:
+  - シルエット枠の背景にラジアルグラデで光が集まる感じ
+  - 内側に inset shadow でテーマ色のオーラ
+  - 全体背景にもうっすらラジアルグラデ
+- **サインカード風の選手名表示**: 番号バッジに glow 二重リング、文字に強い text-shadow
+- **プライマリ指標の比較値併記** (新):
+  - `compareValue: { value, label }` でセ平均などを併記可能
+  - 例: 「**WAR -0.4** (セ平均: 0.0)」 で衝撃を増す
+- データスキーマ: `primaryStat.compareValue` 追加、後方互換あり
+
+### VersusCard v2 (mood 切替で勝敗両対応)
+- **mood フィールド (新)**: `main_wins` | `main_loses` | `close`
+  - **main_wins**: mainPlayer 側に `WIN` ベルト風マーク + テーマ色の光のオーラ
+  - **main_loses**: mainPlayer 側に `-差●` 警告マーク (赤)、subPlayer 側に `REF` (基準) マーク
+  - **close**: 両側グレー寄り、中央に `互角` マーク
+- **中央 VS 装飾**:
+  - 火炎・閃光風のグラデーション (mood で色変化)
+  - main_loses 時は `⚠ 差● ⚠` の脈動マーク
+- **mood 省略時の自動判定**: overall.main vs sub の比較で main_wins/main_loses/close を自動判定
+- 「敗北を強調したい動画」(例: 巨人打線 vs リーグ平均で巨人が負けてる) に対応
+
+### TeamContext v2 (3要素ブロック化 + mode 分岐)
+- **モード A (mode:"single")**: チームビュー
+  - **打線/投手/采配 の3ブロック構造** (それぞれ色分け: オレンジ/青/グレー)
+  - 各ブロック内に `stats[{label, value, rank, score(1-5)}]`
+  - **5段階ドット評価** (●●●●○) でブロック内強弱を一目で
+  - 采配ブロックは `traits[{label, level:"高"|"中"|"低"}]` の3項目グリッド
+  - スタジアム背景演出 (上部にグラデ)
+- **モード B (mode:"compare")**: チーム間比較
+  - 「巨人 vs セ平均」「巨人 vs 上位3チーム平均」「巨人 vs 首位」等
+  - 1指標ごとに 巨/対象/差分 の3列レイアウト
+  - 差分は色分け (mainBetter なら巨人色、負けてるなら赤)
+- 旧スキーマ (lineup/roles) は新規データでは使わない方針
+
+### PitchArsenal v2 (vs_batter 追加)
+- **モード分岐 (新)**: `single` | `compare` | `vs_batter`
+- **モード "single"**: 単一の球種パイチャート + 表 (現状)
+- **モード "compare"**:
+  - 球種使用率の変化を矢印で可視化
+  - 増えた球種は緑↑、減った球種は赤↓ (2%以上の差分)
+  - 球速・被打率も比較行で表示
+- **モード "vs_batter" (新、左右別)**:
+  - 対右打者 / 対左打者 で配球を**並べて比較**
+  - 2つのパイチャートと球種別配分表を並列表示
+  - 「対左に弱い理由」など投手攻略動画に最適
+
+### BatterHeatmap v2 (旧 pitch_heatmap をリネーム + 打者用化)
+- 旧 `pitch_heatmap` (投手の配球ヒート) を **`batter_heatmap`** にリネーム
+- **打者の打率ヒートマップ**に仕様変更: 投手目線で「ここに投げれば抑えられる」を視覚化
+- **9エリア (3x3)** が打者の得意/不得意ゾーンを表現
+  - 暖色 (赤/橙/黄) = 得意ゾーン (高打率)
+  - 寒色 (青/シアン/黄緑) = 苦手ゾーン (低打率)
+  - 0.150〜0.400 の範囲で5段階配色
+- **モード分岐**: `single` (単一) | `vs_handedness` (対右投/対左投の左右比較)
+- ホームベース風の枠装飾 + カラーレジェンド付き
+
+### config.js / LayoutPanel / defaultBatter の周辺修正
+- `LAYOUT_TYPES` を 10種 → 8種に整理
+- `VIDEO_PATTERNS` から擁護型のデフォルトを `luck_dashboard` → `radar_compare` に変更
+- `team_analysis` (チーム分析) と `ranking_shock` (ランキング型) を新規追加
+- LayoutPanel から旧 LuckDataEditor / SprayDataEditor / HeatmapDataEditor / Field 関数を削除
+- LayoutPanel に `batter_heatmap` のヒント追加
+- defaultBatter.js から旧 `spray` データ削除、`spray_chart` 切替を `radar_compare` に修正
+
+### Gemini プロンプト schema 全更新
+- 全8レイアウトの schema を新スキーマに同期
+- 削除レイアウト (luck_dashboard / spray_chart) の schema 削除
+- 旧 `pitch_heatmap` の schema を `batter_heatmap` に変更
+- レイアウト遷移パターンの例を 8レイアウト前提に書き換え
+- 新パターン追加: 巨人vsリーグ型 (team_context compare → ranking → versus_card)
+- 新パターン追加: 投手攻略型 (pitch_arsenal vs_batter → batter_heatmap → versus_card)
+
+---
+
+## [5.7.0] - 2026-04-25 - Knowledge File 戦略 + Timeline v2
+
+### 大きな方向転換: Knowledge File 戦略
+カスタム指示 (4000字制限) を簡略化し、**情報量は Knowledge File に逃がす**戦略へ。
+
+### Knowledge File 新設・改訂
+- **`character-bible.md` (35,415字)** ★新規★
+  - 二人のキャラクター: 数原さん × もえかちゃん (確定)
+  - 視聴者像の正確化 (男性 93.3%、コアファン中心、指標語への嫌悪感)
+  - A の役割: 「ファンの観察を現象とデータで裏付ける専門家」
+  - B の役割: 「女性キャスター・思考は男性ファン代弁」
+  - リアクション5パターン (共感/質問/ボケ/異論/感心)
+  - 動画テーマ別のモード切替
+  - 阿部監督への中立姿勢 (8章): 全肯定も全否定もせず、采配の意図を読み解く
+  - シチュエーション別サンプル対話6本 (朗報/悲報/擁護/対決/チーム文脈/編成論)
+  - 指標翻訳辞典、過去・系譜の使い方、NG例集、設計指標
+- **`layout-direction.md` (29,980字)** ★新規★
+  - 各レイアウトのストーリーアーク上の役割を定義
+  - 8レイアウト体制 (luck_dashboard/spray_chart 削除、pitch_heatmap → batter_heatmap)
+  - 共通設計ルール: テロップ被り防止、テロップ枠透明度、注目1人制
+  - mood 概念導入 (ranking: best/worst/neutral, versus_card: main_wins/main_loses/close)
+  - team_context モード分岐 (single/compare、巨人 vs セ平均対応)
+  - timeline unit 4種拡張 (day/week/month/year)
+  - 改修優先順位: timeline → ranking → spotlight → versus → team_context → arsenal → batter_heatmap
+- **`yomigana-dictionary.csv` (26,925字)** ★大改訂・拡充★
+  - **巨人 全選手カバー**: 支配下62名 + 育成42名 + OB 12名 = 計116名
+  - **セリーグ他5球団 主要選手**: 阪神39 + DeNA44 + 中日44 + 広島29 + ヤクルト26 = 計182名
+  - 全6球団監督 + 解説者
+  - 総計 約313名の選手読みを登録
+  - 出典: NPB公式 (https://npb.jp/bis/teams/) 各球団 2026年度 選手一覧
+  - キャラ名 (数原/もえか) 追加
+  - 野球指標 (WAR/OPS/BABIP/FIP/UZR等) 読み追加
+  - 野球用語の誤読防止 (四球→しきゅう、左腕→さわん、本塁打→ほんるいだ等、78エントリ)
+  - 球種・球場・球団名カタカナ読み
+
+### Ranking v2 (実装) ★優先度2★
+- **mood 切替 (新)**: `best`|`worst`|`neutral` の3パターン
+  - **best**: 1位👑、ベスト3に金/銀/銅メダル、金トーン背景、ゴールドバー
+  - **worst**: 1位⚠️、ワースト3に▼マーク、赤トーン背景、赤バー、暗い背景
+  - **neutral**: 中性 (デフォルト)
+- **注目1人制 (重要)**:
+  - `entry.isMainPlayer` は**弱強調**(背景色のみ)
+  - **◀注目マーク**は `currentScript.focusEntry` で**時刻指定された1人だけ**
+  - 全員 isMainPlayer:true による濫用を防ぐ
+  - 動画の異なるシーンで時間差で focusEntry を切り替えれば複数選手を順次強調可
+- **チームエントリ対応 (新)**: 
+  - `entry.isTeam: true` で `[ チーム ]` ラベル付き
+  - セリーグ6球団順位、12球団順位等に対応
+- **演出強化**:
+  - focusEntry 行の脈動アニメ (mood 連動の glow)
+  - 圏外マーカー: `⋯` → `⋯ 圏外 ⋯` で明示化
+  - mood 連動のグラデーション背景
+  - 拡大スケール 1.04倍 (現状値維持)
+- **テロップ被り対策**: pb-[28%] → pb-[32%]、背景透明度 0.85
+
+### Timeline v2 (実装) ★最優先改修★
+- **unit 4種対応**: `day`|`week`|`month`|`year`
+  - day: 開幕直後の日別変化 (5-15点)
+  - week: 1〜3ヶ月の変化 (4-12点)
+  - month: シーズン通年 (3-7点、現状デフォルト)
+  - year: チーム複数年推移 (3-10点、チーム動画用)
+- **シンプル化**:
+  - `points[].main` → `points[].value` に変更 (sub を分離)
+  - 比較線 `compareLine` を任意化 (1選手の推移だけ見せたい場合に対応)
+  - データ最低 **2点**で動作 (旧 3点必須から緩和)
+- **ドラマ性**:
+  - ハイライト点で**ゴールド+脈動アニメ**
+  - 上昇セグメント = ゴールド、下降セグメント = 赤、通常 = テーマ色 (セグメントごと色変化)
+  - 大変化 (10%以上) のセグメントは線が**太く**
+  - isPeak/isBottom 自動判定 (3点以上の場合、最高/最低を自動色分け)
+- **互換性レイヤ**:
+  - 旧 `points[].main` も読み込み可
+  - 旧 `points[].sub` を `compareLine` に自動変換
+- **テロップ被り対策**:
+  - pb-[28%] → pb-[32%] に拡大
+  - 背景透明度 0.90 → 0.85 (テロップが透けて見える程度)
+
+### Gemini プロンプト schema 更新
+- timeline 新スキーマ反映 (unit 4種、value、compareLine)
+- luck_dashboard / spray_chart / pitch_heatmap セクション削除
+- batter_heatmap (将来実装) のスキーマ追加
+
+### Grok エージェント改訂
+- master / researcher / project-instructions に読み仮名ルール (yomigana-dictionary.csv 必参照) 強化
+- 数値読みルール (打率「.276→にわりななぶろくりん」等) 明記
+- 全エージェント 4000字制限内維持
+
+### 削除予定 (実装は次回以降)
+- `LuckDashboardLayout.jsx` (削除予定)
+- `SprayChartLayout.jsx` (削除予定)
+- `PitchHeatmapLayout.jsx` → `BatterHeatmapLayout.jsx` にリネーム + 仕様変更予定
+
+---
+
 ## [5.6.3] - 2026-04-25 - X (Twitter) リサーチ統合
 
 ### 変更

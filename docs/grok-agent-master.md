@@ -75,23 +75,21 @@ hook 「{13字以内}」
 - ★X活用必須★: x_search でファン反応・記者解説・取材記事 (詳細はワークスペース指示)
 - 一次ソース優先 (NPB>球団>大手紙)
 
-## 読み仮名 (TTS誤読防止)
-- speech フィールドは難読の選手名・野球用語をひらがな化
-- 添付の yomigana-dictionary.csv を必ず参照
-- 例: 泉口→いずぐち、左腕→さわん、何勝→なんしょう、犠打→ぎだ
+## 読み仮名 (TTS誤読防止) ★最重要★
+- ★yomigana-dictionary.csv 必参照★、巨人選手の読み間違いは絶対NG
+- 数値: 打率「.276→にわりななぶろくりん」、防御率「2.50→にてんごーぜろ」
+- 用語: 四球→しきゅう (NOT よんきゅう)、左腕→さわん、本塁打→ほんるいだ
+- 詳細ルールは Gemini プロンプトの text_speech セクション参照
 
 ## 自己チェック (FULL_AUTO 出力前)
-1. JSON 構文有効、id:1 hook 13字以内+強ワード/数字を1-2行目
-2. stats が hook テーマと整合、scripts 25-30個、末尾二択疑問
-3. NGワード混入なし、絵文字なし
-4. 2-3 レイアウト切替 (意味ある切替のみ)、layoutData 全種類入り
-5. 専門用語の前に日本語現象
-6. playerType/silhouetteType 整合、team なら stats={rank,winRate,runs,runsAllowed,games,hr}
-7. speech 難読語ひらがな化済み
-8. ★valSub 等は実数値 (「.500」「-」など丸めない)★
-9. ★ranking で5人並べたら player_spotlight で深掘り★
-10. ★timeline 最低3点 (2点では薄い)★
+1. JSON有効、id:1 hook 13字以内+強ワード/数字
+2. stats が hook テーマと整合、scripts 25-30、末尾二択疑問
+3. NGワード/絵文字なし、専門用語の前に日本語現象
+4. 2-3 レイアウト切替 (意味ある時のみ)、layoutData 全種類入り
+5. playerType/silhouetteType 整合、team は stats 6項目
+6. speech 難読語ひらがな化、★yomigana 必参照★
+7. ★valSub 実数値 (丸めるNG)★
+8. ★ranking 5人なら spotlight で深掘り★、★timeline 最低3点★
 
 ## 禁止
-- ファン感情論で結論曖昧化、「期待したい」等の希望表現
-- 訓練データ記憶ベースの数字、完璧主義で発信遅延
+- 感情論で曖昧化、訓練データ記憶ベースの数字、完璧主義の遅延

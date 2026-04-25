@@ -1,42 +1,65 @@
 /**
- * layoutType に応じて適切なレイアウトコンポーネントを呼び分けるルータ
+ * layoutType に応じて適切なレイアウトコンポーネントを呼び分けるルータ (v2)
  *
- * 優先順位:
- *   1. currentScript.layoutType (script単位の切替指示)
- *   2. projectData.layoutType    (動画全体のデフォルト)
- *   3. radar_compare             (フォールバック)
+ * 8レイアウト体制:
+ * - radar_compare:    レーダー比較
+ * - timeline:         時系列推移
+ * - ranking:          順位表
+ * - player_spotlight: 選手スポット
+ * - versus_card:      対決カード
+ * - team_context:     チーム文脈
+ * - pitch_arsenal:    球種パレット
+ * - batter_heatmap:   打者ゾーン (旧 pitch_heatmap をリネーム)
  *
- * 切替時はフェードアニメで視聴体験を滑らかに保つ
+ * 削除済み (互換性のため radar_compare へリダイレクト + console警告):
+ * - luck_dashboard
+ * - spray_chart
+ * - pitch_heatmap (→ batter_heatmap へリダイレクト)
  */
 
 import React, { useEffect, useState, useRef } from 'react';
 import { RadarCompareLayout } from './RadarCompareLayout.jsx';
 import { TimelineLayout } from './TimelineLayout.jsx';
-import { LuckDashboardLayout } from './LuckDashboardLayout.jsx';
-import { SprayChartLayout } from './SprayChartLayout.jsx';
-import { PitchHeatmapLayout } from './PitchHeatmapLayout.jsx';
 import { VersusCardLayout } from './VersusCardLayout.jsx';
 import { PitchArsenalLayout } from './PitchArsenalLayout.jsx';
 import { TeamContextLayout } from './TeamContextLayout.jsx';
 import { RankingLayout } from './RankingLayout.jsx';
 import { PlayerSpotlightLayout } from './PlayerSpotlightLayout.jsx';
+import { BatterHeatmapLayout } from './BatterHeatmapLayout.jsx';
 
 const LAYOUT_COMPONENTS = {
   radar_compare: RadarCompareLayout,
   timeline: TimelineLayout,
-  luck_dashboard: LuckDashboardLayout,
-  spray_chart: SprayChartLayout,
-  pitch_heatmap: PitchHeatmapLayout,
   versus_card: VersusCardLayout,
   pitch_arsenal: PitchArsenalLayout,
   team_context: TeamContextLayout,
   ranking: RankingLayout,
   player_spotlight: PlayerSpotlightLayout,
+  batter_heatmap: BatterHeatmapLayout,
 };
+
+// 削除/リネーム対応
+const LEGACY_REDIRECT = {
+  luck_dashboard: 'radar_compare',  // 削除 → radar へ
+  spray_chart: 'radar_compare',     // 削除 → radar へ
+  pitch_heatmap: 'batter_heatmap',  // リネーム
+};
+
+const LEGACY_WARNED = new Set();
+
+function resolveLayout(layoutType) {
+  if (LEGACY_REDIRECT[layoutType]) {
+    if (!LEGACY_WARNED.has(layoutType)) {
+      console.warn(`[LayoutRouter] レイアウト "${layoutType}" は廃止/リネームされました。"${LEGACY_REDIRECT[layoutType]}" にリダイレクトします。Gemini プロンプトを更新してください。`);
+      LEGACY_WARNED.add(layoutType);
+    }
+    return LEGACY_REDIRECT[layoutType];
+  }
+  return layoutType;
+}
 
 export function LayoutRouter(props) {
   // ★継承ロジック: scriptsを遡って直近の layoutType 指定を探す★
-  // これにより layoutType:"timeline" を一度指定したら、後続のscriptで未指定でも timeline が継続
   const scripts = props.projectData?.scripts || [];
   const currentIndex = props.currentIndex ?? 0;
   let scriptLayout = null;
@@ -47,9 +70,10 @@ export function LayoutRouter(props) {
     }
   }
   const projectLayout = props.projectData?.layoutType;
-  const desiredLayout = scriptLayout || projectLayout || 'radar_compare';
+  const desiredLayoutRaw = scriptLayout || projectLayout || 'radar_compare';
+  const desiredLayout = resolveLayout(desiredLayoutRaw);
 
-  // フェード切替: 表示中のlayoutTypeをstateで管理
+  // フェード切替
   const [activeLayout, setActiveLayout] = useState(desiredLayout);
   const [fadeState, setFadeState] = useState('in');
   const prevLayoutRef = useRef(desiredLayout);

@@ -48,23 +48,6 @@ export const defaultBatterData = {
         { label: '7月', main: 0.172, sub: 0.095, highlight: true },
       ],
     },
-    spray: {
-      handedness: 'right',
-      hits: [
-        { x: 0.25, y: 0.40, type: 'HR',  zone: 'left' },
-        { x: 0.30, y: 0.45, type: '2B',  zone: 'left' },
-        { x: 0.35, y: 0.50, type: '1B',  zone: 'left' },
-        { x: 0.50, y: 0.55, type: '1B',  zone: 'center' },
-        { x: 0.55, y: 0.50, type: 'OUT', zone: 'center' },
-        { x: 0.70, y: 0.55, type: 'OUT', zone: 'right' },
-        { x: 0.75, y: 0.60, type: 'OUT', zone: 'right' },
-      ],
-      zoneStats: {
-        left:   { avg: 0.385, count: 12 },
-        center: { avg: 0.310, count: 11 },
-        right:  { avg: 0.150, count: 6 },
-      },
-    },
   },
   comparisons: [
     { id: 'rc27', label: 'RC27', kana: 'アールシーにじゅうなな', desc: '1試合得点貢献', formula: '得点能力の総合指標', criteria: '優秀: 6.0以上', radarMatch: '得点力', valMain: '4.60', valSub: '2.70', unit: '点', winner: 'main' },
@@ -104,8 +87,8 @@ export const defaultBatterData = {
     { id: 19, speaker: 'A', emoji: '👨‍🏫', text: '程遠い数字です', speech: '程遠い数字です。', highlight: 'isod', textSize: 'l', se: null },
     { id: 20, speaker: 'B', emoji: '😯', text: '29打席で四死球ゼロ\nなんですね', speech: '29打席で四死球ゼロなんですね。', highlight: null, textSize: 's', se: null },
 
-    // ===== ハイライト3: BB/K (★ここでspray_chart切替、打球分布を見せる) =====
-    { id: 21, speaker: 'A', emoji: '👨‍🏫', layoutType: 'spray_chart', text: '選球眼を示す\n「BB/K」も当然です', speech: '選球眼を示すビービーケーも当然です。', highlight: 'bb_k', textSize: 'm', se: 'transition_swoosh' },
+    // ===== ハイライト3: BB/K (radar に戻して選球眼の数字を見せる) =====
+    { id: 21, speaker: 'A', emoji: '👨‍🏫', layoutType: 'radar_compare', text: '選球眼を示す\n「BB/K」も当然です', speech: '選球眼を示すビービーケーも当然です。', highlight: 'bb_k', textSize: 'm', se: 'transition_swoosh' },
     { id: 22, speaker: 'B', emoji: '🧐', text: '四球を三振で\n割った比率ですね', speech: '四球を三振で割った比率ですね。', highlight: 'bb_k', textSize: 'm', se: null },
     { id: 23, speaker: 'A', emoji: '👨‍🏫', text: '今季も【0.00】です', speech: '今季もぜろてんぜろぜろです。', highlight: 'bb_k', textSize: 'm', se: 'stat_reveal' },
     { id: 24, speaker: 'B', emoji: '🧐', text: 'ボール球にも手を\n出しすぎてるん\nですね', speech: 'ぼーるだまにも手を出しすぎてるんですね。', highlight: 'bb_k', textSize: 's', se: null },

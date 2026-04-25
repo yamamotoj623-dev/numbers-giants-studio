@@ -145,34 +145,30 @@ export function LayoutPanel({ projectData, onChange }) {
       {projectData.layoutType === 'timeline' && (
         <TimelineDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {projectData.layoutType === 'luck_dashboard' && (
-        <LuckDataEditor projectData={projectData} onChange={onChange} />
-      )}
-      {projectData.layoutType === 'spray_chart' && (
-        <SprayDataEditor projectData={projectData} onChange={onChange} />
-      )}
-      {projectData.layoutType === 'pitch_heatmap' && (
-        <HeatmapDataEditor projectData={projectData} onChange={onChange} />
-      )}
       {projectData.layoutType === 'versus_card' && (
         <VersusDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking' || projectData.layoutType === 'player_spotlight') && (
+      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking' || projectData.layoutType === 'player_spotlight' || projectData.layoutType === 'batter_heatmap') && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
           <div className="font-bold mb-1">📝 {
             projectData.layoutType === 'pitch_arsenal' ? '球種データ' :
             projectData.layoutType === 'team_context' ? 'チーム文脈データ' :
             projectData.layoutType === 'ranking' ? 'ランキングデータ' :
+            projectData.layoutType === 'batter_heatmap' ? '打者ゾーンデータ' :
             'スポットライトデータ'
           }</div>
           <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.{
             projectData.layoutType === 'pitch_arsenal' ? 'arsenal' :
             projectData.layoutType === 'team_context' ? 'context' :
             projectData.layoutType === 'ranking' ? 'ranking' :
+            projectData.layoutType === 'batter_heatmap' ? 'heatmap' :
             'spotlight'
           }</code> を直接編集してください{
-            projectData.layoutType === 'ranking' ? '。複数指標タブ切替する場合は mode:"multi" + metrics配列で複数指標を入れる。' :
-            projectData.layoutType === 'player_spotlight' ? '。複数選手を入れて script.focusEntry で切替可能。各選手に primaryStat / stats[] / silhouette を持たせる。' :
+            projectData.layoutType === 'ranking' ? '。mood:"best"|"worst"|"neutral"でトーン切替。' :
+            projectData.layoutType === 'player_spotlight' ? '。複数選手を入れて script.focusEntry で切替可能。' :
+            projectData.layoutType === 'team_context' ? '。mode:"single"でチームビュー、mode:"compare"でセ平均比較。' :
+            projectData.layoutType === 'pitch_arsenal' ? '。mode:"single"|"compare"|"vs_batter"。' :
+            projectData.layoutType === 'batter_heatmap' ? '。mode:"single"|"vs_handedness"。' :
             '（サンプルデータがデフォルト）。'
           }</div>
         </div>
@@ -248,192 +244,6 @@ function TimelineDataEditor({ projectData, onChange }) {
   );
 }
 
-function LuckDataEditor({ projectData, onChange }) {
-  const luck = projectData.layoutData?.luck || {
-    babip: 0.182,
-    expectedBabip: 0.290,
-    exitVelocity: 138.5,
-    barrelRate: 0.08,
-    unluckyScore: 82,
-  };
-
-  const update = (field, value) => {
-    onChange({
-      ...projectData,
-      layoutData: {
-        ...(projectData.layoutData || {}),
-        luck: { ...luck, [field]: parseFloat(value) || 0 },
-      },
-    });
-  };
-
-  return (
-    <div className="bg-white p-3 rounded-lg border border-zinc-200">
-      <div className="font-bold text-sm text-zinc-700 mb-2">不運スコア設定</div>
-      <div className="space-y-2">
-        <Field label="BABIP（実績）"        value={luck.babip}         step="0.001" onChange={v => update('babip', v)} />
-        <Field label="BABIP（期待値）"      value={luck.expectedBabip} step="0.001" onChange={v => update('expectedBabip', v)} />
-        <Field label="打球速度 (km/h)"      value={luck.exitVelocity}  step="0.1"   onChange={v => update('exitVelocity', v)} />
-        <Field label="バレル率 (0-1)"       value={luck.barrelRate}    step="0.01"  onChange={v => update('barrelRate', v)} />
-        <Field label="不運スコア (0-100)"   value={luck.unluckyScore}  step="1"     onChange={v => update('unluckyScore', v)} />
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, value, step, onChange }) {
-  return (
-    <label className="flex items-center justify-between text-[11px] text-zinc-600">
-      <span className="font-bold">{label}</span>
-      <input
-        type="number"
-        step={step}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-24 text-[11px] font-mono border border-zinc-200 rounded px-2 py-1 text-right"
-      />
-    </label>
-  );
-}
-
-function SprayDataEditor({ projectData, onChange }) {
-  const spray = projectData.layoutData?.spray || {
-    handedness: 'right',
-    hits: [],
-    zoneStats: {
-      left:   { avg: 0.315, count: 12 },
-      center: { avg: 0.280, count: 18 },
-      right:  { avg: 0.195, count: 8 },
-    },
-  };
-
-  const update = (newSpray) => {
-    onChange({ ...projectData, layoutData: { ...(projectData.layoutData || {}), spray: newSpray } });
-  };
-
-  const updateZone = (zone, field, value) => {
-    update({
-      ...spray,
-      zoneStats: {
-        ...spray.zoneStats,
-        [zone]: { ...spray.zoneStats[zone], [field]: field === 'count' ? parseInt(value) : parseFloat(value) || 0 },
-      },
-    });
-  };
-
-  return (
-    <div className="bg-white p-3 rounded-lg border border-zinc-200">
-      <div className="font-bold text-sm text-zinc-700 mb-2">打球方向データ</div>
-      <label className="block text-[10px] text-zinc-600 mb-2">
-        打者利き手
-        <select
-          value={spray.handedness}
-          onChange={(e) => update({ ...spray, handedness: e.target.value })}
-          className="w-full mt-0.5 text-xs border border-zinc-200 rounded px-2 py-1"
-        >
-          <option value="right">右打ち</option>
-          <option value="left">左打ち</option>
-        </select>
-      </label>
-      <div className="space-y-2">
-        {['left', 'center', 'right'].map(zone => {
-          const label = zone === 'left' ? '左方向' : zone === 'center' ? '中方向' : '右方向';
-          const stat = spray.zoneStats[zone];
-          return (
-            <div key={zone} className="border border-zinc-200 rounded p-2">
-              <div className="text-[11px] font-black text-zinc-700 mb-1">{label}</div>
-              <Field label="打率"   value={stat.avg}   step="0.001" onChange={v => updateZone(zone, 'avg', v)} />
-              <Field label="打球数" value={stat.count} step="1"     onChange={v => updateZone(zone, 'count', v)} />
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-2 text-[10px] text-zinc-500">
-        打球プロット (hits) の編集はJSONパネルで直接行ってください。
-      </div>
-    </div>
-  );
-}
-
-function HeatmapDataEditor({ projectData, onChange }) {
-  const heatmap = projectData.layoutData?.heatmap || {
-    mode: 'pitcher_against',
-    handedness: 'left',
-    grid: [
-      [{ value: 0.125, count: 8 }, { value: 0.200, count: 10 }, { value: 0.357, count: 14 }],
-      [{ value: 0.182, count: 11 }, { value: 0.250, count: 12 }, { value: 0.400, count: 15 }],
-      [{ value: 0.143, count: 7 },  { value: 0.222, count: 9 },  { value: 0.380, count: 10 }],
-    ],
-  };
-
-  const update = (newHeatmap) => {
-    onChange({ ...projectData, layoutData: { ...(projectData.layoutData || {}), heatmap: newHeatmap } });
-  };
-
-  const updateCell = (row, col, field, value) => {
-    const grid = heatmap.grid.map(r => r.map(c => ({ ...c })));
-    grid[row][col][field] = field === 'count' ? parseInt(value) : parseFloat(value) || 0;
-    update({ ...heatmap, grid });
-  };
-
-  const rowLabels = ['高め', '真ん中', '低め'];
-  const colLabels = ['内', '中', '外'];
-
-  return (
-    <div className="bg-white p-3 rounded-lg border border-zinc-200">
-      <div className="font-bold text-sm text-zinc-700 mb-2">9分割ヒートマップ</div>
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <label className="text-[10px] text-zinc-600">
-          モード
-          <select
-            value={heatmap.mode}
-            onChange={(e) => update({ ...heatmap, mode: e.target.value })}
-            className="w-full mt-0.5 text-xs border border-zinc-200 rounded px-2 py-1"
-          >
-            <option value="pitcher_against">被打率（投手）</option>
-            <option value="batter_vs_zone">打率（打者）</option>
-          </select>
-        </label>
-        <label className="text-[10px] text-zinc-600">
-          対象
-          <select
-            value={heatmap.handedness}
-            onChange={(e) => update({ ...heatmap, handedness: e.target.value })}
-            className="w-full mt-0.5 text-xs border border-zinc-200 rounded px-2 py-1"
-          >
-            <option value="left">左打者</option>
-            <option value="right">右打者</option>
-          </select>
-        </label>
-      </div>
-      <div className="grid grid-cols-3 gap-1">
-        {heatmap.grid.map((row, rowIdx) =>
-          row.map((cell, colIdx) => (
-            <div key={`${rowIdx}-${colIdx}`} className="border border-zinc-200 rounded p-1.5">
-              <div className="text-[9px] font-bold text-zinc-500 mb-0.5">{rowLabels[rowIdx]}{colLabels[colIdx]}</div>
-              <input
-                type="number"
-                step="0.001"
-                value={cell.value}
-                onChange={(e) => updateCell(rowIdx, colIdx, 'value', e.target.value)}
-                className="w-full text-[11px] font-mono border border-zinc-200 rounded px-1 py-0.5 text-right mb-0.5"
-                title="打率"
-              />
-              <input
-                type="number"
-                step="1"
-                value={cell.count}
-                onChange={(e) => updateCell(rowIdx, colIdx, 'count', e.target.value)}
-                className="w-full text-[10px] font-mono border border-zinc-200 rounded px-1 py-0.5 text-right"
-                title="打席数"
-              />
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
 
 function VersusDataEditor({ projectData, onChange }) {
   const versus = projectData.layoutData?.versus || {
