@@ -40,9 +40,9 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
   const range = maxVal - minVal || 1;
 
   const chartW = 320;
-  const chartH = 130;
-  const padX = 30;
-  const padY = 15;
+  const chartH = 170;
+  const padX = 36;
+  const padY = 22;
 
   const scaleX = (i) => padX + (i * (chartW - 2 * padX) / Math.max(1, data.points.length - 1));
   const scaleY = (v) => padY + (chartH - 2 * padY) * (1 - (v - minVal) / range);
@@ -53,27 +53,33 @@ export function TimelineLayout({ projectData, currentScript, animationKey , phas
   const isHighlight = phase === 'highlight' && highlightComp;
 
   return (
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[30%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[28%] px-3">
       {/* ハイライト時はチャートを上に縮小、下にHighlightCard */}
-      <div className={`z-20 ${isHighlight ? 'mb-1' : 'mb-3'} w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-500`} style={isHighlight ? { transform: 'scale(0.7)', transformOrigin: 'top center' } : {}}>
-        <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">
-          <span className={`${themeClass.text} text-[10px] font-black`}>{data.metric} 推移</span>
-          <span className="text-zinc-500 text-[9px] font-bold">単位: {data.unit === 'month' ? '月別' : '週別'}</span>
+      <div className={`z-20 ${isHighlight ? 'mb-1' : 'mb-3'} w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-500`} style={isHighlight ? { transform: 'scale(0.55)', transformOrigin: 'top center' } : {}}>
+        <div className="px-4 py-2.5 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">
+          <span className={`${themeClass.text} text-[14px] font-black`}>{data.metric} 推移</span>
+          <span className="text-zinc-400 text-[11px] font-bold">{data.unit === 'month' ? '月別' : '週別'}</span>
         </div>
         <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full">
           {[0, 0.25, 0.5, 0.75, 1].map((r, i) => (
-            <line key={i} x1={padX} y1={padY + (chartH - 2 * padY) * r} x2={chartW - padX} y2={padY + (chartH - 2 * padY) * r} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+            <line key={i} x1={padX} y1={padY + (chartH - 2 * padY) * r} x2={chartW - padX} y2={padY + (chartH - 2 * padY) * r} stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
           ))}
-          <path d={subPath} stroke="rgba(212,212,216,0.8)" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
-          <path d={mainPath} stroke={primaryColor} strokeWidth="2.5" fill="none" style={{ filter: `drop-shadow(0 0 4px ${themeClass.glow})` }} />
+          <path d={subPath} stroke="rgba(212,212,216,0.8)" strokeWidth="2" fill="none" strokeDasharray="4 3" />
+          <path d={mainPath} stroke={primaryColor} strokeWidth="3" fill="none" style={{ filter: `drop-shadow(0 0 4px ${themeClass.glow})` }} />
           {data.points.map((p, i) => (
             <g key={i}>
-              <circle cx={scaleX(i)} cy={scaleY(p.sub)} r="2" fill="rgba(212,212,216,0.9)" />
-              <circle cx={scaleX(i)} cy={scaleY(p.main)} r={p.highlight ? 4 : 3} fill={primaryColor} style={p.highlight ? { filter: `drop-shadow(0 0 6px ${primaryColor})` } : {}} />
+              <circle cx={scaleX(i)} cy={scaleY(p.sub)} r="3" fill="rgba(212,212,216,0.9)" />
+              <circle cx={scaleX(i)} cy={scaleY(p.main)} r={p.highlight ? 6 : 4.5} fill={primaryColor} style={p.highlight ? { filter: `drop-shadow(0 0 8px ${primaryColor})` } : {}} />
+              {/* 数値ラベルを点の上に表示 */}
+              {!isHighlight && (
+                <text x={scaleX(i)} y={scaleY(p.main) - 8} fontSize="11" fill={primaryColor} textAnchor="middle" fontWeight="900" style={{ filter: `drop-shadow(0 0 3px rgba(0,0,0,0.8))` }}>
+                  {typeof p.main === 'number' ? p.main.toFixed(p.main < 10 ? 3 : 0).replace(/^0/, '') : ''}
+                </text>
+              )}
             </g>
           ))}
           {data.points.map((p, i) => (
-            <text key={i} x={scaleX(i)} y={chartH - 2} fontSize="8" fill="rgba(212,212,216,0.7)" textAnchor="middle" fontWeight="700">{p.label}</text>
+            <text key={i} x={scaleX(i)} y={chartH - 4} fontSize="11" fill="rgba(212,212,216,0.85)" textAnchor="middle" fontWeight="800">{p.label}</text>
           ))}
         </svg>
       </div>

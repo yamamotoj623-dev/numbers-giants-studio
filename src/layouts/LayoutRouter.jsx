@@ -50,7 +50,7 @@ export function LayoutRouter(props) {
         setActiveLayout(desiredLayout);
         prevLayoutRef.current = desiredLayout;
         setFadeState('in');
-      }, 280);
+      }, 480);
       return () => clearTimeout(t);
     }
   }, [desiredLayout]);

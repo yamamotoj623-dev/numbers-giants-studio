@@ -333,10 +333,10 @@ function renderHookStatsCells(projectData) {
   if (playerType === 'pitcher') {
     return (
       <>
-        {renderHookStatCell(projectData, 'era', 'ERA')}
+        {renderHookStatCell(projectData, 'era', '防御率')}
         {renderHookStatCell(projectData, 'whip', 'WHIP')}
-        {renderHookStatCell(projectData, 'so', 'K')}
-        {renderHookStatCell(projectData, 'win', 'W')}
+        {renderHookStatCell(projectData, 'so', '奪三振')}
+        {renderHookStatCell(projectData, 'win', '勝利')}
       </>
     );
   }
@@ -353,10 +353,10 @@ function renderHookStatsCells(projectData) {
   }
   return (
     <>
-      {renderHookStatCell(projectData, 'avg', 'AVG')}
+      {renderHookStatCell(projectData, 'avg', '打率')}
       {renderHookStatCell(projectData, 'ops', 'OPS')}
-      {renderHookStatCell(projectData, 'hr', 'HR')}
-      {renderHookStatCell(projectData, 'rbi', 'RBI')}
+      {renderHookStatCell(projectData, 'hr', '本塁打')}
+      {renderHookStatCell(projectData, 'rbi', '打点')}
     </>
   );
 }

@@ -50,7 +50,7 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[35%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[30%] px-3">
 
 
       {data.narrative && (
@@ -64,8 +64,8 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
       {data.mode === 'lineup' && (
         <div className="bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
           <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">
-            <span className={`${themeClass.text} text-[10px] font-black`}>提案オーダー</span>
-            <span className="text-zinc-500 text-[9px] font-bold">合計OPS: {data.lineup.reduce((s, p) => s + p.ops, 0).toFixed(2)}</span>
+            <span className={`${themeClass.text} text-[12px] font-black`}>提案オーダー</span>
+            <span className="text-zinc-500 text-[13px] font-bold">合計OPS: {data.lineup.reduce((s, p) => s + p.ops, 0).toFixed(2)}</span>
           </div>
           {data.lineup.map(p => (
             <div
@@ -83,7 +83,7 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
               </div>
               <span className={`flex-1 text-[12px] font-black ${p.isMainPlayer ? 'text-white' : 'text-zinc-300'}`}>
                 {p.name}
-                {p.isMainPlayer && <span className={`ml-1.5 text-[8px] ${themeClass.text} font-black`}>◀ 注目</span>}
+                {p.isMainPlayer && <span className={`ml-1.5 text-[12px] ${themeClass.text} font-black`}>◀ 注目</span>}
               </span>
               <div className="flex items-center gap-2">
                 <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
@@ -92,7 +92,7 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
                     style={{ width: `${Math.min(100, (p.ops / 1.2) * 100)}%` }}
                   />
                 </div>
-                <span className={`text-[11px] font-mono font-black w-12 text-right ${p.isMainPlayer ? themeClass.text : 'text-zinc-400'}`}>
+                <span className={`text-[13px] font-mono font-black w-12 text-right ${p.isMainPlayer ? themeClass.text : 'text-zinc-400'}`}>
                   {p.ops.toFixed(3).replace(/^0/, '')}
                 </span>
               </div>
@@ -104,7 +104,7 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
       {data.mode === 'role' && (
         <div className="bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
           <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30">
-            <span className={`${themeClass.text} text-[10px] font-black`}>役割適性スコア</span>
+            <span className={`${themeClass.text} text-[12px] font-black`}>役割適性スコア</span>
           </div>
           {(data.roles || []).map((role, i) => (
             <div key={i} className="px-3 py-2 border-b border-zinc-800 last:border-b-0">
@@ -122,7 +122,7 @@ export function TeamContextLayout({ projectData, currentScript, animationKey , p
                   }}
                 />
               </div>
-              {role.note && <div className="text-[9px] text-zinc-500">{role.note}</div>}
+              {role.note && <div className="text-[13px] text-zinc-500">{role.note}</div>}
             </div>
           ))}
         </div>

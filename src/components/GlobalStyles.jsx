@@ -71,7 +71,7 @@ const CSS_TEXT = `
     width: 100%; height: 100%;
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
-    transition: opacity 0.28s ease-out;
+    transition: opacity 0.45s ease-out;
   }
   .layout-fade-wrap.fade-in { opacity: 1; }
   .layout-fade-wrap.fade-out { opacity: 0; }
@@ -291,12 +291,12 @@ const CSS_TEXT = `
   /* ================================================================ */
   /* フェーズB — タイミング短縮+テロップ中央+透過 */
   /* ================================================================ */
-  .phase-b-header { position: absolute; top: 12px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 5px; pointer-events: none; }
-  .phase-b-header .num { width: 20px; height: 20px; background: var(--p); color: #fff; font-weight: 900; font-size: 11px; border-radius: 5px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px var(--p-glow); }
-  .phase-b-header .name { color: var(--p); font-size: 14px; font-weight: 900; letter-spacing: -0.3px; line-height: 1; text-shadow: 0 0 8px var(--p-glow); }
+  .phase-b-header { position: absolute; top: 14px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 6px; pointer-events: none; }
+  .phase-b-header .num { width: 24px; height: 24px; background: var(--p); color: #fff; font-weight: 900; font-size: 13px; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px var(--p-glow); }
+  .phase-b-header .name { color: var(--p); font-size: 17px; font-weight: 900; letter-spacing: -0.3px; line-height: 1; text-shadow: 0 0 8px var(--p-glow); }
 
-  .radar-outer { position: absolute; top: 40px; bottom: 42%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 15px; }
-  .radar-svg-box { width: 100%; max-width: 220px; position: relative; }
+  .radar-outer { position: absolute; top: 38px; bottom: 28%; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 12px; }
+  .radar-svg-box { width: 100%; max-width: 280px; position: relative; }
   .radar-svg-box svg { width: 100%; height: auto; display: block; }
 
   /* 描画時間 0.8s に短縮 */
@@ -318,18 +318,18 @@ const CSS_TEXT = `
   .phase[data-p="normal"].active .radar-label-group:nth-of-type(5) { animation-delay: 0.75s; }
   @keyframes radarFadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-  .radar-legend { margin-top: 2px; display: flex; gap: 10px; justify-content: center; opacity: 0; }
+  .radar-legend { margin-top: 4px; display: flex; gap: 12px; justify-content: center; opacity: 0; }
   .phase[data-p="normal"].active .radar-legend { animation: telopSlideUp 0.4s ease-out 1.5s forwards; }
   /* highlight phase では legend は即時表示 */
   .phase[data-p="highlight"].active .radar-legend { opacity: 1; }
-  .radar-legend-item { display: flex; align-items: center; gap: 6px; background: rgba(24,24,27,0.9); padding: 6px 12px; border-radius: 14px; border: 1px solid rgba(63,63,70,0.6); }
-  .radar-legend-item .swatch { width: 16px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+  .radar-legend-item { display: flex; align-items: center; gap: 7px; background: rgba(24,24,27,0.9); padding: 7px 14px; border-radius: 16px; border: 1px solid rgba(63,63,70,0.6); }
+  .radar-legend-item .swatch { width: 18px; height: 4px; border-radius: 2px; flex-shrink: 0; }
   .radar-legend-item.main .swatch { background: var(--p); box-shadow: 0 0 6px var(--p); }
   .radar-legend-item.sub { border-color: rgba(161,161,170,0.3); }
   .radar-legend-item.sub .swatch { height: 2px; border-top: 2px dashed #a1a1aa; background: none; }
-  .radar-legend-item .label { font-size: 11px; font-weight: 900; display: flex; flex-direction: column; line-height: 1.1; }
-  .radar-legend-item .label .name { font-size: 12px; }
-  .radar-legend-item .label .year { font-size: 9px; font-weight: 700; opacity: 0.8; margin-top: 1px; }
+  .radar-legend-item .label { font-size: 13px; font-weight: 900; display: flex; flex-direction: column; line-height: 1.1; }
+  .radar-legend-item .label .name { font-size: 14px; }
+  .radar-legend-item .label .year { font-size: 11px; font-weight: 700; opacity: 0.8; margin-top: 1px; }
   .radar-legend-item.main .label { color: var(--p); }
   .radar-legend-item.sub .label { color: #a1a1aa; }
 
@@ -400,10 +400,10 @@ const CSS_TEXT = `
   .telop-normal { font-weight: 900; text-align: center; line-height: 1.2; letter-spacing: -0.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 6px 14px rgba(0,0,0,1); animation: textFadeIn 0.18s ease-out; }
   @keyframes textFadeIn { 0% { opacity: 0.3; transform: translateY(4px); } 100% { opacity: 1; transform: translateY(0); } }
   .telop-normal.b { color: #fde047; }
-  .telop-normal.size-xl { font-size: 26px; }
-  .telop-normal.size-l { font-size: 22px; }
-  .telop-normal.size-m { font-size: 19px; }
-  .telop-normal.size-s { font-size: 16px; }
+  .telop-normal.size-xl { font-size: 30px; }
+  .telop-normal.size-l { font-size: 25px; }
+  .telop-normal.size-m { font-size: 21px; }
+  .telop-normal.size-s { font-size: 18px; }
   .telop-normal .em-y { color: #FFD700; font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 15px rgba(255,215,0,0.5); }
   .telop-normal .em-o { color: #FF8C00; font-size: 1.15em; }
   .telop-normal .em-r { color: #FF4500; font-size: 1.15em; }
@@ -416,12 +416,12 @@ const CSS_TEXT = `
   /* ================================================================ */
   /* フェーズC — 情報量削減+数値上部配置 */
   /* ================================================================ */
-  .phase-c-header { position: absolute; top: 12px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 5px; pointer-events: none; }
-  .phase-c-header .num { width: 20px; height: 20px; background: var(--p); color: #fff; font-weight: 900; font-size: 11px; border-radius: 5px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px var(--p-glow); }
-  .phase-c-header .name { color: var(--p); font-size: 14px; font-weight: 900; letter-spacing: -0.3px; line-height: 1; text-shadow: 0 0 8px var(--p-glow); }
+  .phase-c-header { position: absolute; top: 14px; left: 0; right: 0; z-index: 25; display: flex; justify-content: center; align-items: center; gap: 6px; pointer-events: none; }
+  .phase-c-header .num { width: 24px; height: 24px; background: var(--p); color: #fff; font-weight: 900; font-size: 13px; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px var(--p-glow); }
+  .phase-c-header .name { color: var(--p); font-size: 17px; font-weight: 900; letter-spacing: -0.3px; line-height: 1; text-shadow: 0 0 8px var(--p-glow); }
 
-  .hl-radar-outer { position: absolute; top: 50px; left: 0; right: 0; height: 125px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
-  .hl-radar-svg-box { width: 140px; height: 110px; position: relative; transform-origin: center; }
+  .hl-radar-outer { position: absolute; top: 60px; left: 0; right: 0; height: 100px; display: flex; justify-content: center; align-items: center; z-index: 10; padding: 0 40px; }
+  .hl-radar-svg-box { width: 110px; height: 90px; position: relative; transform-origin: center; opacity: 0.45; }
   .phase.active .hl-radar-svg-box { animation: radarShrink 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
   .hl-radar-svg-box svg { width: 100%; height: 100%; display: block; }
 
@@ -429,30 +429,30 @@ const CSS_TEXT = `
   .phase.active .vertex-glow { animation: vertexZoomLight 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s backwards; }
 
   /* ハイライトカード: 両サイド均等マージンで中央バランス、右のショートUI回避 */
-  .highlight-card { position: absolute; top: 245px; left: 40px; right: 44px; background: linear-gradient(180deg, rgba(24,24,27,0.97), rgba(39,39,42,0.9)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.4); padding: 10px 10px 8px; box-shadow: 0 8px 24px rgba(249,115,22,0.15); z-index: 20; transform-origin: top; }
+  .highlight-card { position: absolute; top: 175px; left: 28px; right: 32px; background: linear-gradient(180deg, rgba(24,24,27,0.97), rgba(39,39,42,0.92)); border-radius: 16px; border: 2px solid rgba(249,115,22,0.5); padding: 14px 14px 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 24px rgba(249,115,22,0.2); z-index: 20; transform-origin: top; }
   .phase.active .highlight-card { animation: cardExpand 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.3s backwards, cardPulse 2.5s ease-in-out 1s infinite; }
   .highlight-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--p); box-shadow: 0 0 10px var(--p-glow); border-radius: 4px 0 0 4px; }
 
   /* 上部: バッジ・kana・IsoD を1行に圧縮 */
-  .hl-header-compact { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; min-width: 0; }
-  .hl-radar-badge { font-size: 9px; font-weight: 900; color: #fff; background: var(--p); padding: 3px 8px; border-radius: 12px; flex-shrink: 0; white-space: nowrap; }
-  .hl-label-group { display: flex; flex-direction: column; align-items: center; gap: 1px; flex: 1; min-width: 0; }
-  .hl-label-compact { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; flex-shrink: 0; }
-  .hl-kana-compact { font-size: 10px; font-weight: 700; color: var(--p); letter-spacing: 0.5px; line-height: 1; }
+  .hl-header-compact { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; min-width: 0; }
+  .hl-radar-badge { font-size: 11px; font-weight: 900; color: #fff; background: var(--p); padding: 4px 10px; border-radius: 14px; flex-shrink: 0; white-space: nowrap; }
+  .hl-label-group { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 0; }
+  .hl-label-compact { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; flex-shrink: 0; }
+  .hl-kana-compact { font-size: 12px; font-weight: 700; color: var(--p); letter-spacing: 0.5px; line-height: 1; }
 
   /* コンパクト計算式 */
-  .hl-formula-compact { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; padding: 3px 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(63,63,70,0.6); border-radius: 6px; }
-  .hl-formula-compact .eq-label { font-size: 8px; color: #71717a; font-weight: 900; letter-spacing: 1.5px; border-right: 1px solid rgba(63,63,70,0.8); padding-right: 6px; }
-  .hl-formula-compact .eq-text { font-size: 11px; color: #fff; font-weight: 900; letter-spacing: 0.3px; }
+  .hl-formula-compact { display: flex; align-items: center; justify-content: center; gap: 7px; margin-bottom: 6px; padding: 4px 10px; background: rgba(0,0,0,0.35); border: 1px solid rgba(63,63,70,0.6); border-radius: 7px; }
+  .hl-formula-compact .eq-label { font-size: 10px; color: #a1a1aa; font-weight: 900; letter-spacing: 1.5px; border-right: 1px solid rgba(63,63,70,0.8); padding-right: 7px; }
+  .hl-formula-compact .eq-text { font-size: 13px; color: #fff; font-weight: 900; letter-spacing: 0.3px; }
   .hl-formula-compact .eq-text .op { color: var(--p); margin: 0 3px; }
 
   /* 数値を大きく・目立つ中央配置 (ハイライト最重要) */
-  .hl-values { display: flex; justify-content: center; align-items: baseline; gap: 10px; margin-bottom: 5px; padding: 4px 0; border-top: 1px solid rgba(63,63,70,0.5); border-bottom: 1px solid rgba(63,63,70,0.5); }
+  .hl-values { display: flex; justify-content: center; align-items: baseline; gap: 14px; margin-bottom: 7px; padding: 7px 0; border-top: 1px solid rgba(63,63,70,0.5); border-bottom: 1px solid rgba(63,63,70,0.5); }
   .hl-val-main, .hl-val-sub { display: flex; flex-direction: column; align-items: center; }
-  .hl-val-main .num { font-family: monospace; font-size: 32px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
-  .hl-val-sub .num { font-family: monospace; font-size: 22px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
-  .hl-val-main .tag { font-size: 9px; font-weight: 700; margin-top: 3px; }
-  .hl-val-sub .tag { font-size: 9px; font-weight: 700; margin-top: 3px; }
+  .hl-val-main .num { font-family: monospace; font-size: 38px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+  .hl-val-sub .num { font-family: monospace; font-size: 26px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+  .hl-val-main .tag { font-size: 11px; font-weight: 700; margin-top: 4px; }
+  .hl-val-sub .tag { font-size: 11px; font-weight: 700; margin-top: 4px; }
 
   .hl-val-main.loser .num { color: #fca5a5; text-shadow: 0 0 12px rgba(248,113,113,0.4); }
   .hl-val-main.loser .tag { color: #fca5a5; }
@@ -462,18 +462,18 @@ const CSS_TEXT = `
   .hl-val-sub.winner .tag { color: var(--p); }
   .hl-val-sub.loser .num { color: #fca5a5; text-shadow: 0 0 8px rgba(248,113,113,0.3); opacity: 0.85; }
   .hl-val-sub.loser .tag { color: #fca5a5; opacity: 0.85; }
-  .hl-vs { font-size: 12px; font-weight: 900; color: #52525b; font-style: italic; }
+  .hl-vs { font-size: 14px; font-weight: 900; color: #52525b; font-style: italic; }
 
-  /* 下部: 「なぜ見るか」を簡潔に。計算式と優秀基準は統合表示 */
-  .hl-context-row { display: flex; gap: 6px; }
-  .hl-why-compact { flex: 1; background: rgba(249,115,22,0.08); border-left: 2px solid var(--p); border-radius: 4px; padding: 5px 8px; }
-  .hl-why-compact .label { font-size: 8px; font-weight: 900; color: var(--p); letter-spacing: 1.5px; margin-bottom: 2px; }
-  .hl-why-compact .text { font-size: 10px; font-weight: 700; color: #d4d4d8; line-height: 1.3; }
+  /* 下部: 「なぜ見るか」を簡潔に */
+  .hl-context-row { display: flex; gap: 7px; }
+  .hl-why-compact { flex: 1; background: rgba(249,115,22,0.08); border-left: 3px solid var(--p); border-radius: 5px; padding: 7px 10px; }
+  .hl-why-compact .label { font-size: 10px; font-weight: 900; color: var(--p); letter-spacing: 1.5px; margin-bottom: 3px; }
+  .hl-why-compact .text { font-size: 12px; font-weight: 700; color: #d4d4d8; line-height: 1.35; }
   .hl-why-compact .text strong { color: #FFD700; }
 
-  .hl-criteria-side { background: rgba(0,0,0,0.35); border-radius: 4px; padding: 5px 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 58px; }
-  .hl-criteria-side .label { font-size: 8px; color: #71717a; font-weight: 700; letter-spacing: 1px; }
-  .hl-criteria-side .value { font-size: 12px; color: #10b981; font-weight: 900; font-family: monospace; }
+  .hl-criteria-side { background: rgba(0,0,0,0.35); border-radius: 5px; padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 64px; }
+  .hl-criteria-side .label { font-size: 10px; color: #a1a1aa; font-weight: 700; letter-spacing: 1px; }
+  .hl-criteria-side .value { font-size: 14px; color: #10b981; font-weight: 900; font-family: monospace; }
 
   @keyframes avatarTalk {
     0%, 100% { transform: scale(1.1); }

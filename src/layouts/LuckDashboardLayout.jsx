@@ -39,23 +39,23 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[30%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[30%] px-3">
 
-      <div className="mt-8 mb-2 bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-xl border border-zinc-700/50 p-3 shadow-2xl z-20">
+      <div className="mb-3 bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-xl border border-zinc-700/50 p-4 shadow-2xl z-20">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-black text-zinc-400 tracking-widest">不運度スコア</span>
-          <span className="text-[9px] text-zinc-500">0-100</span>
+          <span className="text-[12px] font-black text-zinc-300 tracking-widest">不運度スコア</span>
+          <span className="text-[11px] text-zinc-400">0-100</span>
         </div>
         <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-[44px] font-black tracking-tighter" style={{ color: unluckyColor, textShadow: `0 0 20px ${unluckyColor}` }}>
+          <span className="text-[52px] font-black tracking-tighter leading-none" style={{ color: unluckyColor, textShadow: `0 0 20px ${unluckyColor}` }}>
             {luck.unluckyScore}
           </span>
-          <span className="text-[14px] font-bold text-zinc-500">/ 100</span>
+          <span className="text-[16px] font-bold text-zinc-400">/ 100</span>
         </div>
-        <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${luck.unluckyScore}%`, background: unluckyColor, boxShadow: `0 0 10px ${unluckyColor}` }} />
         </div>
-        <div className="mt-2 text-[9px] font-bold text-zinc-500 flex justify-between">
+        <div className="mt-2 text-[11px] font-bold text-zinc-400 flex justify-between">
           <span>実力通り</span>
           <span className={themeClass.text}>{luck.unluckyScore >= 70 ? '極端な不運' : '標準範囲'}</span>
         </div>
@@ -78,10 +78,10 @@ export function LuckDashboardLayout({ projectData, currentScript, animationKey ,
 
 function MetricCard({ label, value, color, sub }) {
   return (
-    <div className="bg-zinc-900/80 border border-zinc-700/50 rounded-lg p-2">
-      <div className="text-[8px] font-black text-zinc-500 tracking-widest mb-0.5">{label}</div>
-      <div className={`text-[18px] font-mono font-black tracking-tighter ${color}`}>{value}</div>
-      {sub && <div className="text-[7px] text-zinc-500 mt-0.5">{sub}</div>}
+    <div className="bg-zinc-900/80 border border-zinc-700/50 rounded-lg p-2.5">
+      <div className="text-[10px] font-black text-zinc-300 tracking-widest mb-1">{label}</div>
+      <div className={`text-[22px] font-mono font-black tracking-tighter ${color}`}>{value}</div>
+      {sub && <div className="text-[9px] text-zinc-400 mt-0.5">{sub}</div>}
     </div>
   );
 }

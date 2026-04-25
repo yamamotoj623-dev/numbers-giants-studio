@@ -16,6 +16,7 @@
 
 import { GAS_CONFIG } from './config';
 import { getCachedAudio, saveCachedAudio } from './audioCache';
+import { applyYomigana } from './yomigana';
 
 // ============================================================================
 // PCM → WAV 変換（Gemini TTS が PCM 16bit 24kHz を返してくるため）
@@ -85,13 +86,16 @@ export class WebSpeechAdapter {
       const { rate = 1.6, onEnd, onError } = opts;
       this.stop();
 
-      if (!('speechSynthesis' in window) || !text) {
-        const delay = Math.max(1500, text.length * 150 / rate);
+      // 読み仮名置換 (難読語ひらがな化)
+      const fixedText = applyYomigana(text);
+
+      if (!('speechSynthesis' in window) || !fixedText) {
+        const delay = Math.max(1500, fixedText.length * 150 / rate);
         this.fallbackTimer = setTimeout(() => { onEnd?.(); resolve(); }, delay);
         return;
       }
 
-      const utt = new SpeechSynthesisUtterance(text);
+      const utt = new SpeechSynthesisUtterance(fixedText);
       this.currentUtterance = utt;
       utt.lang = 'ja-JP';
       utt.rate = rate;
@@ -270,8 +274,11 @@ export class GeminiAdapter {
       const { rate = 1.0, onEnd, onError } = opts;
       this.stop();
 
+      // 読み仮名置換 (難読語ひらがな化)
+      const fixedText = applyYomigana(text);
+
       try {
-        const { blob } = await this._getOrGenerate(text, speaker);
+        const { blob } = await this._getOrGenerate(fixedText, speaker);
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.playbackRate = rate;
@@ -348,7 +355,8 @@ export class GeminiAdapter {
     let generated = 0, cached = 0, errors = 0, costUsd = 0;
     for (let i = 0; i < scripts.length; i++) {
       const s = scripts[i];
-      const text = s.speech || s.text;
+      const rawText = s.speech || s.text;
+      const text = applyYomigana(rawText);
       const speaker = s.speaker || 'A';
       if (!text) continue;
       try {

@@ -66,6 +66,59 @@ export function LayoutPanel({ projectData, onChange }) {
 
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="flex items-center gap-2 mb-2">
+          <span className="font-bold text-sm text-zinc-700">選手タイプ・シルエット</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          {[
+            { id: 'batter', label: '打者', emoji: '🏏' },
+            { id: 'pitcher', label: '投手', emoji: '⚾' },
+            { id: 'team', label: 'チーム', emoji: '👥' },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setField('playerType', t.id)}
+              className={`py-1.5 text-xs font-bold rounded-lg border transition ${projectData.playerType === t.id ? 'bg-indigo-50 border-indigo-400 text-indigo-700 ring-2 ring-indigo-300' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'}`}
+            >
+              <div className="text-base mb-0.5">{t.emoji}</div>
+              <div className="text-[10px]">{t.label}</div>
+            </button>
+          ))}
+        </div>
+        {/* シルエット選択 (タイプに応じて) */}
+        <div className="text-[10px] font-bold text-zinc-500 mt-3 mb-1">シルエット</div>
+        <div className="grid grid-cols-4 gap-1">
+          {(() => {
+            const t = projectData.playerType || 'batter';
+            const options =
+              t === 'batter' ? [
+                { id: 'batter_right', label: '右打' },
+                { id: 'batter_left', label: '左打' },
+                { id: 'batter_stance', label: '構え' },
+                { id: 'runner', label: '走塁' },
+              ] : t === 'pitcher' ? [
+                { id: 'pitcher_right', label: '右投' },
+                { id: 'pitcher_left', label: '左投' },
+                { id: 'pitcher_set', label: 'セット' },
+                { id: 'catcher', label: '捕手' },
+              ] : [
+                { id: 'team_huddle', label: '円陣' },
+                { id: 'team_stadium', label: '球場' },
+              ];
+            return options.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => setField('silhouetteType', opt.id)}
+                className={`py-1.5 text-[10px] font-bold rounded border transition ${projectData.silhouetteType === opt.id ? 'bg-indigo-50 border-indigo-400 text-indigo-700' : 'bg-white border-zinc-200 text-zinc-500 hover:bg-zinc-50'}`}
+              >
+                {opt.label}
+              </button>
+            ));
+          })()}
+        </div>
+      </div>
+
+      <div className="bg-white p-3 rounded-lg border border-zinc-200">
+        <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-sm text-zinc-700">画面比率</span>
         </div>
         <div className="grid grid-cols-2 gap-2">

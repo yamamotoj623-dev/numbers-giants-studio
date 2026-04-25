@@ -78,12 +78,12 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey , 
 
   return (
 <>
-    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[35%] px-3">
+    <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[30%] px-3">
 
 
       <div className="mb-2 bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
         <div className="px-3 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30">
-          <span className={`${themeClass.text} text-[10px] font-black`}>球種配分 & 被打率</span>
+          <span className={`${themeClass.text} text-[12px] font-black`}>球種配分 & 被打率</span>
         </div>
         <div className="flex items-center justify-center p-1">
           <svg viewBox={`-30 -10 ${size + 60} ${size + 20}`} style={{ width: '60%', maxWidth: '180px' }}>
@@ -104,10 +104,10 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey , 
 
       <div className="bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden z-20">
         <div className={`px-3 py-1.5 border-b border-zinc-700/80 bg-zinc-800/30 grid ${data.comparePitches ? 'grid-cols-[1fr_56px_56px_56px]' : 'grid-cols-[1fr_50px_50px_45px]'} gap-2 items-center`}>
-          <span className="text-[9px] font-black text-zinc-500 tracking-widest">球種</span>
-          <span className="text-[9px] font-black text-zinc-500 tracking-widest text-right">配分</span>
-          <span className="text-[9px] font-black text-zinc-500 tracking-widest text-right">球速</span>
-          <span className="text-[9px] font-black text-zinc-500 tracking-widest text-right">被打率</span>
+          <span className="text-[13px] font-black text-zinc-500 tracking-widest">球種</span>
+          <span className="text-[13px] font-black text-zinc-500 tracking-widest text-right">配分</span>
+          <span className="text-[13px] font-black text-zinc-500 tracking-widest text-right">球速</span>
+          <span className="text-[13px] font-black text-zinc-500 tracking-widest text-right">被打率</span>
         </div>
         {data.pitches.map((pitch, i) => {
           const isBest = pitch.avg === Math.min(...data.pitches.map(p => p.avg));
@@ -117,31 +117,31 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey , 
             <div key={i} className={`px-3 py-2 border-b border-zinc-800 last:border-b-0 grid ${data.comparePitches ? 'grid-cols-[1fr_56px_56px_56px]' : 'grid-cols-[1fr_50px_50px_45px]'} gap-2 items-center`}>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: pitch.color, boxShadow: `0 0 6px ${pitch.color}` }}/>
-                <span className="text-[11px] font-black text-white truncate">{pitch.name}</span>
-                {isBest && <span className="text-[8px] bg-amber-500 text-black font-black px-1 py-0.5 rounded flex-shrink-0">武器</span>}
+                <span className="text-[13px] font-black text-white truncate">{pitch.name}</span>
+                {isBest && <span className="text-[12px] bg-amber-500 text-black font-black px-1 py-0.5 rounded flex-shrink-0">武器</span>}
               </div>
               {/* 配分 */}
               <div className="text-right">
                 <div className="text-[12px] font-mono font-black text-zinc-300">{pitch.pct}%</div>
-                {cmp && <div className="text-[8px] font-mono text-zinc-500 leading-none">→{cmp.pct}%</div>}
+                {cmp && <div className="text-[12px] font-mono text-zinc-500 leading-none">→{cmp.pct}%</div>}
               </div>
               {/* 球速 */}
               <div className="text-right">
-                <div className="text-[10px] font-mono font-bold text-zinc-400">{pitch.velocity}<span className="text-[7px] text-zinc-600">km</span></div>
-                {cmp && <div className="text-[8px] font-mono text-zinc-500 leading-none">→{cmp.velocity}km</div>}
+                <div className="text-[12px] font-mono font-bold text-zinc-400">{pitch.velocity}<span className="text-[7px] text-zinc-600">km</span></div>
+                {cmp && <div className="text-[12px] font-mono text-zinc-500 leading-none">→{cmp.velocity}km</div>}
               </div>
               {/* 被打率 */}
               <div className="text-right">
                 <div className={`text-[12px] font-mono font-black ${isBest ? 'text-amber-400' : pitch.avg > 0.280 ? 'text-red-400' : 'text-zinc-300'}`}>
                   {pitch.avg.toFixed(3).replace(/^0/, '')}
                 </div>
-                {cmp && <div className="text-[8px] font-mono text-zinc-500 leading-none">→{cmp.avg.toFixed(3).replace(/^0/, '')}</div>}
+                {cmp && <div className="text-[12px] font-mono text-zinc-500 leading-none">→{cmp.avg.toFixed(3).replace(/^0/, '')}</div>}
               </div>
             </div>
           );
         })}
         {data.compareLabel && (
-          <div className="px-3 py-1 bg-zinc-800/40 text-[8px] text-zinc-500 text-right">
+          <div className="px-3 py-1 bg-zinc-800/40 text-[12px] text-zinc-500 text-right">
             ※ 数値→以降は「{data.compareLabel}」との比較
           </div>
         )}

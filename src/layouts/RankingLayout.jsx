@@ -71,14 +71,14 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
 
   return (
     <>
-      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-7 pb-[30%] px-3">
+      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[28%] px-3">
         {/* タブ切替 (複数指標時のみ) */}
         {data.mode === 'multi' && data.metrics.length > 1 && (
-          <div className="z-20 flex gap-1.5 mb-2 overflow-x-auto">
+          <div className="z-20 flex gap-1.5 mb-3 overflow-x-auto">
             {data.metrics.map(metric => (
               <button
                 key={metric.id}
-                className={`text-[10px] font-black px-2.5 py-1 rounded-full whitespace-nowrap transition flex-shrink-0 ${
+                className={`text-[12px] font-black px-3 py-1.5 rounded-full whitespace-nowrap transition flex-shrink-0 ${
                   metric.id === activeMetric.id
                     ? `${themeClass.bg} text-white shadow-md`
                     : 'bg-zinc-800/80 text-zinc-400 border border-zinc-700/50'
@@ -91,9 +91,9 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
         )}
 
         {/* タイトル */}
-        <div className="z-20 mb-2 text-center">
-          <span className={`text-[14px] font-black ${themeClass.text}`}>
-            {activeMetric.label}{activeMetric.kana ? ` ${activeMetric.kana}` : ''} ランキング
+        <div className="z-20 mb-3 text-center">
+          <span className={`text-[18px] font-black ${themeClass.text}`}>
+            {activeMetric.label}{activeMetric.kana ? <span className="text-[11px] opacity-80 ml-1">{activeMetric.kana}</span> : null} ランキング
           </span>
         </div>
 
@@ -113,25 +113,25 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
               : (idx % 2 === 0 ? 'bg-zinc-800/40' : 'bg-zinc-900/40');
             return (
               <React.Fragment key={entry.rank}>
-                {isCutoff && <div className="text-center text-zinc-600 text-[10px] py-0.5">⋯</div>}
-                <div className={`flex items-center px-3 py-1.5 border-b border-zinc-800 ${rowClass} ${isMain ? 'scale-[1.02]' : ''}`}>
+                {isCutoff && <div className="text-center text-zinc-600 text-[12px] py-1">⋯</div>}
+                <div className={`flex items-center px-3 py-2.5 border-b border-zinc-800 ${rowClass} ${isMain ? 'scale-[1.03]' : ''}`}>
                 {/* 順位 */}
-                <div className={`w-8 flex-shrink-0 text-center font-black text-[14px] ${
+                <div className={`w-9 flex-shrink-0 text-center font-black text-[18px] ${
                   entry.rank === 1 ? 'text-yellow-400' :
                   entry.rank === 2 ? 'text-zinc-300' :
                   entry.rank === 3 ? 'text-orange-300' :
                   'text-zinc-500'
                 }`}>
                   {entry.rank}
-                  {isTop3 && entry.rank === 1 && <span className="text-[8px] ml-0.5">👑</span>}
+                  {isTop3 && entry.rank === 1 && <span className="text-[10px] ml-0.5">👑</span>}
                 </div>
                 {/* 選手名 */}
-                <div className={`flex-1 text-[12px] font-black px-2 ${isMain ? 'text-white' : 'text-zinc-300'}`}>
+                <div className={`flex-1 text-[15px] font-black px-2 ${isMain ? 'text-white' : 'text-zinc-300'}`}>
                   {entry.name}
-                  {isMain && <span className={`ml-1 text-[9px] ${themeClass.text}`}>◀ 注目</span>}
+                  {isMain && <span className={`ml-1.5 text-[11px] ${themeClass.text}`}>◀ 注目</span>}
                 </div>
                 {/* 値 */}
-                <div className={`flex-shrink-0 text-[14px] font-mono font-black ${
+                <div className={`flex-shrink-0 text-[17px] font-mono font-black ${
                   isMain ? themeClass.text : (isTop3 ? 'text-white' : 'text-zinc-400')
                 }`}>
                   {entry.value}{activeMetric.unit || ''}

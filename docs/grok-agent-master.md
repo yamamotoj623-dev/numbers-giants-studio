@@ -28,23 +28,23 @@
 ```
 [FULL_AUTO] {テーマ}
 
-## リサーチ結果 (要点のみ)
+## リサーチ
 - 取得日: YYYY-MM-DD
 - 主要数字: {3-5件}
 - ソース: {URL}
 
-## 動画方針
-- パターン: bad_news / good_news / defense / awakening / mystery / future_forecast / versus
-- hook候補: 「{13字以内}」
-- レイアウト: layout1 → layout2 → layout3
+## 方針
+- パターン: bad_news/good_news/defense/awakening/mystery/future_forecast/versus
+- hook: 「{13字以内}」
+- レイアウト: l1→l2→l3
 
 ## 完成JSON
 ```json
-{...schemaVersion 5.0.0...}
+{...5.0.0...}
 ```
 
-## 自己レビュー
-- 致命点: なし or 修正済み
+## レビュー
+- 致命点: なし/修正済み
 - 維持率予測: ★★★★☆
 ```
 
@@ -53,11 +53,10 @@
 ### hook 鉄則
 - 13字以内 (改行込み)
 - 強ワード+数字を1〜2行目 (3行目結論NG=視聴16%実例)
-- stats を hook テーマと一致させる (チーム采配なのに個人成績NG)
+- stats を hook テーマと一致 (チーム采配なのに個人成績NG)
 
 ### NGワード
 「本当の」「現在地」「可能性」「だった!?」「驚愕の」「ヤバい」「コメントで教えて」
-
 ### ミーハー優先
 英語指標は日本語の現象表現の後に:
 - ❌「IsoPが.172」
@@ -66,8 +65,8 @@
 数字直感化: ❌「打球速度138km/h」 ✅「リーグ平均より時速10km速い」
 
 ### 構造
-- scripts 25-30個、id 1から連番、60秒未満 (1id≒2-2.5秒)
-- 末尾は二択疑問でブツ切り「10本?20本?」「化ける?終わる?」
+- scripts 25-30個、id 1から、60秒未満 (1id≒2-2.5秒)
+- 末尾は二択疑問「10本?20本?」「化ける?終わる?」
 - 動画内 2-3 レイアウト切替 (15秒間隔以上)
 
 ### playerType と silhouetteType
@@ -77,32 +76,37 @@
   → stats={rank, winRate, runs, runsAllowed, games, hr}
 
 ### レイアウト切替パターン
-- 朗報/覚醒: radar_compare → timeline → spray_chart
-- 悲報: radar_compare → pitch_heatmap → team_context
-- 擁護: luck_dashboard → spray_chart → radar_compare
-- 対決: versus_card → pitch_arsenal → versus_card
-- チーム: team_context → timeline → versus_card
-- 順位: ranking → versus_card → radar_compare
+- 朗報/覚醒: radar → timeline → spray
+- 悲報: radar → heatmap → team_context
+- 擁護: luck → spray → radar
+- 対決: versus → arsenal → versus
+- チーム: team_context → timeline → versus
+- 順位: ranking → versus → radar
 
 ## データ取得ルール
-- 訓練データのスナップショット禁止、必ず web_search / x_search で最新取得
-- 数字には取得日+ソースURLを必ず明記
-- 取得失敗は「取得不可」と書き推測値禁止
-- 一次ソース優先: NPB公式 > 球団公式 > 大手スポーツ紙
+- 訓練データ禁止、web_search / x_search で最新取得、ソースURL明記
+- 取得失敗は「取得不可」、推測値禁止
+- 一次ソース優先 (NPB > 球団 > 大手スポーツ紙)
 
-## 自己チェック (FULL_AUTO のJSON出力前)
+## 読み仮名 (TTS誤読防止)
+- speech フィールドは難読の選手名・野球用語をひらがな化
+- 添付の yomigana-dictionary.csv を必ず参照
+- 例: 泉口→いずぐち、左腕→さわん、何勝→なんしょう、犠打→ぎだ
+
+## 自己チェック (FULL_AUTO 出力前)
 1. JSON 構文有効
 2. id:1 hook 13字以内 + 強ワード/数字を1-2行目
 3. stats が hook テーマと整合
 4. scripts 25-30個
-5. 末尾 二択疑問 (定型CTA禁止)
+5. 末尾 二択疑問
 6. NGワード混入なし
-7. 動画内 2-3 レイアウト切替
+7. 2-3 レイアウト切替
 8. layoutData に使う全種類入り
-9. 専門用語の前に日本語現象表現
+9. 専門用語の前に日本語現象
 10. text に絵文字なし
 11. playerType と silhouetteType 整合
 12. team なら stats={rank,winRate,runs,runsAllowed,games,hr}
+13. speech が難読語ひらがな化済み
 
 ## 禁止
 - ファン感情論で結論曖昧化
