@@ -19,14 +19,15 @@ export const THEMES = {
 };
 
 export const LAYOUT_TYPES = {
-  radar_compare:  { label: 'レーダー比較',   desc: '総合能力を5角形で比較',        status: 'ready' },
-  timeline:       { label: '時系列推移',     desc: '月別・週別の変化を折れ線で',    status: 'ready' },
-  luck_dashboard: { label: '運要素分析',     desc: 'BABIP・打球速度で擁護',         status: 'ready' },
-  spray_chart:    { label: '打球方向マップ', desc: '球場に打球分布を可視化',        status: 'ready' },
-  pitch_heatmap:  { label: '配球ヒートマップ', desc: '9分割でコース別成績',         status: 'ready' },
-  versus_card:    { label: '対決カード',     desc: '2選手フル比較',                 status: 'ready' },
-  pitch_arsenal:  { label: '球種分析',       desc: '投球配分と被打率',              status: 'ready' },
-  team_context:   { label: 'チーム文脈',     desc: '起用法・打順考察',              status: 'ready' },
+  radar_compare:  { label: 'レーダー比較',   desc: '総合能力を5角形で比較',        status: 'ready', emoji: '🎯' },
+  timeline:       { label: '時系列推移',     desc: '月別・週別の変化を折れ線で',    status: 'ready', emoji: '📈' },
+  luck_dashboard: { label: '運要素分析',     desc: 'BABIP・打球速度で擁護',         status: 'ready', emoji: '🎲' },
+  spray_chart:    { label: '打球方向マップ', desc: '球場に打球分布を可視化',        status: 'ready', emoji: '⚾' },
+  pitch_heatmap:  { label: '配球ヒート',     desc: '9分割でコース別成績',           status: 'ready', emoji: '🔥' },
+  versus_card:    { label: '対決カード',     desc: '2選手フル比較',                 status: 'ready', emoji: '⚔️' },
+  pitch_arsenal:  { label: '球種分析',       desc: '投球配分と被打率',              status: 'ready', emoji: '🎳' },
+  team_context:   { label: 'チーム文脈',     desc: '起用法・打順考察',              status: 'ready', emoji: '👥' },
+  ranking:        { label: 'ランキング',     desc: '指標別の順位表',                status: 'ready', emoji: '🏆' },
 };
 
 export const SE_PRESETS = [

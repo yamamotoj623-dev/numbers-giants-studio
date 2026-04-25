@@ -34,7 +34,27 @@ export const defaultPitcherData = {
     k_bb: { main: 100, sub: 85, label: '制圧力(K/BB)' },
     k_9:  { main: 55,  sub: 60, label: '奪三振力' },
   },
-  layoutData: {},
+  layoutData: {
+    timeline: {
+      unit: 'season',
+      metric: 'BB/9',
+      points: [
+        { label: '24年', main: 1.85, sub: 1.85, highlight: false },
+        { label: '25年', main: 1.45, sub: 1.45, highlight: false },
+        { label: '26年4月', main: 0.50, sub: 1.45, highlight: false },
+        { label: '初登板', main: 0.00, sub: 1.45, highlight: true },
+      ],
+    },
+    arsenal: {
+      pitches: [
+        { name: 'ストレート', pct: 48, avg: 0.205, velocity: 152, color: '#ef4444' },
+        { name: 'スプリット', pct: 22, avg: 0.150, velocity: 138, color: '#3b82f6' },
+        { name: 'スライダー', pct: 18, avg: 0.180, velocity: 132, color: '#10b981' },
+        { name: 'カーブ', pct: 8, avg: 0.250, velocity: 118, color: '#f59e0b' },
+        { name: 'チェンジアップ', pct: 4, avg: 0.300, velocity: 128, color: '#a855f7' },
+      ],
+    },
+  },
   comparisons: [
     { id: 'fip',  label: 'DIPS', kana: 'ディップス',        desc: '守備から独立した防御率', formula: '本塁打・四死球・三振で評価',     criteria: 'エース級: 3.00以下',    radarMatch: 'DIPS(内容)',    valMain: '3.55', valSub: '3.31', unit: '', winner: 'sub' },
     { id: 'hr_9', label: 'HR/9', kana: 'エイチアールナイン', desc: '被本塁打率',              formula: '9イニングあたりの被本塁打',     criteria: '優秀: 0.80以下',         radarMatch: '本塁打回避',   valMain: '1.29', valSub: '0.96', unit: '本', winner: 'sub' },
@@ -57,8 +77,8 @@ export const defaultPitcherData = {
     { id: 7, speaker: 'B', emoji: '😯', text: 'むしろ昨季より\n下がってますね', speech: 'むしろ昨季より下がってますね。', highlight: 'k_9', textSize: 'm', se: null },
     { id: 8, speaker: 'A', emoji: '👨‍🏫', text: '三振を狙う投球では\nなくなったんです', speech: '三振を狙う投球ではなくなったんです。', highlight: 'k_9', textSize: 's', se: null },
 
-    // ===== ハイライト2: BB/9 =====
-    { id: 9, speaker: 'A', emoji: '👨‍🏫', text: '最大の変化は\n制球力です', speech: '最大の変化は制球力です。', highlight: 'bb_9', textSize: 'm', se: 'highlight_ping' },
+    // ===== ハイライト2: BB/9 (★ここでtimeline切替、制球力推移) =====
+    { id: 9, speaker: 'A', emoji: '👨‍🏫', layoutType: 'timeline', text: '最大の変化は\n制球力です', speech: '最大の変化は制球力です。', highlight: 'bb_9', textSize: 'm', se: 'transition_swoosh' },
     { id: 10, speaker: 'A', emoji: '👨‍🏫', text: '「BB/9」を\n見てください', speech: 'ビービーナインを見てください。', highlight: 'bb_9', textSize: 'm', se: null },
     { id: 11, speaker: 'B', emoji: '🧐', text: '1試合あたりの\n与四球率ですね', speech: '1試合あたりの与四球率ですね。', highlight: 'bb_9', textSize: 'm', se: null },
     { id: 12, speaker: 'A', emoji: '👨‍🏫', text: '今季はなんと\n【0.00】です', speech: '今季はなんとぜろてんぜろぜろです。', highlight: 'bb_9', textSize: 'm', se: 'stat_reveal' },
@@ -70,8 +90,8 @@ export const defaultPitcherData = {
     { id: 16, speaker: 'A', emoji: '👨‍🏫', text: '【MAX】値を\n記録しました', speech: 'マックス値を記録しました。', highlight: 'k_bb', textSize: 'm', se: 'stat_reveal' },
     { id: 17, speaker: 'B', emoji: '😆', text: '四球からの自滅が\n全く無いんですね', speech: '四球からの自滅が全く無いんですね。', highlight: 'k_bb', textSize: 's', se: null },
 
-    // ===== ハイライト4: HR/9 =====
-    { id: 18, speaker: 'A', emoji: '👨‍🏫', text: 'ただし\n弱点もあります', speech: 'ただし弱点もあります。', highlight: null, textSize: 'm', se: null },
+    // ===== ハイライト4: HR/9 (★ここでpitch_arsenal切替、球種別の被打率) =====
+    { id: 18, speaker: 'A', emoji: '👨‍🏫', layoutType: 'pitch_arsenal', text: 'ただし\n弱点もあります', speech: 'ただし弱点もあります。', highlight: null, textSize: 'm', se: 'transition_swoosh' },
     { id: 19, speaker: 'A', emoji: '👨‍🏫', text: '被弾率の\n「HR/9」が\n悪化してます', speech: '被弾率のエイチアールナインが悪化してます。', highlight: 'hr_9', textSize: 's', se: 'warning_alert' },
     { id: 20, speaker: 'B', emoji: '😨', text: '「DIPS」も実際の\n防御率より悪いですね', speech: 'ディップスも実際の防御率より悪いですね。', highlight: 'fip', textSize: 's', se: null },
 
@@ -93,8 +113,8 @@ export const defaultPitcherData = {
     { id: 31, speaker: 'A', emoji: '👨‍🏫', text: 'ローテーション定着は\n確実でしょう', speech: 'ローテーション定着は確実でしょう。', highlight: null, textSize: 's', se: null },
     { id: 32, speaker: 'B', emoji: '🥰', text: '今後が本当に\n楽しみですね', speech: '今後が本当に楽しみですね。', highlight: null, textSize: 'm', se: null },
 
-    // ===== アウトロ =====
-    { id: 33, speaker: 'A', emoji: '👨‍🏫', text: 'あなたは則本に今季\n【何勝】を\n期待しますか？', speech: 'あなたは則本に今季何勝を期待しますか。', highlight: null, textSize: 's', se: null },
-    { id: 34, speaker: 'B', emoji: '🥰', text: '私は10勝予想\n皆さんの予想も\nコメントで教えて🥰', speech: '私はじゅっしょう予想。皆さんの予想もコメントで教えてください。', highlight: null, textSize: 's', se: 'outro_fade' },
+    // ===== アウトロ (二択疑問でブツ切り) =====
+    { id: 33, speaker: 'A', emoji: '👨‍🏫', text: '今季の則本\n何勝予想?', speech: '今季の則本何勝予想。', highlight: null, textSize: 'm', se: null },
+    { id: 34, speaker: 'B', emoji: '🤔', text: '【10勝?\n15勝?】', speech: 'じゅっしょうか。じゅうごしょうか。', highlight: null, textSize: 'l', se: 'outro_fade' },
   ]
 };

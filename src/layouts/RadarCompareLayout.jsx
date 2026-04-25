@@ -24,13 +24,14 @@ export function RadarCompareLayout({ projectData, currentScript, currentIndex, p
   if (phase === 'highlight' && highlightComp) {
     return (
       <HighlightView
+        key={`hl-${animationKey}`}
         projectData={projectData}
         comp={highlightComp}
       />
     );
   }
 
-  return <NormalView projectData={projectData} />;
+  return <NormalView key={`nm-${animationKey}`} projectData={projectData} />;
 }
 
 // ==================== Normal ====================

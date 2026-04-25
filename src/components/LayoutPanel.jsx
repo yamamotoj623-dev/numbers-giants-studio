@@ -30,7 +30,7 @@ export function LayoutPanel({ projectData, onChange }) {
           <Layers size={14} className="text-zinc-600"/>
           <span className="font-bold text-sm text-zinc-700">レイアウトタイプ</span>
         </div>
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {Object.entries(LAYOUT_TYPES).map(([key, info]) => {
             const selected = projectData.layoutType === key;
             const planned = info.status === 'planned';
@@ -39,26 +39,29 @@ export function LayoutPanel({ projectData, onChange }) {
                 key={key}
                 disabled={planned}
                 onClick={() => setField('layoutType', key)}
-                className={`w-full text-left px-3 py-2 rounded border transition ${
+                title={info.desc}
+                className={`text-center px-1.5 py-2 rounded-lg border transition ${
                   selected
-                    ? 'bg-indigo-50 border-indigo-400 ring-1 ring-indigo-400'
+                    ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-300'
                     : planned
                     ? 'bg-zinc-50 border-zinc-200 opacity-50 cursor-not-allowed'
-                    : 'bg-white border-zinc-200 hover:border-indigo-300'
+                    : 'bg-white border-zinc-200 hover:border-indigo-300 hover:bg-indigo-50/30'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs font-bold ${selected ? 'text-indigo-700' : 'text-zinc-700'}`}>
-                    {info.label}
-                  </span>
-                  {planned && <span className="text-[9px] bg-zinc-200 text-zinc-500 px-1.5 py-0.5 rounded">予定</span>}
-                  {selected && <span className="text-[9px] bg-indigo-500 text-white px-1.5 py-0.5 rounded">選択中</span>}
+                <div className="text-xl leading-tight mb-0.5">{info.emoji || '📊'}</div>
+                <div className={`text-[10px] font-bold leading-tight ${selected ? 'text-indigo-700' : 'text-zinc-700'}`}>
+                  {info.label}
                 </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5">{info.desc}</div>
               </button>
             );
           })}
         </div>
+        {projectData.layoutType && LAYOUT_TYPES[projectData.layoutType] && (
+          <div className="mt-2 px-2 py-1.5 bg-indigo-50 rounded text-[10px] text-indigo-700">
+            <span className="font-bold">{LAYOUT_TYPES[projectData.layoutType].label}:</span>
+            <span className="ml-1">{LAYOUT_TYPES[projectData.layoutType].desc}</span>
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
@@ -101,10 +104,18 @@ export function LayoutPanel({ projectData, onChange }) {
       {projectData.layoutType === 'versus_card' && (
         <VersusDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context') && (
+      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking') && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
-          <div className="font-bold mb-1">📝 {projectData.layoutType === 'pitch_arsenal' ? '球種データ' : 'チーム文脈データ'}</div>
-          <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.{projectData.layoutType === 'pitch_arsenal' ? 'arsenal' : 'context'}</code> を直接編集してください（サンプルデータがデフォルト）。</div>
+          <div className="font-bold mb-1">📝 {
+            projectData.layoutType === 'pitch_arsenal' ? '球種データ' :
+            projectData.layoutType === 'team_context' ? 'チーム文脈データ' :
+            'ランキングデータ'
+          }</div>
+          <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.{
+            projectData.layoutType === 'pitch_arsenal' ? 'arsenal' :
+            projectData.layoutType === 'team_context' ? 'context' :
+            'ranking'
+          }</code> を直接編集してください{projectData.layoutType === 'ranking' ? '。複数指標タブ切替する場合は mode:"multi" + metrics配列で複数指標を入れる。' : '（サンプルデータがデフォルト）。'}</div>
         </div>
       )}
 

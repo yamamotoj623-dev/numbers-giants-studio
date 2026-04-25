@@ -429,14 +429,14 @@ const CSS_TEXT = `
   .phase.active .vertex-glow { animation: vertexZoomLight 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s backwards; }
 
   /* ハイライトカード: 両サイド均等マージンで中央バランス、右のショートUI回避 */
-  .highlight-card { position: absolute; top: 235px; left: 40px; right: 44px; background: linear-gradient(180deg, rgba(24,24,27,0.97), rgba(39,39,42,0.9)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.4); padding: 8px 10px 7px; box-shadow: 0 8px 24px rgba(249,115,22,0.15); z-index: 20; transform-origin: top; }
+  .highlight-card { position: absolute; top: 245px; left: 40px; right: 44px; background: linear-gradient(180deg, rgba(24,24,27,0.97), rgba(39,39,42,0.9)); border-radius: 14px; border: 1px solid rgba(249,115,22,0.4); padding: 10px 10px 8px; box-shadow: 0 8px 24px rgba(249,115,22,0.15); z-index: 20; transform-origin: top; }
   .phase.active .highlight-card { animation: cardExpand 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.3s backwards, cardPulse 2.5s ease-in-out 1s infinite; }
   .highlight-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--p); box-shadow: 0 0 10px var(--p-glow); border-radius: 4px 0 0 4px; }
 
   /* 上部: バッジ・kana・IsoD を1行に圧縮 */
   .hl-header-compact { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; min-width: 0; }
   .hl-radar-badge { font-size: 9px; font-weight: 900; color: #fff; background: var(--p); padding: 3px 8px; border-radius: 12px; flex-shrink: 0; white-space: nowrap; }
-  .hl-label-group { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: 1; min-width: 0; }
+  .hl-label-group { display: flex; flex-direction: column; align-items: center; gap: 1px; flex: 1; min-width: 0; }
   .hl-label-compact { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; flex-shrink: 0; }
   .hl-kana-compact { font-size: 10px; font-weight: 700; color: var(--p); letter-spacing: 0.5px; line-height: 1; }
 

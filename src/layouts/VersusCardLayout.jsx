@@ -72,38 +72,56 @@ export function VersusCardLayout({ projectData, currentScript, animationKey , ph
       </div>
 
       <div className="bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm z-20">
-        <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30">
-          <span className={`${themeClass.text} text-[10px] font-black`}>カテゴリ別比較</span>
-        </div>
-        {data.categoryScores.map((cat, i) => (
-          <div key={i} className="flex items-center gap-2 px-3 py-1.5 border-b border-zinc-800 last:border-b-0">
-            <div className="w-10 text-[10px] font-black text-zinc-400 text-center">{cat.label}</div>
-
-            <div className="flex-1 flex items-center justify-end gap-1">
-              <span className={`text-[13px] font-mono font-black ${cat.main > cat.sub ? themeClass.text : 'text-zinc-500'}`}>{cat.main}</span>
-              <div className="w-20 h-2 bg-zinc-800 rounded-full overflow-hidden relative">
-                <div
-                  className={`h-full absolute right-0 ${cat.main > cat.sub ? themeClass.bg : 'bg-zinc-600'}`}
-                  style={{ width: `${cat.main}%`, boxShadow: cat.main > cat.sub ? `0 0 8px ${themeClass.glow}` : 'none' }}
-                />
-              </div>
-            </div>
-
-            <div className={`text-[10px] font-black ${cat.main > cat.sub ? themeClass.text : 'text-zinc-500'}`}>
-              {cat.main > cat.sub ? '◀' : cat.main < cat.sub ? '▶' : '='}
-            </div>
-
-            <div className="flex-1 flex items-center gap-1">
-              <div className="w-20 h-2 bg-zinc-800 rounded-full overflow-hidden relative">
-                <div
-                  className={`h-full absolute left-0 ${cat.sub > cat.main ? 'bg-sky-400' : 'bg-zinc-600'}`}
-                  style={{ width: `${cat.sub}%`, boxShadow: cat.sub > cat.main ? '0 0 8px rgba(56,189,248,0.6)' : 'none' }}
-                />
-              </div>
-              <span className={`text-[13px] font-mono font-black ${cat.sub > cat.main ? 'text-sky-400' : 'text-zinc-500'}`}>{cat.sub}</span>
-            </div>
+        <div className="px-3 py-2 border-b border-zinc-700/80 bg-zinc-800/30 flex items-center justify-between">
+          <span className={`${themeClass.text} text-[10px] font-black`}>指標別の比較</span>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1 text-[8px] text-zinc-400"><span className={`w-2 h-2 rounded-sm ${themeClass.bg}`}/>{projectData.mainPlayer?.name}</span>
+            <span className="flex items-center gap-1 text-[8px] text-zinc-400"><span className="w-2 h-2 rounded-sm bg-sky-400"/>{projectData.subPlayer?.name}</span>
           </div>
-        ))}
+        </div>
+        {data.categoryScores.map((cat, i) => {
+          const mainWin = cat.main > cat.sub;
+          const subWin = cat.sub > cat.main;
+          const mainDisplay = cat.rawMain || `${cat.main}`;
+          const subDisplay = cat.rawSub || `${cat.sub}`;
+          return (
+            <div key={i} className="px-3 py-2 border-b border-zinc-800 last:border-b-0">
+              {/* ラベル + 勝者マーク */}
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-black text-zinc-300">
+                  {cat.label}
+                  {cat.kana && <span className="text-[8px] text-zinc-500 ml-1">{cat.kana}</span>}
+                </span>
+                {mainWin && <span className={`text-[9px] font-black ${themeClass.text}`}>◀ {projectData.mainPlayer?.name} 優勢</span>}
+                {subWin && <span className="text-[9px] font-black text-sky-400">{projectData.subPlayer?.name} 優勢 ▶</span>}
+                {!mainWin && !subWin && <span className="text-[9px] font-black text-zinc-500">互角</span>}
+              </div>
+              {/* 2本のバーを縦に並べる */}
+              <div className="space-y-0.5">
+                {/* main */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${themeClass.bg}`}
+                      style={{ width: `${cat.main}%`, boxShadow: mainWin ? `0 0 8px ${themeClass.glow}` : 'none' }}
+                    />
+                  </div>
+                  <span className={`text-[11px] font-mono font-black w-12 text-right ${mainWin ? themeClass.text : 'text-zinc-400'}`}>{mainDisplay}</span>
+                </div>
+                {/* sub */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-sky-400"
+                      style={{ width: `${cat.sub}%`, boxShadow: subWin ? '0 0 8px rgba(56,189,248,0.6)' : 'none' }}
+                    />
+                  </div>
+                  <span className={`text-[11px] font-mono font-black w-12 text-right ${subWin ? 'text-sky-400' : 'text-zinc-400'}`}>{subDisplay}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
     </div>

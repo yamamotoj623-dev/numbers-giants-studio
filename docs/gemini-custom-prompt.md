@@ -120,10 +120,23 @@ pitch_heatmap:  layoutData: { heatmap: { mode:"pitcher_against", handedness:"rig
                   grid:[[{value:0.180,count:12}, ...×3], ×3行] } }
 
 versus_card:    layoutData: { versus: { overall:{main:85,sub:78},
-                  categoryScores:[{label:"打撃",main:82,sub:75}, ...] } }
+                  categoryScores:[
+                    {label:"打撃", kana:"だげき", main:82, sub:75, rawMain:".285", rawSub:".265"},
+                    {label:"出塁力", kana:"しゅつるいりょく", main:78, sub:60, rawMain:".352", rawSub:".321"},
+                    {label:"長打力", main:90, sub:55, rawMain:".220", rawSub:".150"},
+                    ...
+                  ] } }
+                  ※ main/sub は 0-100 のスコア (バー表示用)
+                  ※ rawMain/rawSub はオプションの実数値 (打率/OPS等)、表示はrawを優先
+                  ※ 指標は4-6個推奨、リサーチ段階で動画テーマに合わせてカスタム選択
 
-pitch_arsenal:  layoutData: { arsenal: { pitches:[
-                  {name:"ストレート",pct:48,avg:0.255,velocity:147,color:"#ef4444"}, ...] } }
+pitch_arsenal:  layoutData: { arsenal: {
+                  pitches:[{name:"ストレート",pct:48,avg:0.255,velocity:147,color:"#ef4444"}, ...],
+                  comparePitches:[{name:"ストレート",pct:55,avg:0.310,velocity:145,color:"#ef4444"}, ...] (オプション、比較対象の球種データ),
+                  compareLabel:"昨季の本人" or "他投手名"
+                } }
+                ※ comparePitches を入れると 配分円グラフに比較対象の縮小版が並ぶ + 表に2列表示
+                ※ 同投手の昨季vs今季、同チーム他投手との比較等に使える
 
 team_context:   layoutData: { context: { mode:"lineup",
                   lineup:[{order:1,name:"泉口",ops:1.013,isMainPlayer:false}, ...],

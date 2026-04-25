@@ -32,12 +32,12 @@ const App = () => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isSEEnabled, setIsSEEnabled] = useState(true);
   const [isBgmEnabled, setIsBgmEnabled] = useState(true);
-  const [showDurationBadge, setShowDurationBadge] = useState(true);
+  const [showDurationBadge, setShowDurationBadge] = useState(false);
 
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
   const [isRecordingMode, setIsRecordingMode] = useState(false);
   const [recordingCountdown, setRecordingCountdown] = useState(0);
-  const [isSquareMode, setIsSquareMode] = useState(false);
+  const [isSquareMode, setIsSquareMode] = useState(true);
   const [showSafeZone, setShowSafeZone] = useState(false);
   const [quotaWarning, setQuotaWarning] = useState(null);
 

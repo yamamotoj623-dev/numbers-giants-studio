@@ -97,16 +97,24 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
           </span>
         </div>
 
-        {/* ランキング表 */}
+        {/* ランキング表 (最大10件、注目選手は圏外でも自動含める) */}
         <div className="z-20 w-full bg-zinc-900/90 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm">
-          {activeMetric.entries.map((entry, idx) => {
+          {(() => {
+            const all = activeMetric.entries || [];
+            const top10 = all.slice(0, 10);
+            const mainOutside = all.find(e => e.isMainPlayer && !top10.includes(e));
+            const display = mainOutside ? [...top10, mainOutside] : top10;
+            return display.map((entry, idx) => {
             const isTop3 = entry.rank <= 3;
             const isMain = entry.isMainPlayer;
+            const isCutoff = mainOutside && idx === display.length - 1;
             const rowClass = isMain
               ? `${themeClass.bg}/20 border-2 ${themeClass.border}`
               : (idx % 2 === 0 ? 'bg-zinc-800/40' : 'bg-zinc-900/40');
             return (
-              <div key={entry.rank} className={`flex items-center px-3 py-2 border-b border-zinc-800 ${rowClass} transition-all duration-300 ${isMain ? 'scale-[1.02]' : ''}`}>
+              <React.Fragment key={entry.rank}>
+                {isCutoff && <div className="text-center text-zinc-600 text-[10px] py-0.5">⋯</div>}
+                <div className={`flex items-center px-3 py-1.5 border-b border-zinc-800 ${rowClass} ${isMain ? 'scale-[1.02]' : ''}`}>
                 {/* 順位 */}
                 <div className={`w-8 flex-shrink-0 text-center font-black text-[14px] ${
                   entry.rank === 1 ? 'text-yellow-400' :
@@ -129,8 +137,10 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                   {entry.value}{activeMetric.unit || ''}
                 </div>
               </div>
+              </React.Fragment>
             );
-          })}
+          });
+        })()}
         </div>
       </div>
 
