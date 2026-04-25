@@ -162,7 +162,15 @@ export class WebSpeechAdapter {
   }
 
   async pregenerate() {
-    return { generated: 0, cached: 0, errors: 0, costUsd: 0 };
+    return { generated: 0, cached: 0, errors: 0, costUsd: 0, failedIds: [] };
+  }
+
+  async findMissing() {
+    return [];  // WebSpeech はキャッシュ概念が無いので不足なし
+  }
+
+  async pregenerateOnly() {
+    return { generated: 0, errors: 0, costUsd: 0, failedIds: [] };
   }
 }
 
@@ -353,6 +361,7 @@ export class GeminiAdapter {
 
   async pregenerate(scripts, onProgress) {
     let generated = 0, cached = 0, errors = 0, costUsd = 0;
+    const failedIds = [];  // ★失敗 id を記録 (v5.11.6)
     for (let i = 0; i < scripts.length; i++) {
       const s = scripts[i];
       const rawText = s.speech || s.text;
@@ -363,14 +372,87 @@ export class GeminiAdapter {
         const result = await this._getOrGenerate(text, speaker);
         if (result.wasCached) cached++;
         else { generated++; costUsd += result.costUsd; }
-        onProgress?.({ current: i + 1, total: scripts.length, generated, cached, errors, costUsd });
+        onProgress?.({ current: i + 1, total: scripts.length, generated, cached, errors, costUsd, failedIds: [...failedIds] });
       } catch (err) {
         console.error('pregenerate failed for script', s.id, err);
         errors++;
-        onProgress?.({ current: i + 1, total: scripts.length, generated, cached, errors, costUsd });
+        failedIds.push(s.id);
+        onProgress?.({ current: i + 1, total: scripts.length, generated, cached, errors, costUsd, failedIds: [...failedIds] });
       }
     }
-    return { generated, cached, errors, costUsd };
+    return { generated, cached, errors, costUsd, failedIds };
+  }
+
+  /**
+   * ★v5.11.6 新規: scripts のうち、まだキャッシュに無いものだけを返す★
+   * UI で「不足チェック」「不足のみ再生成」のために使う。
+   *
+   * @returns {Promise<Array<{id, speaker, text, reason}>>} 不足している script のリスト
+   */
+  async findMissing(scripts) {
+    const missing = [];
+    for (const s of scripts) {
+      const rawText = s.speech || s.text;
+      const text = applyYomigana(rawText);
+      const speaker = s.speaker || 'A';
+      if (!text) {
+        missing.push({ id: s.id, speaker, text: '', reason: 'テキストが空' });
+        continue;
+      }
+      try {
+        const cached = await getCachedAudio(speaker, text);
+        if (!cached) {
+          missing.push({ id: s.id, speaker, text, reason: 'キャッシュ未生成' });
+        }
+      } catch (err) {
+        missing.push({ id: s.id, speaker, text, reason: 'キャッシュ確認エラー: ' + err.message });
+      }
+    }
+    return missing;
+  }
+
+  /**
+   * ★v5.11.6 新規: 指定された script だけを再生成★
+   * findMissing で取得したリストを渡せば、不足分だけ生成できる。
+   *
+   * @param {Array} scripts 全 scripts (id ベースで参照)
+   * @param {Array<number>} targetIds 再生成したい script の id 配列
+   * @param {Function} onProgress 進捗コールバック
+   * @returns {Promise<{generated, errors, costUsd, failedIds}>}
+   */
+  async pregenerateOnly(scripts, targetIds, onProgress) {
+    const targets = scripts.filter(s => targetIds.includes(s.id));
+    let generated = 0, errors = 0, costUsd = 0;
+    const failedIds = [];
+
+    for (let i = 0; i < targets.length; i++) {
+      const s = targets[i];
+      const rawText = s.speech || s.text;
+      const text = applyYomigana(rawText);
+      const speaker = s.speaker || 'A';
+      if (!text) {
+        errors++;
+        failedIds.push(s.id);
+        onProgress?.({ current: i + 1, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+        continue;
+      }
+      try {
+        // ★キャッシュは無視して強制的に生成する★
+        const data = await this._fetchFromGAS(text, speaker);
+        const pcmBytes = base64ToBytes(data.audioBase64);
+        const wavBlob = pcmToWav(pcmBytes, data.sampleRate || 24000);
+        await saveCachedAudio(speaker, text, wavBlob);
+        generated++;
+        costUsd += data.estimatedCostUsd || 0;
+        onProgress?.({ current: i + 1, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+      } catch (err) {
+        console.error('pregenerateOnly failed for script', s.id, err);
+        errors++;
+        failedIds.push(s.id);
+        onProgress?.({ current: i + 1, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+      }
+    }
+    return { generated, errors, costUsd, failedIds };
   }
 
   getTotalCostUsd() {
