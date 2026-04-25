@@ -157,18 +157,24 @@ export function LayoutPanel({ projectData, onChange }) {
       {projectData.layoutType === 'versus_card' && (
         <VersusDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking') && (
+      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking' || projectData.layoutType === 'player_spotlight') && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
           <div className="font-bold mb-1">📝 {
             projectData.layoutType === 'pitch_arsenal' ? '球種データ' :
             projectData.layoutType === 'team_context' ? 'チーム文脈データ' :
-            'ランキングデータ'
+            projectData.layoutType === 'ranking' ? 'ランキングデータ' :
+            'スポットライトデータ'
           }</div>
           <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.{
             projectData.layoutType === 'pitch_arsenal' ? 'arsenal' :
             projectData.layoutType === 'team_context' ? 'context' :
-            'ranking'
-          }</code> を直接編集してください{projectData.layoutType === 'ranking' ? '。複数指標タブ切替する場合は mode:"multi" + metrics配列で複数指標を入れる。' : '（サンプルデータがデフォルト）。'}</div>
+            projectData.layoutType === 'ranking' ? 'ranking' :
+            'spotlight'
+          }</code> を直接編集してください{
+            projectData.layoutType === 'ranking' ? '。複数指標タブ切替する場合は mode:"multi" + metrics配列で複数指標を入れる。' :
+            projectData.layoutType === 'player_spotlight' ? '。複数選手を入れて script.focusEntry で切替可能。各選手に primaryStat / stats[] / silhouette を持たせる。' :
+            '（サンプルデータがデフォルト）。'
+          }</div>
         </div>
       )}
 

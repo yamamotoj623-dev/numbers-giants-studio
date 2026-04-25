@@ -61,7 +61,9 @@ schemaVersion "5.0.0" 形式。下記スキーマ厳守。
   擁護型: luck_dashboard → spray_chart → radar_compare
   対決型: versus_card → pitch_arsenal → versus_card
   チーム型: team_context → timeline → versus_card (vs他球団)
-  順位/比較型: ranking → versus_card → radar_compare (順位提示→個別深掘り)
+  順位/比較型: ranking → player_spotlight → ranking (順位提示→個別選手深掘り→もう一度全体)
+  ワースト診断型: ranking → player_spotlight (1人目) → player_spotlight (2人目) → ranking
+  チーム診断型: team_context → ranking → player_spotlight → versus_card
 
 # 5. テーマ別 playerType と推奨シルエット
 - 個人 (打者): playerType="batter" / silhouette="batter_right" 等
@@ -150,16 +152,42 @@ ranking:        layoutData: { ranking: { mode:"single"|"multi",
                       kana:"オーピーエス",
                       unit:"",
                       entries:[
-                        {rank:1, name:"泉口", value:"1.013", isMainPlayer:false},
-                        {rank:2, name:"ダルベック", value:".980", isMainPlayer:false},
-                        {rank:3, name:"増田陸", value:".724", isMainPlayer:true},
+                        {rank:1, name:"泉口", value:"1.013", sub:"68打席", isMainPlayer:false},
+                        {rank:2, name:"ダルベック", value:".980", sub:"DH", isMainPlayer:false},
+                        {rank:3, name:"増田陸", value:".724", sub:"内野", isMainPlayer:true},
                         ...10位まで
                       ]
                     },
-                    ※ mode:"multi" なら指標を複数 (例: OPS+打率+本塁打 でタブ切替)
-                    ※ currentScript.highlight に metric.id を指定するとそのタブにフォーカス
-                    ※ isMainPlayer:true の選手は強調表示+「◀注目」マーク
+                    ※ entry.sub はオプション (ポジション、打数、状態など補足情報)
+                    ※ 値が負(-0.4等)の場合は赤バーで自動表示
+                    ※ mode:"multi" なら指標を複数、currentScript.highlight でタブ切替
+                    ※ currentScript.focusEntry に名前を入れるとその選手だけ強調拡大
                   ] } }
+
+player_spotlight: layoutData: { spotlight: {
+                  players: [
+                    {
+                      id: "matsumoto",
+                      name: "松本剛",
+                      number: "2",
+                      label: "26年(今季)",
+                      silhouette: "batter_right",
+                      primaryStat: { label: "WAR", value: "-0.4", isNegative: true, note: "ワースト1位" },
+                      stats: [
+                        { label: "打率", value: ".220" },
+                        { label: "OPS",  value: ".590" },
+                        { label: "守備率", value: ".988" },
+                        { label: "失策",  value: "5" }
+                      ],
+                      comment: "外野守備が課題。打撃も復調せず"
+                    },
+                    ...複数選手OK (script.focusEntry で id 指定して切替)
+                  ]
+                } }
+                ※ 1選手にフォーカスして詳細を見せる。ランキング後の深掘りに最適
+                ※ ranking → player_spotlight (各選手詳細) → ranking が王道パターン
+                ※ primaryStat.isNegative:true で値を赤色表示
+                ※ stats は 3-6個 (3個なら3列、4個以上なら2列グリッド)
 </schema_layoutData>
 
 <schema_script>
@@ -172,6 +200,7 @@ ranking:        layoutData: { ranking: { mode:"single"|"multi",
   textSize: "xl|l|m|s" (省略可、文字数で自動),
   isCatchy: true (id:1のみ),
   highlight: <comparisons[i].id を文字列指定。深掘り時のみ>,
+  focusEntry: <ranking/spotlight 内のエントリ名 or id を指定。「松本剛」など>,
   layoutType: <script単位で切替時のみ。指定なし=直前を維持>,
   se: "hook_impact|highlight_ping|stat_reveal|shock_hit|success_chime|warning_alert|transition_swoosh|outro_fade|null"
 }

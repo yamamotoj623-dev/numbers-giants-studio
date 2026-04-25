@@ -2,7 +2,7 @@
  * アプリ全体の定数・テーマ定義
  */
 
-export const APP_VERSION = '5.6.1';
+export const APP_VERSION = '5.6.3';
 
 export const GAS_CONFIG = {
   endpoint: import.meta.env.VITE_GAS_ENDPOINT || '',
@@ -28,6 +28,7 @@ export const LAYOUT_TYPES = {
   pitch_arsenal:  { label: '球種分析',       desc: '投球配分と被打率',              status: 'ready', emoji: '🎳' },
   team_context:   { label: 'チーム文脈',     desc: '起用法・打順考察',              status: 'ready', emoji: '👥' },
   ranking:        { label: 'ランキング',     desc: '指標別の順位表',                status: 'ready', emoji: '🏆' },
+  player_spotlight: { label: '選手スポット',  desc: '1選手の詳細データを大きく',     status: 'ready', emoji: '🔦' },
 };
 
 export const SE_PRESETS = [
