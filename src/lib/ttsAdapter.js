@@ -303,13 +303,20 @@ export class GeminiAdapter {
 
   async _getOrGenerate(text, speaker) {
     const cached = await getCachedAudio(speaker, text);
-    if (cached) return { blob: cached, wasCached: true, costUsd: 0 };
+    if (cached) return { blob: cached, wasCached: true, costUsd: 0, usedFallback: false };
 
     const data = await this._fetchFromGAS(text, speaker);
     const pcmBytes = base64ToBytes(data.audioBase64);
     const wavBlob = pcmToWav(pcmBytes, data.sampleRate || 24000);
     await saveCachedAudio(speaker, text, wavBlob);
-    return { blob: wavBlob, wasCached: false, costUsd: data.estimatedCostUsd || 0 };
+    return {
+      blob: wavBlob,
+      wasCached: false,
+      costUsd: data.estimatedCostUsd || 0,
+      // ★v5.11.9: フォールバック情報を伝達★
+      usedFallback: !!data.usedFallback,
+      modelUsed: data.modelUsed || 'gemini-3.1-flash-tts-preview',
+    };
   }
 
   /**
@@ -508,16 +515,18 @@ export class GeminiAdapter {
   }
 
   /**
-   * scripts を一括事前生成 (★v5.11.8 で並列化、約 4倍高速化★)
+   * scripts を一括事前生成 (★v5.11.8 で並列化、v5.11.9 でフォールバック追跡★)
    *
    * @param {Array} scripts - 生成対象の script 配列
    * @param {Function} onProgress - 進捗コールバック
-   * @param {Object} options - { concurrency: 並列数 (デフォルト 4) }
+   * @param {Object} options - { concurrency: 並列数 (デフォルト 2) }
    */
   async pregenerate(scripts, onProgress, options = {}) {
-    const concurrency = options.concurrency ?? 4;
+    const concurrency = options.concurrency ?? 2;
     let generated = 0, cached = 0, errors = 0, costUsd = 0, completed = 0;
+    let fallbackCount = 0;  // ★v5.11.9: 2.5 Flash でフォールバックされた件数★
     const failedIds = [];
+    const fallbackIds = [];  // どの id が fallback されたか
 
     // 1件処理 (並列ワーカーから呼ばれる)
     const processOne = async (s) => {
@@ -532,6 +541,12 @@ export class GeminiAdapter {
         const result = await this._getOrGenerate(text, speaker);
         if (result.wasCached) cached++;
         else { generated++; costUsd += result.costUsd; }
+
+        // ★フォールバック発生をカウント★
+        if (result.usedFallback) {
+          fallbackCount++;
+          fallbackIds.push(s.id);
+        }
 
         // decode もしてキャッシュに保持 (即時再生のため)
         try {
@@ -554,18 +569,20 @@ export class GeminiAdapter {
           total: scripts.length,
           generated, cached, errors, costUsd,
           failedIds: [...failedIds],
+          fallbackCount,
+          fallbackIds: [...fallbackIds],
         });
       }
     };
 
     // ★並列化★: チャンクに分けて Promise.all で同時処理
-    // 全部一度に並列だとレート制限 (429) が出やすいので、concurrency 件ずつのバッチに分ける
+    // v5.11.9: デフォルト concurrency を 4→2 に下げて RPM 10/分 を超えない設計
     for (let i = 0; i < scripts.length; i += concurrency) {
       const chunk = scripts.slice(i, i + concurrency);
       await Promise.all(chunk.map(processOne));
     }
 
-    return { generated, cached, errors, costUsd, failedIds };
+    return { generated, cached, errors, costUsd, failedIds, fallbackCount, fallbackIds };
   }
 
   /**
@@ -609,7 +626,7 @@ export class GeminiAdapter {
    * @returns {Promise<{generated, errors, costUsd, failedIds}>}
    */
   async pregenerateOnly(scripts, targetIds, onProgress, options = {}) {
-    const concurrency = options.concurrency ?? 4;
+    const concurrency = options.concurrency ?? 2;
     const targets = scripts.filter(s => targetIds.includes(s.id));
     let generated = 0, errors = 0, costUsd = 0, completed = 0;
     const failedIds = [];

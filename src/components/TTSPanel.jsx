@@ -25,6 +25,7 @@ export function TTSPanel({
   const [progress, setProgress] = useState(null);
   const [totalCost, setTotalCost] = useState(0);
   const [cacheStats, setCacheStats] = useState({ count: 0, totalBytes: 0 });
+  const [fallbackInfo, setFallbackInfo] = useState({ count: 0, ids: [] });  // ★v5.11.9: フォールバック発生の追跡★
 
   // ★v5.11.6 新規: 不足チェック関連の state★
   const [missingList, setMissingList] = useState([]);
@@ -50,13 +51,25 @@ export function TTSPanel({
   const handlePregen = async () => {
     setPregenStatus('loading');
     setProgress({ current: 0, total: projectData.scripts.length });
+    setFallbackInfo({ count: 0, ids: [] });  // ★リセット★
     try {
       const adapter = getAdapter('gemini');
       // ★v5.11.7: AudioContext を unlock (再生時のレイテンシをゼロに)★
       if (adapter.unlock) await adapter.unlock();
-      const result = await adapter.pregenerate(projectData.scripts, (p) => setProgress(p));
+      const result = await adapter.pregenerate(projectData.scripts, (p) => {
+        setProgress(p);
+        // ★v5.11.9: フォールバック件数の進捗反映★
+        if (p.fallbackCount !== undefined) {
+          setFallbackInfo({ count: p.fallbackCount, ids: p.fallbackIds || [] });
+        }
+      });
       setTotalCost(prev => prev + result.costUsd);
       setPregenStatus(result.errors > 0 ? 'partial' : 'done');
+      // ★v5.11.9: 最終的なフォールバック件数を反映★
+      setFallbackInfo({
+        count: result.fallbackCount || 0,
+        ids: result.fallbackIds || []
+      });
       // エラーがあったら不足リストを自動セット
       if (result.failedIds && result.failedIds.length > 0) {
         const failed = projectData.scripts
@@ -224,10 +237,23 @@ export function TTSPanel({
                   <>
                     <Zap size={14}/>
                     全セクションを事前生成
-                    <span className="text-[9px] opacity-70 font-normal">⚡4並列</span>
+                    <span className="text-[9px] opacity-70 font-normal">⚡2並列</span>
                   </>
                 )}
               </button>
+
+              {/* ★v5.11.9 新規: フォールバック発生の表示★ */}
+              {fallbackInfo.count > 0 && (
+                <div className="bg-blue-50 border border-blue-300 rounded-lg p-2 flex items-center gap-2 text-[11px]">
+                  <Sparkles size={12} className="text-blue-600 flex-shrink-0"/>
+                  <span className="text-blue-900 font-bold">
+                    {fallbackInfo.count}件が代替モデル (2.5 Flash) で生成
+                  </span>
+                  <span className="text-blue-700 text-[9px]">
+                    (3.1 quota 切れの自動切替)
+                  </span>
+                </div>
+              )}
 
               {/* ★v5.11.6 新規: 不足チェック★ */}
               <button
