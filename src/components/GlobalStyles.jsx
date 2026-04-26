@@ -352,14 +352,17 @@ const CSS_TEXT = `
 
   /* デフォルト配置=中央 */
   .telop-wrap-normal, .telop-wrap-hl { align-items: center; }
-  /* speaker-a(左アナリスト)が喋る場合: 左寄り、Aアバター(left:14px+46px幅)を避けて padding-left: 70px */
+  /* ★v5.15.2★ speaker-a (数原) が喋る場合: より左寄り、右側にセーフゾーン確保
+     旧: padding-left:70px / padding-right:14px (右セーフゾーン狭い)
+     新: padding-left:62px / padding-right:36px (右側により余裕、Pixelの右端通知やジェスチャー領域回避)
+     max-width も 270px → 240px に絞って画面右端への侵食を防止 */
   .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 70px; padding-right: 14px; }
-  /* speaker-b(右ファン)が喋る場合: 右寄り、Bアバター(right:14px+46px幅)を避けて padding-right: 70px */
+  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 62px; padding-right: 36px; }
+  /* speaker-b (もえか): 対称に左に余裕 */
   .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 14px; padding-right: 70px; }
+  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 36px; padding-right: 62px; }
 
-  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 270px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 240px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
 
   /* speaker-a: オレンジ枠 */
   .telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); box-shadow: 0 4px 16px rgba(249,115,22,0.35), 0 0 24px rgba(249,115,22,0.15); }

@@ -9,7 +9,133 @@
 
 ---
 
-## [5.15.1] - 2026-04-26 - audioExporter 2大バグ修正 (速度ピッチ問題 + BGM/SE 取得)
+## [5.15.2] - 2026-04-26 - SoundTouchJS でピッチ維持速度変更 + BGM選択UI改善 + 吹き出しセーフゾーン
+
+### 動機: v5.15.1 で残った問題
+
+ユーザー報告:
+> BGMなし未登録、SEなし。BGMはライブラリにはあるけど選択ってのがないよ。
+> ってかTTSが倍速音質変更なしverが取得できないなら意味ないな。もっと確実な方法はない？
+> あと数原の吹き出しが右よりでセーフゾーン侵食してるのでもっと左。
+
+### 改修内容
+
+#### A. ★最重要★ SoundTouchJS でピッチ維持時間伸縮 (機械音化解消)
+
+問題: HTMLAudioElement の `preservesPitch=true` は再生時しか効かない。
+OfflineAudioContext で使う AudioBufferSourceNode は仕様上 playbackRate を変えるとピッチも変わる。
+→ 倍速書き出しすると必ず機械音化する状態だった。
+
+解決: **SoundTouchJS** ライブラリを導入。
+- npm: `soundtouchjs@^0.1.30` (~30KB)
+- Web Audio で動作する Time Stretch / Pitch Shift エンジン
+- HTMLAudioElement の preservesPitch と同等品質
+
+```js
+import { PitchShifter } from 'soundtouchjs';
+
+async function timeStretchPreservingPitch(sourceBuffer, tempo, ctx) {
+  if (Math.abs(tempo - 1.0) < 0.001) return sourceBuffer;
+
+  const numChannels = sourceBuffer.numberOfChannels;
+  const sampleRate = sourceBuffer.sampleRate;
+  const outputLength = Math.ceil(sourceBuffer.length / tempo) + 1024;
+
+  const offlineCtx = new OfflineAudioContext(numChannels, outputLength, sampleRate);
+  const shifter = new PitchShifter(offlineCtx, sourceBuffer, 1024);
+  shifter.tempo = tempo;       // 速度倍率
+  shifter.pitch = 1.0;          // ピッチは変えない
+  shifter.connect(offlineCtx.destination);
+
+  return await offlineCtx.startRendering();
+}
+```
+
+audioExporter で TTS decode 後にこの関数で時間伸縮してから本番 OfflineAudioContext に渡す。
+**playbackRate は使わない** (時間伸縮は事前に SoundTouch で済ませる)。
+
+UI のチェックボックスも:
+```
+☑ 書き出し時に再生速度 (x1.30) を反映
+   ✅ SoundTouchJS でピッチ維持 — 速度反映しても音質変化なし
+   OFF にすると 1.0倍 (TTSの自然な速度) で書き出し
+```
+
+デフォルトを **OFF → ON** に変更 (ピッチ維持できるので速度反映が無料に)。
+
+#### B. BGM 選択 UI 改善
+
+問題: BGM ライブラリに登録してても「選択する」操作がユーザーに見えづらい。
+カードクリックで選択可能だったが UI が分かりにくかった。
+
+解決:
+- ライブラリのヘッダーに「📚 BGM ライブラリ — タップして選択」と明記
+- 選択中のカードを **濃いインディゴ + 「✓ 選択中」白バッジ + ring-2 シャドウ** で強調
+- 未選択カードは「○」マークで「選択可能」を示唆
+- ホバー時 indigo-50 で誘導
+
+```jsx
+{isSelected ? (
+  <span className="bg-white text-indigo-600 rounded px-1 py-0.5">✓ 選択中</span>
+) : (
+  <span className="text-zinc-400">○</span>
+)}
+```
+
+#### C. 数原(A)の吹き出しがセーフゾーン侵食 → 左に寄せる
+
+問題: Pixel 9 Pro Fold で数原 (左話者) の吹き出しが右に伸びすぎてセーフゾーンに侵入。
+
+原因の特定:
+- 旧: `padding-left: 70px / padding-right: 14px` で**右余白 14px だけ**
+- 旧: `max-width: 270px` で吹き出し最大幅が画面右端近くまで届く
+- → 右側の通知バー/ジェスチャー領域に侵食
+
+解決:
+```css
+/* speaker-a (数原): より左寄り、右セーフゾーン拡大 */
+padding-left: 62px;       /* 70 → 62 (アバターギリギリまで) */
+padding-right: 36px;      /* 14 → 36 (★右余白を 2.5倍に★) */
+
+/* もえか (B) も対称に */
+padding-left: 36px;
+padding-right: 62px;
+
+/* 吹き出し最大幅も絞る */
+.telop-bg { max-width: 240px; }  /* 270 → 240 */
+```
+
+これで数原の吹き出しが画面右端 36px のセーフゾーンを確保し、侵食しない。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `package.json` | soundtouchjs 依存追加 |
+| `src/lib/audioExporter.js` | timeStretchPreservingPitch 関数追加 / playbackRate 削除 |
+| `src/components/TTSPanel.jsx` | applySpeechRate デフォルト ON / UI テキスト更新 |
+| `src/components/BGMPanel.jsx` | BGM ライブラリ UI 改善 (選択中バッジ、ヘッダー説明) |
+| `src/components/GlobalStyles.jsx` | テロップ padding 調整 / max-width 240px |
+
+### 期待される効果
+
+| 改善前 (v5.15.1) | 改善後 (v5.15.2) |
+|---|---|
+| ❌ 倍速書き出しで音質劣化 (機械音化) | ✅ SoundTouchJS でピッチ維持、音質保たれる |
+| ❌ BGM 「選択」操作が分かりづらい | ✅ 「📚 タップして選択」+ ✓選択中バッジで明確化 |
+| ❌ 数原の吹き出しがセーフゾーン侵食 | ✅ 右余白 14→36px, max-width 270→240px で安全 |
+
+### v5.15.2 で運用フロー再確認
+
+1. BGMPanel で BGM 選択 → ✓選択中 バッジが付く
+2. SEPanel でカスタム SE 登録
+3. TTSPanel の「動画用音声をダウンロード」を開く
+4. **「速度反映」は ON のまま** (デフォルト) で OK (ピッチ維持なので音質劣化なし)
+5. 「音声トラックを書き出す」→ デバッグログで「BGM 追加成功」「SE 追加: N件」を確認
+6. WAV ダウンロード
+7. 動画編集アプリで合成
+
+
 
 ### 動機: v5.15.0 のリリースで判明した不具合
 

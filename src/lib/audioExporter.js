@@ -1,18 +1,18 @@
 /**
- * audioExporter.js (★v5.15.1★)
+ * audioExporter.js (★v5.15.2★)
  *
  * 動画用音声トラックをオフライン合成して WAV ファイルとしてダウンロード可能にする。
  *
- * ★v5.15.1 修正★:
- * 1. 速度反映時のピッチ問題 → speechRate は無視 (1.0で再生) し、TTS は自然な速度で書き出し
- *    ユーザーが速度反映したい場合は明示的にチェックを入れる (デフォルトOFF)
- * 2. BGM/SE が入らない問題 → mixer インスタンスから直接 blob を回収する方式に変更
- *    (projectData.audio.bgmId は実は使われていなかった)
+ * ★v5.15.2 修正★:
+ * - SoundTouchJS で TTS のピッチを維持したまま速度変更可能に
+ *   (OfflineAudioContext の playbackRate だとピッチが変わる問題を解決)
+ * - applySpeechRate=true でも音質劣化なし
  */
 
 import { getCachedAudio } from './audioCache';
 import { applyYomigana } from './yomigana';
 import { getMixer } from './mixer';
+import { PitchShifter } from 'soundtouchjs';
 
 /**
  * AudioBuffer を WAV blob に変換 (16bit PCM)
@@ -73,6 +73,40 @@ async function fetchAsBlob(url) {
 }
 
 /**
+ * ★v5.15.2★ SoundTouchJS で AudioBuffer をピッチ維持しつつ速度変更
+ *
+ * @param {AudioBuffer} sourceBuffer - 元の音声
+ * @param {number} tempo - 速度倍率 (1.0=変えない, 1.3=1.3倍速, 0.8=0.8倍)
+ * @param {AudioContext} ctx - 出力用 AudioContext (sampleRate を合わせる)
+ * @returns {AudioBuffer} 速度変更後の音声 (ピッチは元のまま)
+ *
+ * SoundTouchJS の PitchShifter は本来「ピッチをshift」する用途だが、
+ * tempo プロパティで時間伸縮 (TimeStretch) も可能。pitch=0 で「ピッチそのまま、速度だけ変更」になる。
+ */
+async function timeStretchPreservingPitch(sourceBuffer, tempo, ctx) {
+  if (Math.abs(tempo - 1.0) < 0.001) {
+    return sourceBuffer;  // 変更不要
+  }
+
+  const numChannels = sourceBuffer.numberOfChannels;
+  const sampleRate = sourceBuffer.sampleRate;
+  const inputLength = sourceBuffer.length;
+  // 出力長は速度倍率の逆数倍
+  const outputLength = Math.ceil(inputLength / tempo) + 1024;  // 余裕
+
+  // PitchShifter は AudioBufferSourceNode 互換の API を持つので、
+  // OfflineAudioContext で接続して render する
+  const offlineCtx = new OfflineAudioContext(numChannels, outputLength, sampleRate);
+  const shifter = new PitchShifter(offlineCtx, sourceBuffer, 1024);
+  shifter.tempo = tempo;
+  shifter.pitch = 1.0;  // ピッチは変えない (1.0 = 元のまま)
+  shifter.connect(offlineCtx.destination);
+
+  const rendered = await offlineCtx.startRendering();
+  return rendered;
+}
+
+/**
  * メイン: プロジェクト全体の音声を合成して WAV blob で返す
  *
  * @param {Object} opts
@@ -103,9 +137,10 @@ export async function exportProjectAudio({
   const sampleRate = 48000;
   const numChannels = 2;
 
-  // ★v5.15.1★ 速度の扱い: applySpeechRate=true なら playbackRate を変える (音質劣化注意)
-  const effectivePlaybackRate = applySpeechRate ? speechRate : 1.0;
-  log(`applySpeechRate=${applySpeechRate}, effectivePlaybackRate=${effectivePlaybackRate}`);
+  // ★v5.15.2★ 速度反映: applySpeechRate=true なら SoundTouchJS でピッチ維持時間伸縮
+  // false なら speechRate を無視して 1.0倍 (自然な速度)
+  const targetTempo = applySpeechRate ? speechRate : 1.0;
+  log(`applySpeechRate=${applySpeechRate}, targetTempo=${targetTempo} (SoundTouchJS pitch-preserving)`);
 
   // === Phase 1: TTS 音声を全部 decode してから duration を計算する ===
   // 同一 speaker のグループ化 (usePlaybackEngine と同じロジック)
@@ -155,7 +190,17 @@ export async function exportProjectAudio({
     } else {
       try {
         const arrayBuffer = await blob.arrayBuffer();
-        const audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer.slice(0));
+        let audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer.slice(0));
+
+        // ★v5.15.2★ 速度反映が ON なら SoundTouchJS でピッチ維持時間伸縮
+        if (targetTempo !== 1.0) {
+          try {
+            audioBuffer = await timeStretchPreservingPitch(audioBuffer, targetTempo, decodeCtx);
+          } catch (stretchErr) {
+            log(`[GROUP ${gi}] time stretch 失敗, 1倍速で続行: ${stretchErr.message}`);
+          }
+        }
+
         ttsItems.push({ ...g, audioBuffer });
       } catch (e) {
         log(`[GROUP ${gi}] decode失敗: ${e.message}`);
@@ -175,16 +220,17 @@ export async function exportProjectAudio({
   log(`TTS 取得済み: ${ttsItems.filter(t => t.audioBuffer).length}件 / 未生成: ${missingScripts.length}件`);
 
   // === Phase 3: 各グループの実 duration からタイムラインを構築 ===
-  // 無音は推定 (1文字 0.16秒, 速度反映時は短縮)
+  // ★v5.15.2★ audioBuffer は既に時間伸縮済みなので duration をそのまま使う
   const charSec = 0.16;
   const ttsTimings = [];
   let cursor = 0;
   for (const item of ttsItems) {
     let durationSec;
     if (item.audioBuffer) {
-      durationSec = item.audioBuffer.duration / effectivePlaybackRate;
+      durationSec = item.audioBuffer.duration;  // 既に targetTempo 反映済み
     } else {
-      durationSec = (item.joinedText.length * charSec) / (applySpeechRate ? speechRate : 1.0);
+      // 未生成の場合は推定
+      durationSec = (item.joinedText.length * charSec) / targetTempo;
     }
     ttsTimings.push({
       ...item,
@@ -204,16 +250,12 @@ export async function exportProjectAudio({
     sampleRate
   );
 
-  // 4-A: TTS をスケジュール
+  // 4-A: TTS をスケジュール (★v5.15.2★ audioBuffer は既に SoundTouch で時間伸縮済み)
   for (const t of ttsTimings) {
     if (!t.audioBuffer) continue;
-    // 本番ctxで再 decode (decodeCtx と sampleRate が違うとそのまま使えないため)
-    // 実は同じ sampleRate なら使える。ただし安全のため bufferソース新規作成
     const source = offlineCtx.createBufferSource();
-    // ★ v5.15.1 ★ buffer は decode 済みなので そのまま代入できる
-    // (samepleRate も両方 48000 で揃えてる)
     source.buffer = t.audioBuffer;
-    source.playbackRate.value = effectivePlaybackRate;
+    // playbackRate は使わない (時間伸縮は事前に SoundTouch で済んでる)
 
     const gain = offlineCtx.createGain();
     gain.gain.value = audio.voiceVolume ?? 1.0;

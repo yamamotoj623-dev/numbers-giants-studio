@@ -1,7 +1,7 @@
 {
   "name": "numbers-giants-studio",
   "private": true,
-  "version": "5.15.1",
+  "version": "5.15.2",
   "type": "module",
   "description": "YouTubeチャンネル『数字で見るG党』の動画生成スタジオ",
   "scripts": {
@@ -13,7 +13,8 @@
   "dependencies": {
     "lucide-react": "^0.383.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "soundtouchjs": "^0.1.30"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

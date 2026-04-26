@@ -46,8 +46,8 @@ export function TTSPanel({
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ msg: '', percent: 0 });
   const [exportResult, setExportResult] = useState(null);
-  // ★v5.15.1★ 速度反映オプション (デフォルト OFF で音質維持)
-  const [applySpeechRate, setApplySpeechRate] = useState(false);  // { audioCount, currentAudios, lastPlayLog }
+  // ★v5.15.2★ SoundTouchJS でピッチ維持時間伸縮できるようになったため、デフォルト ON
+  const [applySpeechRate, setApplySpeechRate] = useState(true);  // { audioCount, currentAudios, lastPlayLog }
 
   const refreshCacheStats = async () => {
     try {
@@ -803,21 +803,21 @@ export function TTSPanel({
                     アプリで <strong>映像だけ画面録画 (音はミュートでOK)</strong> → このボタンで <strong>音声 WAV を取得</strong> → 動画編集アプリで合成。
                   </div>
 
-                  {/* ★v5.15.1★ 速度反映オプション */}
-                  <label className="flex items-start gap-1.5 text-[10px] text-zinc-700 bg-amber-50 border border-amber-200 rounded p-1.5 cursor-pointer">
+                  {/* ★v5.15.2★ 速度反映オプション (SoundTouchJS でピッチ維持) */}
+                  <label className="flex items-start gap-1.5 text-[10px] text-zinc-700 bg-emerald-50 border border-emerald-200 rounded p-1.5 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={applySpeechRate}
                       onChange={(e) => setApplySpeechRate(e.target.checked)}
-                      className="mt-0.5 w-3 h-3 accent-amber-600 flex-shrink-0"
+                      className="mt-0.5 w-3 h-3 accent-emerald-600 flex-shrink-0"
                     />
                     <div className="flex-1">
-                      <div className="font-bold text-amber-900">
+                      <div className="font-bold text-emerald-900">
                         書き出し時に再生速度 (x{speechRate.toFixed(2)}) を反映
                       </div>
-                      <div className="text-amber-700 mt-0.5">
-                        OFF推奨: TTS の自然な速度で書き出し (音質維持)<br/>
-                        ON: 速度反映するが <strong>音質劣化 (機械音化)</strong> ※ピッチ維持できないため
+                      <div className="text-emerald-700 mt-0.5">
+                        ✅ <strong>SoundTouchJS でピッチ維持</strong> — 速度反映しても音質変化なし<br/>
+                        OFF にすると 1.0倍 (TTSの自然な速度) で書き出し
                       </div>
                     </div>
                   </label>

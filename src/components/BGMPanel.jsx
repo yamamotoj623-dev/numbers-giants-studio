@@ -269,31 +269,49 @@ export function BGMPanel() {
         )}
 
         {bgmList.length > 0 && (
-          <div className="mt-3 space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
-            {bgmList.map(bgm => (
-              <div
-                key={bgm.key}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-bold transition cursor-pointer ${
-                  selectedBgmKey === bgm.key
-                    ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-400'
-                    : 'bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200'
-                }`}
-                onClick={() => handleSelectBgm(bgm)}
-              >
-                <span className="truncate flex-1">{bgm.name}</span>
-                <span className="text-[9px] font-normal text-zinc-500 ml-2 whitespace-nowrap">
-                  {formatBytes(bgm.size)}
-                </span>
-                <button
-                  onClick={(e) => handleRemoveBgm(bgm.key, e)}
-                  className="ml-2 text-zinc-400 hover:text-red-500"
-                  title="削除"
-                >
-                  <X size={12}/>
-                </button>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="mt-3 text-[10px] font-bold text-zinc-600 flex items-center gap-1">
+              <span>📚 BGM ライブラリ</span>
+              <span className="text-zinc-400 font-normal">— タップして選択</span>
+            </div>
+            <div className="mt-1 space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
+              {bgmList.map(bgm => {
+                const isSelected = selectedBgmKey === bgm.key;
+                return (
+                  <div
+                    key={bgm.key}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-bold transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-500 text-white ring-2 ring-indigo-700 shadow'
+                        : 'bg-white hover:bg-indigo-50 text-zinc-700 border border-zinc-200'
+                    }`}
+                    onClick={() => handleSelectBgm(bgm)}
+                  >
+                    {isSelected ? (
+                      <span className="flex-shrink-0 text-[10px] font-black bg-white text-indigo-600 rounded px-1 py-0.5">
+                        ✓ 選択中
+                      </span>
+                    ) : (
+                      <span className="flex-shrink-0 text-[10px] font-normal text-zinc-400">
+                        ○
+                      </span>
+                    )}
+                    <span className="truncate flex-1">{bgm.name}</span>
+                    <span className={`text-[9px] font-normal whitespace-nowrap ${isSelected ? 'text-indigo-100' : 'text-zinc-500'}`}>
+                      {formatBytes(bgm.size)}
+                    </span>
+                    <button
+                      onClick={(e) => handleRemoveBgm(bgm.key, e)}
+                      className={`flex-shrink-0 ${isSelected ? 'text-indigo-200 hover:text-white' : 'text-zinc-400 hover:text-red-500'}`}
+                      title="削除"
+                    >
+                      <X size={12}/>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {selectedBgmKey && (
