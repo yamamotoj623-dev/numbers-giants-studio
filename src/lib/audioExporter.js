@@ -11,7 +11,8 @@
 
 import { getCachedAudio } from './audioCache';
 import { applyYomigana } from './yomigana';
-import { getMixer } from './mixer';
+import { getBgmBlob } from './bgmStorage';
+import { listSes, getSeBlob } from './seStorage';
 import { PitchShifter } from 'soundtouchjs';
 
 /**
@@ -264,24 +265,41 @@ export async function exportProjectAudio({
     source.start(t.startSec);
   }
 
-  // === Phase 5: BGM/SE を mixer インスタンスから直接取得 ===
-  // ★v5.15.1★ projectData.audio.bgmId ではなく、現在 mixer に登録されてる音源を使う
+  // === Phase 5: BGM/SE を IndexedDB から直接取得 ===
+  // ★v5.15.3★ mixer 経由ではなく IndexedDB に直接アクセス
+  //   - mixer は React state なので、コンポーネントアンマウントや再マウントで揮発する可能性
+  //   - IndexedDB なら永続的、確実に取得できる
   onProgress('BGM/SE を読み込み中...', 60);
-  const mixer = getMixer();
 
-  // 5-A: BGM
+  // 5-A: BGM (localStorage に保存された selectedBgmKey から)
   let bgmAdded = false;
-  if (mixer.bgmAudioEl && mixer.bgmAudioEl.src) {
-    log(`BGM 検出: src=${mixer.bgmAudioEl.src.substring(0, 60)}`);
+  let selectedBgmKey = null;
+  try {
+    selectedBgmKey = localStorage.getItem('selectedBgmKey');
+  } catch (e) {}
+
+  if (selectedBgmKey) {
+    log(`BGM 選択 key: ${selectedBgmKey}`);
     try {
-      const bgmBlob = await fetchAsBlob(mixer.bgmAudioEl.src);
-      if (bgmBlob) {
+      const bgmBlob = await getBgmBlob(selectedBgmKey);
+      if (!bgmBlob) {
+        log(`⚠️ BGM blob 取得失敗 (key=${selectedBgmKey} は IndexedDB に存在しない?)`);
+      } else {
+        log(`BGM blob 取得成功 size=${bgmBlob.size} bytes type=${bgmBlob.type}`);
         const arrayBuffer = await bgmBlob.arrayBuffer();
-        const bgmBuffer = await offlineCtx.decodeAudioData(arrayBuffer.slice(0));
+        let bgmBuffer;
+        try {
+          bgmBuffer = await offlineCtx.decodeAudioData(arrayBuffer.slice(0));
+        } catch (decodeErr) {
+          log(`⚠️ BGM decode 失敗: ${decodeErr.message}`);
+          throw decodeErr;
+        }
+        log(`BGM decode 成功 duration=${bgmBuffer.duration.toFixed(2)}s channels=${bgmBuffer.numberOfChannels}`);
 
         const bgmSource = offlineCtx.createBufferSource();
         bgmSource.buffer = bgmBuffer;
         bgmSource.loop = true;
+        // BGM は元の速度のまま (倍速にしない)
 
         const bgmGain = offlineCtx.createGain();
         const baseBgmVol = audio.bgmVolume ?? 0.15;
@@ -302,73 +320,93 @@ export async function exportProjectAudio({
         bgmGain.connect(offlineCtx.destination);
         bgmSource.start(0);
         bgmAdded = true;
-        log(`BGM 追加成功 (vol=${baseBgmVol})`);
-      } else {
-        log(`BGM blob 取得失敗`);
+        log(`✅ BGM 追加成功 (vol=${baseBgmVol}, ducking 適用)`);
       }
     } catch (e) {
-      log(`BGM 合成失敗: ${e.message}`);
+      log(`⚠️ BGM 合成失敗: ${e.message}`);
     }
   } else {
-    log(`BGM 未登録 (mixer.bgmAudioEl.src なし)`);
+    log(`BGM 未選択 (localStorage.selectedBgmKey が空)`);
+    log(`→ BGMPanel で BGM をタップ (✓選択中) してから再度書き出してください`);
   }
 
-  // 5-B: SE
+  // 5-B: SE (IndexedDB の listSes + assignedPresetId mapping)
+  onProgress('SE を読み込み中...', 70);
   let seAddedCount = 0;
   let seSkippedCount = 0;
-  if (mixer._seAudioEls && mixer._seAudioEls.size > 0) {
-    log(`SE 登録数: ${mixer._seAudioEls.size}`);
-    // SE id → blob のキャッシュ
-    const seBlobCache = new Map();
-    for (const [seId, el] of mixer._seAudioEls.entries()) {
-      try {
-        const blob = await fetchAsBlob(el.src);
-        if (blob) seBlobCache.set(seId, blob);
-      } catch (e) {
-        log(`SE ${seId} blob 取得失敗`);
-      }
-    }
-    log(`SE blob キャッシュ: ${seBlobCache.size}件`);
+  try {
+    const seList = await listSes();  // IndexedDB から SE 一覧取得
+    log(`SE 一覧: ${seList.length} 件登録済み`);
 
-    // scripts を順次たどって SE を配置
-    let seCursor = 0;
-    for (const t of ttsTimings) {
-      // グループ内の各 script の SE
-      let scriptCursor = t.startSec;
-      const groupTotalChars = t.joinedText.length || 1;
-      const groupDuration = t.durationSec;
-      for (let k = 0; k < t.groupScripts.length; k++) {
-        const s = t.groupScripts[k];
-        const seId = s.se;
-        if (seId) {
-          const seBlob = seBlobCache.get(seId);
-          if (seBlob) {
-            try {
-              const arrayBuffer = await seBlob.arrayBuffer();
-              const seBuffer = await offlineCtx.decodeAudioData(arrayBuffer.slice(0));
-              const source = offlineCtx.createBufferSource();
-              source.buffer = seBuffer;
-              const gain = offlineCtx.createGain();
-              gain.gain.value = audio.seVolume ?? 0.6;
-              source.connect(gain);
-              gain.connect(offlineCtx.destination);
-              source.start(scriptCursor);
-              seAddedCount++;
-            } catch (e) {
-              log(`SE ${seId} decode 失敗: ${e.message}`);
+    // ★v5.15.3★ assignedPresetId は localStorage の "se-assignments" map に保存されてる
+    let assignments = {};
+    try {
+      const raw = localStorage.getItem('se-assignments');
+      if (raw) assignments = JSON.parse(raw);
+    } catch (e) {}
+    log(`SE assignment マップ: ${Object.keys(assignments).length} 件`);
+
+    if (seList.length === 0) {
+      log(`SE 未登録`);
+    } else {
+      // preset id → blob のマップを構築
+      // assignments[seKey] = presetId なので逆引き
+      const presetToBlob = new Map();
+      for (const seMeta of seList) {
+        const presetId = assignments[seMeta.key];
+        if (!presetId) {
+          log(`  SE ${seMeta.key} (${seMeta.name}) は preset 未割り当て → スキップ`);
+          continue;
+        }
+        const blob = await getSeBlob(seMeta.key);
+        if (!blob) {
+          log(`  ⚠️ SE blob 取得失敗 key=${seMeta.key}`);
+          continue;
+        }
+        presetToBlob.set(presetId, blob);
+        log(`  SE ${presetId} ← ${seMeta.name} (${blob.size} bytes)`);
+      }
+      log(`SE preset マッピング完了: ${presetToBlob.size} preset 利用可能`);
+
+      // scripts を順次たどって SE を配置
+      for (const t of ttsTimings) {
+        let scriptCursor = t.startSec;
+        const groupTotalChars = t.joinedText.length || 1;
+        const groupDuration = t.durationSec;
+        for (let k = 0; k < t.groupScripts.length; k++) {
+          const s = t.groupScripts[k];
+          const seId = s.se;
+          if (seId) {
+            const seBlob = presetToBlob.get(seId);
+            if (seBlob) {
+              try {
+                const arrayBuffer = await seBlob.arrayBuffer();
+                const seBuffer = await offlineCtx.decodeAudioData(arrayBuffer.slice(0));
+                const source = offlineCtx.createBufferSource();
+                source.buffer = seBuffer;
+                // SE も元の速度のまま (倍速にしない)
+                const gain = offlineCtx.createGain();
+                gain.gain.value = audio.seVolume ?? 0.6;
+                source.connect(gain);
+                gain.connect(offlineCtx.destination);
+                source.start(scriptCursor);
+                seAddedCount++;
+              } catch (e) {
+                log(`  ⚠️ SE ${seId} decode 失敗: ${e.message}`);
+                seSkippedCount++;
+              }
+            } else {
               seSkippedCount++;
             }
-          } else {
-            seSkippedCount++;
           }
+          const thisChars = (s.speech || s.text || '').length;
+          scriptCursor += (thisChars / groupTotalChars) * groupDuration;
         }
-        const thisChars = (s.speech || s.text || '').length;
-        scriptCursor += (thisChars / groupTotalChars) * groupDuration;
       }
+      log(`✅ SE 配置: ${seAddedCount} 件追加 / ${seSkippedCount} 件スキップ`);
     }
-    log(`SE 追加: ${seAddedCount}件 / スキップ: ${seSkippedCount}件`);
-  } else {
-    log(`SE 未登録 (mixer._seAudioEls 空)`);
+  } catch (e) {
+    log(`⚠️ SE 取得失敗: ${e.message}`);
   }
 
   // === Phase 6: レンダリング + WAV エンコード ===

@@ -41,9 +41,16 @@ export function BGMPanel() {
         setBgmList(saved);
         const s = await getBgmStats();
         setStats(s);
-        // 最初のBGMを自動選択 (一番新しいもの)
         if (saved.length > 0) {
-          await handleSelectBgm(saved[0]);
+          // ★v5.15.3★ localStorage に保存された選択を優先復元
+          let toSelect = null;
+          try {
+            const savedKey = localStorage.getItem('selectedBgmKey');
+            if (savedKey) toSelect = saved.find(b => b.key === savedKey);
+          } catch (e) {}
+          // なければ一番新しいものを自動選択
+          if (!toSelect) toSelect = saved[0];
+          await handleSelectBgm(toSelect);
         }
       } catch (err) {
         setError('BGM読み込み失敗: ' + err.message);
@@ -194,6 +201,8 @@ export function BGMPanel() {
       const url = URL.createObjectURL(blob);
       currentBlobUrlRef.current = url;
       setSelectedBgmKey(bgm.key);
+      // ★v5.15.3★ 選択された BGM key を localStorage に永続化 (audioExporter から参照可能に)
+      try { localStorage.setItem('selectedBgmKey', bgm.key); } catch (e) {}
       setIsPreviewingBgm(false);
       mixer.stopBgm();
       await mixer.loadBgmFromUrl(url);

@@ -9,7 +9,134 @@
 
 ---
 
-## [5.15.2] - 2026-04-26 - SoundTouchJS でピッチ維持速度変更 + BGM選択UI改善 + 吹き出しセーフゾーン
+## [5.15.3] - 2026-04-26 - BGM/SE 取得を IndexedDB 直接アクセスに切替 (確実に動くように)
+
+### 動機: v5.15.2 でも BGM/SE が入らなかった
+
+ユーザー報告:
+> 倍速音質は改善確認。
+> ただ選択してるのにBGM・SEともにさっきと変わらず。
+> ちなみにBGM/SEは倍速にならないように。
+
+### 真の原因: mixer 経由の取得が不安定
+
+調査の結果:
+- **`selectedBgmKey` は BGMPanel の React useState のローカル state** だった
+- **mixer は singleton だが bgmAudioEl はメモリのみ** で永続性がない
+- BGMPanel をアンマウント or ページリロードすると `selectedBgmKey` も `mixer.bgmAudioEl` も揮発
+- audioExporter は `getMixer().bgmAudioEl.src` を見ていたので、**揮発直後だと「BGM 未登録」になる**
+
+タブ切り替え、TTSPanel への遷移、コンポーネント再マウント等で `mixer.bgmAudioEl` が空になる状態があり、書き出し時にちょうど空っぽだったと推測。
+
+### 解決: mixer をバイパスして IndexedDB を直接読む
+
+mixer 経由をやめて、**audioExporter から直接 IndexedDB と localStorage を読む**:
+
+```js
+// 旧 (v5.15.2) - 不安定
+const mixer = getMixer();
+if (mixer.bgmAudioEl?.src) {
+  const blob = await fetchAsBlob(mixer.bgmAudioEl.src);
+  // ...
+}
+
+// 新 (v5.15.3) - 永続的・確実
+import { getBgmBlob } from './bgmStorage';
+const selectedBgmKey = localStorage.getItem('selectedBgmKey');
+if (selectedBgmKey) {
+  const bgmBlob = await getBgmBlob(selectedBgmKey);
+  // IndexedDB から確実に取得
+}
+```
+
+#### A. BGM 選択を localStorage に永続化
+
+BGMPanel.jsx の `handleSelectBgm` で `localStorage.setItem('selectedBgmKey', bgm.key)` を追加。
+初回ロード時も `localStorage.getItem('selectedBgmKey')` で前回選択を復元。
+
+#### B. SE 取得も IndexedDB 直接アクセスに
+
+SE assignment は元々 `localStorage["se-assignments"] = { [seKey]: presetId }` に保存されてた。
+audioExporter から直接これを読み、`getSeBlob(seKey)` で blob 取得する方式に変更。
+
+```js
+// audioExporter.js
+const assignments = JSON.parse(localStorage.getItem('se-assignments') || '{}');
+const seList = await listSes();  // IndexedDB から
+const presetToBlob = new Map();
+for (const seMeta of seList) {
+  const presetId = assignments[seMeta.key];
+  if (!presetId) continue;
+  const blob = await getSeBlob(seMeta.key);
+  if (blob) presetToBlob.set(presetId, blob);
+}
+// scripts.se で参照
+```
+
+#### C. デバッグログ大幅強化
+
+何が起きてるか1行で分かるよう詳細化:
+
+```
+BGM 選択 key: bgm-1234567
+BGM blob 取得成功 size=2456789 bytes type=audio/mp3
+BGM decode 成功 duration=120.50s channels=2
+✅ BGM 追加成功 (vol=0.15, ducking 適用)
+
+SE 一覧: 4 件登録済み
+SE assignment マップ: 3 件
+  SE shock_hit ← shock1.wav (12345 bytes)
+  SE highlight_ping ← ping.wav (8765 bytes)
+  SE stat_reveal ← reveal.wav (45678 bytes)
+SE preset マッピング完了: 3 preset 利用可能
+✅ SE 配置: 12 件追加 / 0 件スキップ
+```
+
+これで失敗時もどこで詰まったか即座に判明する。
+
+#### D. BGM/SE は元の速度のまま (倍速適用なし)
+
+ユーザー要望「BGM/SE は倍速にならないように」を明示的に反映:
+- TTS は SoundTouchJS で時間伸縮 (ピッチ維持)
+- BGM/SE は **playbackRate 一切触らず**、元の速度で再生
+
+コードコメントで明記:
+```js
+// BGM は元の速度のまま (倍速にしない)
+const bgmSource = offlineCtx.createBufferSource();
+bgmSource.buffer = bgmBuffer;
+bgmSource.loop = true;
+// playbackRate を設定しない = 1.0 (元の速度)
+```
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/audioExporter.js` | mixer 依存削除 / IndexedDB + localStorage 直接アクセス / 詳細ログ |
+| `src/components/BGMPanel.jsx` | selectedBgmKey を localStorage に永続化 / 復元時に優先使用 |
+
+### 期待される効果
+
+| 改善前 (v5.15.2) | 改善後 (v5.15.3) |
+|---|---|
+| ❌ BGM 入らない (mixer 揮発タイミング次第) | ✅ localStorage に保存された BGM key から確実に取得 |
+| ❌ SE 入らない (mixer._seAudioEls 揮発) | ✅ IndexedDB の listSes + assignment で確実に取得 |
+| ❌ BGM/SE が倍速になる懸念 | ✅ 元の速度のまま (TTS のみ SoundTouch で時間伸縮) |
+| ❌ 失敗時に何が原因か分からない | ✅ 詳細ログでどこで詰まったか一目瞭然 |
+
+### 動作確認手順 (v5.15.3)
+
+1. BGMPanel で BGM をタップ → `[✓ 選択中]` バッジ表示
+2. SEPanel でカスタム SE をアップロード + preset 割り当て
+3. TTSPanel の「動画用音声をダウンロード」を開く
+4. 「音声トラックを書き出す」を実行
+5. **デバッグログを必ず確認** (展開できる)
+   - `BGM 選択 key: bgm-xxx` → `✅ BGM 追加成功` が出てるか
+   - `SE 一覧: N 件登録済み` → `✅ SE 配置: N 件追加` が出てるか
+6. WAV をダウンロード、再生確認
+
+
 
 ### 動機: v5.15.1 で残った問題
 
