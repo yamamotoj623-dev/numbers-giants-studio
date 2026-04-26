@@ -675,7 +675,6 @@ export class GeminiAdapter {
 
     return { generated, errors, costUsd, failedIds };
   }
-  }
 
   getTotalCostUsd() {
     return this._totalCostUsd;

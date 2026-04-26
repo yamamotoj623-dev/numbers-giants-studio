@@ -122,6 +122,13 @@ docs/
 - player_spotlight: showPlayerName='auto'|true|false 切替 (実装+UI操作)
 - 基本成績の視覚的強調 (versus_card / player_spotlight 内の話してる行を強調)
 
+### バグ修正 (v5.13.0 でついでに)
+
+- ★ `src/lib/ttsAdapter.js` の構文エラー修正 ★
+  - pregenerateOnly メソッド (678行目) に余分な `}` が混入していて Vercel build が失敗
+  - 過去の v5.11.8 並列化対応時に紛れ込んだもの (CI 環境で初めて検出)
+  - 余分な括弧を削除して全 lib ファイルの `node --check` パスを確認
+
 
 
 ### 動機: 動画テストで判明した「Geminiが指示に従わない」問題
