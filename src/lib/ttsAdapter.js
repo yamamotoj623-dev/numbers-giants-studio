@@ -211,29 +211,62 @@ export class GeminiAdapter {
   }
 
   /**
-   * ★v5.14.5★ 共有 audio 要素を取得 (なければ作って DOM に attach)
-   * 同じ要素を再利用することで Chromium のメディア要素検出が安定する。
+   * ★v5.14.6★ 共有 <video> 要素を取得 (なければ作って DOM に attach)
+   *
+   * 【なぜ <video> 要素を使うか】
+   * v5.14.5 で <audio> 要素を DOM 永続化したが、ユーザー診断ログで
+   * 「audio は完璧な状態 (inDom=true, paused=false, ready=4) なのに録画されない」
+   * ことが判明。
+   *
+   * 真の原因: Pixel/Android の内部音声録画は AUDIO_USAGE_MEDIA フラグの音だけキャプチャする。
+   * Chrome の HTMLAudioElement は短時間音声を USAGE_GAME 等で再生する場合があり、
+   * 録画キャプチャから漏れる。
+   * <video> 要素は確実に AUDIO_USAGE_MEDIA で再生されるため録画される。
+   * (Chrome は audio/wav data URL を <video> 要素でも受け付ける)
+   *
+   * 確認情報: Web Speech API (下書き) は OS の TTS engine 経由で必ず MEDIA usage、
+   * これは録画される ← この事実が「audio 要素じゃダメ、media element としての強さが足りない」
+   * の証拠になっている。
    */
   _getSharedAudio() {
+    // 名前は _getSharedAudio のままだが、中身は <video> (互換性のため)
     if (this._sharedAudio && document.body.contains(this._sharedAudio)) {
       return this._sharedAudio;
     }
-    const audio = document.createElement('audio');
-    audio.preload = 'auto';
-    audio.setAttribute('playsinline', '');
-    audio.id = 'tts-voice-audio-shared';
+    // ★<video> 要素★ に変更 (audio 要素から)
+    const el = document.createElement('video');
+    el.preload = 'auto';
+    el.setAttribute('playsinline', '');
+    el.setAttribute('webkit-playsinline', '');
+    el.muted = false;
+    el.id = 'tts-voice-video-shared';
     // 1px 可視 (録画キャプチャされやすい)
-    audio.style.position = 'fixed';
-    audio.style.bottom = '0';
-    audio.style.right = '0';
-    audio.style.width = '1px';
-    audio.style.height = '1px';
-    audio.style.opacity = '0.01';
-    audio.style.pointerEvents = 'none';
-    audio.style.zIndex = '-9999';
-    document.body.appendChild(audio);
-    this._sharedAudio = audio;
-    return audio;
+    el.style.position = 'fixed';
+    el.style.bottom = '0';
+    el.style.right = '0';
+    el.style.width = '1px';
+    el.style.height = '1px';
+    el.style.opacity = '0.01';
+    el.style.pointerEvents = 'none';
+    el.style.zIndex = '-9999';
+    el.style.background = '#000';
+    document.body.appendChild(el);
+
+    // ★MediaSession API: 「これはメディア再生」と OS に明示★
+    try {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '数字で見るG党 Studio',
+          artist: 'TTS Voice',
+          album: 'Numbers Giants',
+        });
+        navigator.mediaSession.setActionHandler('play', () => {});
+        navigator.mediaSession.setActionHandler('pause', () => {});
+      }
+    } catch (e) {}
+
+    this._sharedAudio = el;
+    return el;
   }
 
   _getAudioCtx() {
@@ -448,6 +481,12 @@ export class GeminiAdapter {
           // ★v5.14.5★ 共有要素なので DOM remove はしない
           // src だけクリアしておく (次の speak で上書きされる)
           if (this.currentAudio === audio) this.currentAudio = null;
+          // ★v5.14.6★ Media Session を paused に
+          try {
+            if ('mediaSession' in navigator) {
+              navigator.mediaSession.playbackState = 'paused';
+            }
+          } catch (e) {}
         };
 
         audio.onended = () => {
@@ -470,6 +509,13 @@ export class GeminiAdapter {
             audio.preservesPitch = true;
             audio.mozPreservesPitch = true;
             audio.webkitPreservesPitch = true;
+            audio.muted = false;  // ★v5.14.6★ 念のため muted=false 確認
+            // ★v5.14.6★ Media Session に playing 状態を伝える
+            try {
+              if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = 'playing';
+              }
+            } catch (e) {}
             await audio.play();
           } catch (e) {
             cleanup();

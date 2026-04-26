@@ -301,10 +301,7 @@ export function TTSPanel({
   const clearSelection = () => setSelectedIds([]);
 
   /**
-   * ★v5.14.4 新規 / v5.14.5 強化★ 録画診断
-   * - 長めのテスト音声 (5秒程度) で観察時間を確保
-   * - 200ms ごとに 8回 DOM 観察
-   * - 共有 audio 要素が永続的に存在するか確認
+   * ★v5.14.4 新規 / v5.14.5 強化 / v5.14.6 環境チェック追加★ 録画診断
    */
   const handleDiagnostic = async () => {
     try {
@@ -312,33 +309,53 @@ export function TTSPanel({
       const log = [];
       log.push(`[${new Date().toLocaleTimeString()}] 診断開始`);
       log.push(`UA: ${navigator.userAgent.substring(0, 80)}`);
-      log.push(`APP_VERSION 確認: index.html を直接見て確認してください`);
+
+      // ★v5.14.6★ 環境チェック (録画されない原因の切り分け)
+      log.push(`--- 環境チェック ---`);
+      log.push(`Media Session API: ${'mediaSession' in navigator ? '✅対応' : '❌非対応'}`);
+      log.push(`AudioContext: ${'AudioContext' in window || 'webkitAudioContext' in window ? '✅対応' : '❌非対応'}`);
+      // 出力デバイス情報 (取れる場合のみ)
+      try {
+        if (navigator.mediaDevices?.enumerateDevices) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const outputs = devices.filter(d => d.kind === 'audiooutput');
+          log.push(`音声出力デバイス数: ${outputs.length}`);
+          // ラベルは permission ない時は空
+          outputs.slice(0, 3).forEach((d, i) => {
+            log.push(`  [${i}] ${d.label || '(label無)'} ${d.deviceId.substring(0, 8)}`);
+          });
+        }
+      } catch (e) {
+        log.push(`デバイス列挙エラー: ${e.message}`);
+      }
 
       // 1. unlock
       if (adapter.unlock) await adapter.unlock();
       log.push(`unlock 完了`);
 
-      // 2. 共有 audio 要素チェック (v5.14.5 で導入)
+      // 2. 共有 audio 要素チェック
       if (adapter._getSharedAudio) {
         const shared = adapter._getSharedAudio();
-        log.push(`共有 audio 要素: ID=${shared.id}, inDOM=${document.body.contains(shared)}`);
+        log.push(`共有 audio: ID=${shared.id}, inDOM=${document.body.contains(shared)}`);
+        log.push(`  muted=${shared.muted}, defaultMuted=${shared.defaultMuted}`);
       } else {
         log.push(`⚠️ _getSharedAudio が未定義 (古いコードがロード中?)`);
       }
 
-      // 3. 長めのテスト音声を生成
+      // 3. テスト音声を生成
       const testText = '録画テスト中、聞こえていますか';
       const testSpeaker = 'A';
       log.push(`テスト発声: "${testText}"`);
 
-      // DOM 観察ヘルパー
       const observe = () => {
-        const audios = document.querySelectorAll('audio');
+        const audios = document.querySelectorAll('audio, video');
         return Array.from(audios).map(a => ({
+          tag: a.tagName.toLowerCase(),
           id: a.id || '(no-id)',
           srcType: !a.src ? 'empty' : a.src.startsWith('data:') ? 'data' : a.src.startsWith('blob:') ? 'blob' : 'other',
           srcLen: (a.src || '').length,
           volume: a.volume,
+          muted: a.muted,
           rate: a.playbackRate,
           paused: a.paused,
           ready: a.readyState,
@@ -346,16 +363,16 @@ export function TTSPanel({
         }));
       };
 
-      log.push(`再生前: audio 要素数=${observe().length}`);
+      log.push(`再生前: メディア要素数=${observe().length}`);
 
-      // 4. 再生開始 (await しない、タイマー監視のため)
+      // 4. 再生開始
       const speakPromise = adapter.speak(testText, testSpeaker, {
         rate: speechRate,
         onEnd: () => log.push(`[${new Date().toLocaleTimeString()}] 再生終了`),
         onError: (e) => log.push(`再生エラー: ${e?.message || e}`),
       });
 
-      // 5. 200ms ごとに 8回観察 (合計 1.6秒)
+      // 5. 200ms ごとに 8回観察
       const observations = [];
       for (let i = 1; i <= 8; i++) {
         await new Promise(r => setTimeout(r, 200));
@@ -369,18 +386,34 @@ export function TTSPanel({
           log.push(`  ${t}ms: audio 0個`);
         } else {
           audios.forEach((a, i) => {
-            log.push(`  ${t}ms: [${i}] id=${a.id} src=${a.srcType}(${a.srcLen}) vol=${a.volume.toFixed(2)} rate=${a.rate.toFixed(2)} paused=${a.paused} inDom=${a.inDom} ready=${a.ready}`);
+            log.push(`  ${t}ms: <${a.tag}> id=${a.id} src=${a.srcType}(${a.srcLen}) vol=${a.volume.toFixed(2)} muted=${a.muted} rate=${a.rate.toFixed(2)} paused=${a.paused} ready=${a.ready}`);
           });
         }
       });
 
       await speakPromise;
-      log.push(`再生終了後: audio 要素数=${observe().length}`);
+      log.push(`再生終了後: メディア要素数=${observe().length}`);
 
-      // 6. 共有 audio が再生終了後も DOM に残ってるか
-      if (adapter._sharedAudio) {
-        log.push(`★ 共有 audio 永続: inDOM=${document.body.contains(adapter._sharedAudio)} (true なら成功)`);
+      // 6. Media Session 確認
+      try {
+        if ('mediaSession' in navigator) {
+          log.push(`Media Session playbackState: ${navigator.mediaSession.playbackState}`);
+        }
+      } catch (e) {}
+
+      // 7. 共有要素の永続性チェック (★v5.14.6★)
+      const adapter2 = getAdapter('gemini');
+      if (adapter2._sharedAudio) {
+        const tag = adapter2._sharedAudio.tagName.toLowerCase();
+        log.push(`★ 共有 <${tag}> 永続: inDOM=${document.body.contains(adapter2._sharedAudio)}`);
+        log.push(`  (v5.14.6 では <video> になってるはず — もし <audio> なら古いコード)`);
       }
+
+      // 7. 環境確認お願い
+      log.push(`--- 確認事項 ---`);
+      log.push(`Q1. Pixel 画面録画の音声: マイク / デバイス / 両方?`);
+      log.push(`Q2. Bluetooth/有線イヤホン 接続中?`);
+      log.push(`Q3. メディア音量は0以外?`);
 
       setDiagnostic({ logs: log });
     } catch (err) {

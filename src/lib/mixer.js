@@ -96,20 +96,29 @@ export class MixerEngine {
     this._bgmUrl = url;
     if (this.bgmAudioEl) {
       try { this.bgmAudioEl.pause(); } catch (e) {}
-      try { this.bgmAudioEl.remove(); } catch (e) {}  // ★v5.14.3★ 旧要素を DOM から削除
+      try { this.bgmAudioEl.remove(); } catch (e) {}
       this.bgmAudioEl.src = '';
     }
-    const audio = new Audio();
+    // ★v5.14.6★ <video> 要素に変更 (AUDIO_USAGE_MEDIA を確実にするため)
+    const audio = document.createElement('video');
     audio.loop = true;
     audio.preload = 'auto';
+    audio.setAttribute('playsinline', '');
+    audio.setAttribute('webkit-playsinline', '');
+    audio.muted = false;
+    audio.id = 'mixer-bgm-shared';
     audio.src = url;
     audio.volume = this._effectiveBgmVolume();
-    // ★v5.14.3★ DOM に attach (Android 画面録画でキャプチャ可能に)
+    // 1px 可視
     audio.style.position = 'fixed';
-    audio.style.bottom = '-100px';
-    audio.style.opacity = '0';
+    audio.style.bottom = '0';
+    audio.style.left = '0';
+    audio.style.width = '1px';
+    audio.style.height = '1px';
+    audio.style.opacity = '0.01';
     audio.style.pointerEvents = 'none';
-    audio.setAttribute('playsinline', '');
+    audio.style.zIndex = '-9999';
+    audio.style.background = '#000';
     document.body.appendChild(audio);
     this.bgmAudioEl = audio;
     await new Promise((resolve, reject) => {
@@ -189,21 +198,29 @@ export class MixerEngine {
     const prev = this._seAudioEls.get(id);
     if (prev) {
       try { prev.pause(); } catch (e) {}
-      try { prev.remove(); } catch (e) {}  // ★v5.14.3★ 旧要素を DOM から削除
+      try { prev.remove(); } catch (e) {}
       if (prev._blobUrl) URL.revokeObjectURL(prev._blobUrl);
     }
     const url = URL.createObjectURL(blob);
-    const audio = new Audio();
+    // ★v5.14.6★ <video> 要素に変更 (AUDIO_USAGE_MEDIA 確実化)
+    const audio = document.createElement('video');
     audio.preload = 'auto';
+    audio.setAttribute('playsinline', '');
+    audio.setAttribute('webkit-playsinline', '');
+    audio.muted = false;
     audio.src = url;
     audio._blobUrl = url;
     audio.volume = this._effectiveSeVolume();
-    // ★v5.14.3★ DOM に attach (Android 画面録画対応 — 原本もattach、clone のtemplate として保持)
+    // 1px 可視
     audio.style.position = 'fixed';
-    audio.style.bottom = '-100px';
-    audio.style.opacity = '0';
+    audio.style.bottom = '0';
+    audio.style.left = '0';
+    audio.style.width = '1px';
+    audio.style.height = '1px';
+    audio.style.opacity = '0.01';
     audio.style.pointerEvents = 'none';
-    audio.setAttribute('playsinline', '');
+    audio.style.zIndex = '-9999';
+    audio.style.background = '#000';
     document.body.appendChild(audio);
     await new Promise((resolve) => {
       let done = false;
@@ -235,15 +252,22 @@ export class MixerEngine {
     const customEl = this._seAudioEls.get(seId);
     if (customEl) {
       try {
-        // 重ね再生: cloneして新インスタンスで鳴らす
+        // 重ね再生: cloneして新インスタンスで鳴らす (★v5.14.6★ <video> 要素のクローン)
         const clone = customEl.cloneNode(true);
         clone.volume = this._effectiveSeVolume();
-        // ★v5.14.3★ clone も DOM に attach (録画対応)
+        // 1px 可視 + DOM attach
         clone.style.position = 'fixed';
-        clone.style.bottom = '-100px';
-        clone.style.opacity = '0';
+        clone.style.bottom = '0';
+        clone.style.left = '0';
+        clone.style.width = '1px';
+        clone.style.height = '1px';
+        clone.style.opacity = '0.01';
         clone.style.pointerEvents = 'none';
+        clone.style.zIndex = '-9999';
+        clone.style.background = '#000';
         clone.setAttribute('playsinline', '');
+        clone.setAttribute('webkit-playsinline', '');
+        clone.muted = false;
         document.body.appendChild(clone);
         clone.play().catch(err => console.warn('SE play failed:', err));
         clone.addEventListener('ended', () => {

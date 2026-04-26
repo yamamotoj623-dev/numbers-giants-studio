@@ -9,7 +9,105 @@
 
 ---
 
-## [5.14.5] - 2026-04-26 - ★決定打★ 共有 audio 要素方式 + 診断強化
+## [5.14.6] - 2026-04-26 - ★最終手段★ <audio> → <video> 要素に変更 (AUDIO_USAGE_MEDIA 確実化)
+
+### 動機: v5.14.5 の診断結果から判明した「audio 要素では Pixel 録画NG」事実
+
+ユーザー診断ログ:
+```
+共有 audio 要素: ID=tts-voice-audio-shared, inDOM=true
+再生前: audio 要素数=1
+  200ms: [0] id=tts-voice-audio-shared src=data(166482) vol=1.00 rate=1.30 paused=false inDom=true ready=4
+  ...8回全部完璧な状態...
+★ 共有 audio 永続: inDOM=true (true なら成功)
+```
+
+**audio 要素は完璧な状態**:
+- ✅ DOM に永続的に存在
+- ✅ data URL で 166KB のデータが正しく設定
+- ✅ 音量 1.00、速度 1.30
+- ✅ paused=false, ready=4 (HAVE_ENOUGH_DATA)
+- ✅ MediaSession metadata 設定済み
+
+**それでも録画されない**。
+
+ユーザーから決定的な追加情報:
+> 1デバイスの音でやってる
+> 2接続されてません (ヘッドフォン等)
+> 3動画再生も同じく録音されない
+> てかそもそも下書きの方は問題なく録音されてる
+
+### 真の原因 (確定)
+
+**Android Chrome の HTMLAudioElement は AUDIO_USAGE_MEDIA フラグで再生されない**
+
+Pixel/Android の内部音声録画 (AudioPlaybackCapture) は `AUDIO_USAGE_MEDIA` フラグの音だけを
+キャプチャ対象とする仕様。Chrome は `<audio>` 要素の短時間音声を `USAGE_GAME` または
+別の usage で再生しており、録画キャプチャから漏れる。
+
+一方:
+- **Web Speech API (下書き)** = OS の TTS engine 経由 → 確実に MEDIA usage → ✅録画される
+- **`<audio>` 要素 (本番 v5.14.5)** = Chrome 内部処理 → MEDIA フラグ立たない → ❌録画されない
+- **`<video>` 要素 (本v5.14.6)** = 動画再生としてはっきり認識 → MEDIA usage 確実 → 録画される (期待)
+
+### 解決策: 共有要素を <audio> → <video> に変更
+
+`<video>` 要素は確実に `AUDIO_USAGE_MEDIA` で再生される。
+Chrome は audio/wav の data URL を `<video>` 要素でも受け付けるため、コード上の
+互換性は保たれる。動画は黒の 1px で表示されるが、音声だけ流れる仕組み。
+
+#### ttsAdapter.js の変更
+
+```js
+// 旧 (v5.14.5)
+const audio = document.createElement('audio');
+
+// 新 (v5.14.6)
+const el = document.createElement('video');
+el.setAttribute('playsinline', '');
+el.setAttribute('webkit-playsinline', '');
+el.muted = false;
+el.style.background = '#000';  // 黒1px
+```
+
+#### mixer.js (BGM/SE) も同じく <video> に統一
+
+BGM・カスタムSE も `new Audio()` → `document.createElement('video')` に変更。
+これで全ての音源が AUDIO_USAGE_MEDIA で再生される統一感ある実装に。
+
+#### MediaSession API は引き続き設定
+
+MediaSession metadata は `<video>` 要素でも有効。OS に「これはメディア再生」と明示する
+追加保険として残す。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/ttsAdapter.js` | `_getSharedAudio()` の中身を <video> に変更 |
+| `src/lib/mixer.js` | BGM (loadBgmFromUrl) / SE (registerCustomSe / playSe clone) を全て <video> に変更 |
+| `src/components/TTSPanel.jsx` | 診断観察を `audio, video` 両方クエリに |
+
+### 期待される効果
+
+| 確認項目 | 期待 |
+|---|---|
+| 診断ログで `<video>` タグで観察される | ✅ (古いコードなら `<audio>` のまま) |
+| 画面録画に TTS 音声が入る | ✅ (本命) |
+| BGM 登録時の録画 | ✅ |
+| カスタムSE 登録時の録画 | ✅ |
+
+### v5.14.6 でも録画されなかった場合 (v5.14.7 候補)
+
+最後の最後の砦:
+- **WAV → MP4 (音声のみ) に変換** してから `<video>` に渡す
+  - WAV のままだと video 要素が「動画じゃない」と判断する場合がある
+  - MP4 ならより明確にメディア扱いされる
+- **MediaSource API** で動的にチャンクを供給
+- **静的に `<video>` を JSX に置く** (React コンポーネント側で配置)
+- **Chromium のフラグ確認**: chrome://flags で何か設定が必要?
+
+
 
 ### 動機: v5.14.4 の診断結果から判明した真の原因
 
