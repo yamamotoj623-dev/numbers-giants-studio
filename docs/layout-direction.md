@@ -17,6 +17,20 @@
 
 ---
 
+## 0.1 関連 Knowledge Files (重要)
+
+このファイルはレイアウトの**ビジュアル方向性**のみを扱う。それ以外の戦略・言葉づかい・構成は他ファイル参照:
+
+- **channel-strategy.md** — チャンネル戦略・視聴者像・実証データ法則
+- **audience-and-language.md** — 「指標より事象→数字」原則・現象の定義・自分ごと化
+- **hook-design.md** — id:1 (動画タイトル) の作り方
+- **structure-playbook.md** — scripts 構成・連続ルール・レイアウト切替パターン
+- **character-bible.md** — A=数原さん / B=もえかちゃん の話し方
+
+★ レイアウト切替の**遷移パターン**は本ファイル「セクション5」と structure-playbook.md「セクション4」の両方に記載。本質的には同じだが、レイアウト視点と構成視点で記述。矛盾があれば structure-playbook.md を優先。
+
+---
+
 ## 1. レイアウト一覧 (8つ)
 
 ### 残すレイアウト
@@ -678,42 +692,7 @@ mode: "vs_handedness"  // 対右投 / 対左投 の左右並び (新)
 
 ---
 
-## 6. 改修の優先順位
-
-ユーザーの希望「使用頻度高い順」に基づき:
-
-| 優先度 | レイアウト | 主な改修内容 |
-|---|---|---|
-| 1 | **timeline** | unit 拡張 (day/week/month/year)、シンプル化、ドラマ演出、二重ネスト解除 |
-| 2 | **ranking** | mood 切替 (best/worst/neutral)、注目1人制、チームエントリ対応 |
-| 3 | **player_spotlight** | データ主役 (選手名重複・シルエット廃止)、比較値併記 |
-| 4 | **versus_card** | シンプル化 (バー・スコア・装飾バッジ全廃)、純粋な数字比較 |
-| 5 | **team_context** | 3要素ブロック化、mode: compare 追加 |
-| 6 | **pitch_arsenal** | mode 拡張 (single/compare/vs_batter)、武器バッジ→行強調、列幅調整 |
-| 7 | **batter_heatmap** | 旧 pitch_heatmap をリネーム、打率ヒート化、左右別 |
-| - | **削除** | luck_dashboard, spray_chart |
-| - | **共通基盤** | Error Boundary、データ有効性ガード、二重ネスト解除レイヤ |
-
----
-
-## 7. 完了基準
-
-各レイアウトの改修が「完了」と言える条件:
-
-| レイアウト | 完了基準 |
-|---|---|
-| timeline | unit 4種対応 / sub 任意化 / ハイライト点で線太・光 / 上昇下降で色変化 / 二重ネスト解除レイヤ |
-| ranking | mood 3種切替 / 注目選手の脈動 / 圏外マーカー強化 / チームエントリ対応 |
-| player_spotlight | データ主役 (選手名重複・シルエット廃止) / プライマリ指標巨大化 (60px) / 比較値併記 |
-| versus_card | シンプル化 (バー・スコア・装飾バッジ全廃) / 純粋な数字比較 / 勝者矢印 (◀▶) |
-| team_context | 3要素ブロック / mode 2種 / スタジアム背景 |
-| pitch_arsenal | mode 3種 (single/compare/vs_batter) / 武器バッジ廃止→行強調 / 列幅調整 |
-| batter_heatmap | 旧 pitch_heatmap からのリネーム / mode 2種 (single/vs_handedness) |
-| 全レイアウト共通 | テロップ被り回避 / テロップ枠の透明度調整 / Error Boundary でラップ / データ有効性ガード (_hasValidData) |
-
----
-
-## 8. このドキュメントの運用
+## 6. このドキュメントの運用
 
 ### Gemini Custom Gem 用
 このファイルを Knowledge File としてアップロード。カスタム指示には:
