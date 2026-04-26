@@ -9,7 +9,114 @@
 
 ---
 
-## [5.14.3] - 2026-04-26 - ★緊急修正★ Android Chrome の3つの音声問題を統合解決
+## [5.14.4] - 2026-04-26 - 録画問題への追加対策 + 診断UI
+
+### 動機: v5.14.3 でも録画問題が解消しなかった
+
+ユーザー報告:
+> 速度は解決。ただ録画が依然未解決。困ったなあ
+
+v5.14.3 で DOM attach + unlock を入れたが、Pixel 9 Pro Fold の画面録画では依然 TTS 音声が録音されない。
+速度は解決したので、`playbackRate` 設定タイミングの修正は効果あった。
+残るのは「録音されない」のみ。
+
+### 追加した3つの仮説と対策
+
+#### 仮説1: blob URL は Android 内部で「短時間 PCM」扱いされて録画スルーされる
+
+**対策A**: `URL.createObjectURL(blob)` → **`FileReader.readAsDataURL(blob)` で data URL に変換**
+
+blob URL は Chromium 内部で MediaSource 系のストリーミング扱いになる場合があり、
+Android の `AUDIO_USAGE_MEDIA` フラグが立たない可能性がある。
+data URL ならインラインデータとして扱われ、メディア音として認識されやすい。
+
+```js
+async function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+```
+
+WAV 30〜60KB → base64 化で 40〜80KB の data URL。実用範囲内。
+
+#### 仮説2: 完全 hidden (opacity:0) はメディア要素検出から外れる
+
+**対策B**: `opacity: 0` (完全透明) → **`opacity: 0.01` + `width: 1px / height: 1px`**
+
+一部の Chromium 実装では完全に画面外の要素は「メディア再生中」と認識されないことがある。
+1px 残すことで Chrome のメディア要素検出から外れない。
+
+```js
+audio.style.position = 'fixed';
+audio.style.bottom = '0';
+audio.style.right = '0';
+audio.style.width = '1px';
+audio.style.height = '1px';
+audio.style.opacity = '0.01';     // 完全0より検出されやすい
+audio.style.pointerEvents = 'none';
+audio.style.zIndex = '-9999';
+```
+
+#### 仮説3: ユーザーが原因を特定しづらい
+
+**対策C**: 録画診断UIを TTSPanel に追加
+
+「🔍 録画診断 (TTSが録画されない時)」という折りたたみセクションを追加。
+「診断テスト実行」ボタンを押すと:
+
+1. unlock() を実行
+2. 「テスト」と発声
+3. 再生中に DOM 内の audio 要素を観察
+4. 結果を画面に表示:
+   - audio 要素の数
+   - src の種類 (data URL / blob URL / その他)
+   - volume / playbackRate / paused / readyState
+   - DOM attach されているか
+
+これでユーザーが「DOM attach は成功してるが録画されない」のか「そもそも attach されてない」のか
+切り分けできる。
+
+##### 運用方法
+
+1. 画面録画開始
+2. 「録画診断」を開く
+3. 「診断テスト実行」を押す
+4. 「テスト」音声が鳴る
+5. 画面に診断ログが表示される
+6. 録画停止 → 動画ファイルを確認
+7. 動画に「テスト」音声が入ってれば修正成功
+8. 入ってなければ診断ログのスクショを送ってもらう (追加調査の手がかり)
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/ttsAdapter.js` | blobToDataUrl ヘルパー追加 / speak() で data URL 化 + 1px 可視化 |
+| `src/components/TTSPanel.jsx` | 録画診断 UI + handleDiagnostic ハンドラ追加 |
+| `package.json` / `config.js` | 5.14.3 → 5.14.4 |
+
+### 期待される効果
+
+| シナリオ | 期待結果 |
+|---|---|
+| 仮説1 (blob URL) が原因 | data URL 化で録画される |
+| 仮説2 (hidden) が原因 | 1px 可視化で録画される |
+| 1+2 のいずれかが原因 | v5.14.4 で解決 |
+| **どちらでもなかった場合** | **診断UIで原因切り分け可能、追加調査の手がかり取得** |
+
+### 残っていれば次の手 (v5.14.5 候補)
+
+もし v5.14.4 でも録画されなければ:
+- **MediaSource API** で audio 出力 (より明示的にメディア音として再生)
+- **Web Audio API + MediaStreamDestination + audio.srcObject** でストリーム経由再生
+- **audio に `controls` 属性をつけて完全に可視化** (UX 影響あるが録画優先)
+- **<audio> 要素を React コンポーネントとして静的に配置** し、src を切り替える方式
+
+
 
 ### 動機: ユーザー報告の3つの問題
 

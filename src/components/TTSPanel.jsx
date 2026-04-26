@@ -38,6 +38,9 @@ export function TTSPanel({
   const [cachedSet, setCachedSet] = useState(new Set()); // どの id がキャッシュ済か
   const [previewingId, setPreviewingId] = useState(null); // 個別試聴中の id
 
+  // ★v5.14.4 新規: 録画診断モード★
+  const [diagnostic, setDiagnostic] = useState(null);  // { audioCount, currentAudios, lastPlayLog }
+
   const refreshCacheStats = async () => {
     try {
       const stats = await getCacheStats();
@@ -296,6 +299,75 @@ export function TTSPanel({
   };
 
   const clearSelection = () => setSelectedIds([]);
+
+  /**
+   * ★v5.14.4 新規: 録画診断 (現状の audio 要素の状態を画面に表示)★
+   * - DOM に何個の audio があるか
+   * - それぞれの src / volume / playbackRate / paused 状態
+   * - これで「DOM attach されてるか」「volume が 0 になってないか」等を確認できる
+   */
+  const handleDiagnostic = async () => {
+    try {
+      const adapter = getAdapter('gemini');
+      // 1. unlock を実行 (これでメディア permission が取れるはず)
+      if (adapter.unlock) await adapter.unlock();
+
+      // 2. テスト音声を生成 + 再生
+      const testText = 'テスト';
+      const testSpeaker = 'A';
+      const log = [];
+      log.push(`[${new Date().toLocaleTimeString()}] 診断開始`);
+      log.push(`UA: ${navigator.userAgent.substring(0, 80)}`);
+
+      // 3. play 中に DOM を観察
+      const observeDom = () => {
+        const audios = document.querySelectorAll('audio');
+        return {
+          count: audios.length,
+          details: Array.from(audios).map((a, i) => ({
+            i,
+            src: (a.src || '').substring(0, 50),
+            volume: a.volume,
+            playbackRate: a.playbackRate,
+            paused: a.paused,
+            readyState: a.readyState,
+            duration: a.duration,
+            currentTime: a.currentTime,
+            inDom: document.body.contains(a),
+          })),
+        };
+      };
+
+      log.push(`再生前 DOM audio 数: ${observeDom().count}`);
+
+      // 再生開始
+      await adapter.speak(testText, testSpeaker, {
+        rate: speechRate,
+        onEnd: () => {
+          log.push(`[${new Date().toLocaleTimeString()}] 再生終了`);
+        },
+        onError: (e) => {
+          log.push(`再生エラー: ${e?.message || e}`);
+        },
+      });
+
+      // 再生中に observe (途中で何度か観察)
+      setTimeout(() => {
+        const obs1 = observeDom();
+        log.push(`再生中 DOM audio 数: ${obs1.count}`);
+        if (obs1.details.length > 0) {
+          const a = obs1.details[0];
+          log.push(`  src: ${a.src.startsWith('data:') ? 'data URL ✅' : a.src.startsWith('blob:') ? 'blob URL ⚠️' : 'other'}`);
+          log.push(`  volume: ${a.volume.toFixed(2)}, rate: ${a.playbackRate.toFixed(2)}`);
+          log.push(`  paused: ${a.paused}, inDom: ${a.inDom}, readyState: ${a.readyState}`);
+        }
+        setDiagnostic({ logs: log, audios: obs1.details });
+      }, 500);
+    } catch (err) {
+      console.error('diagnostic failed:', err);
+      setDiagnostic({ logs: ['診断エラー: ' + err.message], audios: [] });
+    }
+  };
 
   const handleClearCache = async () => {
     if (!confirm('音声キャッシュを全削除します。よろしいですか？（次回Gemini TTS再生時に再課金されます）')) return;
@@ -605,6 +677,33 @@ export function TTSPanel({
                   <Trash2 size={10}/>キャッシュ削除
                 </button>
               </div>
+
+              {/* ★v5.14.4 新規: 録画診断★ */}
+              <details className="bg-amber-50 border border-amber-200 rounded-lg overflow-hidden">
+                <summary className="px-2.5 py-1.5 text-[10px] font-bold text-amber-800 cursor-pointer hover:bg-amber-100">
+                  🔍 録画診断 (TTSが録画されない時)
+                </summary>
+                <div className="p-2 bg-white border-t border-amber-200 space-y-2">
+                  <button
+                    onClick={handleDiagnostic}
+                    className="w-full text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white py-1.5 rounded"
+                  >
+                    診断テスト実行 (「テスト」と発声)
+                  </button>
+                  {diagnostic && (
+                    <div className="bg-zinc-900 text-emerald-400 font-mono text-[9px] p-2 rounded overflow-x-auto max-h-40 overflow-y-auto">
+                      {diagnostic.logs.map((line, i) => (
+                        <div key={i}>{line}</div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="text-[9px] text-zinc-600 space-y-0.5">
+                    <div>📋 <strong>診断ボタンを押した状態で画面録画開始</strong>してください</div>
+                    <div>1. 録画開始 → 2. 診断ボタン押下 → 3. 「テスト」音声が鳴る</div>
+                    <div>4. 録画停止して動画確認 → 録画されてれば DOM attach は成功</div>
+                  </div>
+                </div>
+              </details>
             </>
           )}
 

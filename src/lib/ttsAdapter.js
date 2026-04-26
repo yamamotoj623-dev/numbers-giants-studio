@@ -56,6 +56,18 @@ function base64ToBytes(base64) {
   return bytes;
 }
 
+// ★v5.14.4★ blob を data URL に変換 (Android 画面録画対応のため)
+// blob: URL は短時間 PCM バッファとして扱われ、Pixel の画面録画でキャプチャされない場合がある。
+// data URL ならインラインデータとして扱われ、メディア音として認識されやすい。
+async function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 // ============================================================================
 // WebSpeechAdapter: ブラウザ内蔵 TTS（下書き層）
 // ============================================================================
@@ -371,22 +383,29 @@ export class GeminiAdapter {
 
       try {
         // ★v5.14.1★ AudioBufferSourceNode → HTMLAudioElement (Android 画面録画対応)
-        // ★v5.14.3★ 追加修正:
-        //   1. audio を DOM に attach (画面録画でキャプチャされるように)
-        //   2. playbackRate と preservesPitch は play() 直前に設定 (Android Chrome で確実に反映)
-        //   3. これらの修正で「速度が反映されない」「録画されない」「最初の再生が無音」を全部解消
+        // ★v5.14.3★ DOM attach + play直前 rate 設定
+        // ★v5.14.4★ さらに修正:
+        //   1. blob URL → data URL に変更 (Pixel 画面録画でキャプチャされやすくする)
+        //      blob: URL は短時間 PCM 扱いされて録画スルーされる場合があるため
+        //   2. 完全 hidden (opacity:0) → 1px 可視化に変更
+        //      Chromium の一部実装で完全透明はメディア要素として認識されないことがある
         const { blob } = await this._getOrGenerate(fixedText, speaker);
-        const url = URL.createObjectURL(blob);
+        // ★data URL 変換★ (blob URL ではなく)
+        const dataUrl = await blobToDataUrl(blob);
         const audio = new Audio();
         audio.preload = 'auto';
-        audio.src = url;
+        audio.src = dataUrl;
 
-        // ★v5.14.3★ DOM に attach (画面録画でキャプチャ可能に)
-        // 画面外に配置するが DOM ツリーには存在させる
+        // ★v5.14.4★ DOM に attach (1px 可視で録画キャプチャ確実化)
+        // 完全 hidden だと一部のブラウザでメディア要素検出から外れる
         audio.style.position = 'fixed';
-        audio.style.bottom = '-100px';
-        audio.style.opacity = '0';
+        audio.style.bottom = '0';
+        audio.style.right = '0';
+        audio.style.width = '1px';
+        audio.style.height = '1px';
+        audio.style.opacity = '0.01';        // 完全0より検出されやすい
         audio.style.pointerEvents = 'none';
+        audio.style.zIndex = '-9999';
         audio.setAttribute('playsinline', '');  // iOS Safari対策
         document.body.appendChild(audio);
 
@@ -406,8 +425,8 @@ export class GeminiAdapter {
           if (resolved) return;
           resolved = true;
           clearTimeout(this.fallbackTimer);
-          try { URL.revokeObjectURL(url); } catch (e) {}
-          // ★v5.14.3★ DOM から remove
+          // ★v5.14.4★ data URL なので revokeObjectURL は不要
+          // DOM から remove
           try { audio.remove(); } catch (e) {}
           if (this.currentAudio === audio) this.currentAudio = null;
         };

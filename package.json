@@ -1,7 +1,7 @@
 {
   "name": "numbers-giants-studio",
   "private": true,
-  "version": "5.14.3",
+  "version": "5.14.4",
   "type": "module",
   "description": "YouTubeチャンネル『数字で見るG党』の動画生成スタジオ",
   "scripts": {
