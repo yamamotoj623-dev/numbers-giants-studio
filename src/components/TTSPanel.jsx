@@ -301,71 +301,91 @@ export function TTSPanel({
   const clearSelection = () => setSelectedIds([]);
 
   /**
-   * ★v5.14.4 新規: 録画診断 (現状の audio 要素の状態を画面に表示)★
-   * - DOM に何個の audio があるか
-   * - それぞれの src / volume / playbackRate / paused 状態
-   * - これで「DOM attach されてるか」「volume が 0 になってないか」等を確認できる
+   * ★v5.14.4 新規 / v5.14.5 強化★ 録画診断
+   * - 長めのテスト音声 (5秒程度) で観察時間を確保
+   * - 200ms ごとに 8回 DOM 観察
+   * - 共有 audio 要素が永続的に存在するか確認
    */
   const handleDiagnostic = async () => {
     try {
       const adapter = getAdapter('gemini');
-      // 1. unlock を実行 (これでメディア permission が取れるはず)
-      if (adapter.unlock) await adapter.unlock();
-
-      // 2. テスト音声を生成 + 再生
-      const testText = 'テスト';
-      const testSpeaker = 'A';
       const log = [];
       log.push(`[${new Date().toLocaleTimeString()}] 診断開始`);
       log.push(`UA: ${navigator.userAgent.substring(0, 80)}`);
+      log.push(`APP_VERSION 確認: index.html を直接見て確認してください`);
 
-      // 3. play 中に DOM を観察
-      const observeDom = () => {
+      // 1. unlock
+      if (adapter.unlock) await adapter.unlock();
+      log.push(`unlock 完了`);
+
+      // 2. 共有 audio 要素チェック (v5.14.5 で導入)
+      if (adapter._getSharedAudio) {
+        const shared = adapter._getSharedAudio();
+        log.push(`共有 audio 要素: ID=${shared.id}, inDOM=${document.body.contains(shared)}`);
+      } else {
+        log.push(`⚠️ _getSharedAudio が未定義 (古いコードがロード中?)`);
+      }
+
+      // 3. 長めのテスト音声を生成
+      const testText = '録画テスト中、聞こえていますか';
+      const testSpeaker = 'A';
+      log.push(`テスト発声: "${testText}"`);
+
+      // DOM 観察ヘルパー
+      const observe = () => {
         const audios = document.querySelectorAll('audio');
-        return {
-          count: audios.length,
-          details: Array.from(audios).map((a, i) => ({
-            i,
-            src: (a.src || '').substring(0, 50),
-            volume: a.volume,
-            playbackRate: a.playbackRate,
-            paused: a.paused,
-            readyState: a.readyState,
-            duration: a.duration,
-            currentTime: a.currentTime,
-            inDom: document.body.contains(a),
-          })),
-        };
+        return Array.from(audios).map(a => ({
+          id: a.id || '(no-id)',
+          srcType: !a.src ? 'empty' : a.src.startsWith('data:') ? 'data' : a.src.startsWith('blob:') ? 'blob' : 'other',
+          srcLen: (a.src || '').length,
+          volume: a.volume,
+          rate: a.playbackRate,
+          paused: a.paused,
+          ready: a.readyState,
+          inDom: document.body.contains(a),
+        }));
       };
 
-      log.push(`再生前 DOM audio 数: ${observeDom().count}`);
+      log.push(`再生前: audio 要素数=${observe().length}`);
 
-      // 再生開始
-      await adapter.speak(testText, testSpeaker, {
+      // 4. 再生開始 (await しない、タイマー監視のため)
+      const speakPromise = adapter.speak(testText, testSpeaker, {
         rate: speechRate,
-        onEnd: () => {
-          log.push(`[${new Date().toLocaleTimeString()}] 再生終了`);
-        },
-        onError: (e) => {
-          log.push(`再生エラー: ${e?.message || e}`);
-        },
+        onEnd: () => log.push(`[${new Date().toLocaleTimeString()}] 再生終了`),
+        onError: (e) => log.push(`再生エラー: ${e?.message || e}`),
       });
 
-      // 再生中に observe (途中で何度か観察)
-      setTimeout(() => {
-        const obs1 = observeDom();
-        log.push(`再生中 DOM audio 数: ${obs1.count}`);
-        if (obs1.details.length > 0) {
-          const a = obs1.details[0];
-          log.push(`  src: ${a.src.startsWith('data:') ? 'data URL ✅' : a.src.startsWith('blob:') ? 'blob URL ⚠️' : 'other'}`);
-          log.push(`  volume: ${a.volume.toFixed(2)}, rate: ${a.playbackRate.toFixed(2)}`);
-          log.push(`  paused: ${a.paused}, inDom: ${a.inDom}, readyState: ${a.readyState}`);
+      // 5. 200ms ごとに 8回観察 (合計 1.6秒)
+      const observations = [];
+      for (let i = 1; i <= 8; i++) {
+        await new Promise(r => setTimeout(r, 200));
+        const obs = observe();
+        observations.push({ t: i * 200, audios: obs });
+      }
+
+      log.push(`--- 観察結果 ---`);
+      observations.forEach(({ t, audios }) => {
+        if (audios.length === 0) {
+          log.push(`  ${t}ms: audio 0個`);
+        } else {
+          audios.forEach((a, i) => {
+            log.push(`  ${t}ms: [${i}] id=${a.id} src=${a.srcType}(${a.srcLen}) vol=${a.volume.toFixed(2)} rate=${a.rate.toFixed(2)} paused=${a.paused} inDom=${a.inDom} ready=${a.ready}`);
+          });
         }
-        setDiagnostic({ logs: log, audios: obs1.details });
-      }, 500);
+      });
+
+      await speakPromise;
+      log.push(`再生終了後: audio 要素数=${observe().length}`);
+
+      // 6. 共有 audio が再生終了後も DOM に残ってるか
+      if (adapter._sharedAudio) {
+        log.push(`★ 共有 audio 永続: inDOM=${document.body.contains(adapter._sharedAudio)} (true なら成功)`);
+      }
+
+      setDiagnostic({ logs: log });
     } catch (err) {
       console.error('diagnostic failed:', err);
-      setDiagnostic({ logs: ['診断エラー: ' + err.message], audios: [] });
+      setDiagnostic({ logs: ['診断エラー: ' + err.message] });
     }
   };
 

@@ -203,6 +203,37 @@ export class GeminiAdapter {
     this._decodedCache = new Map();   // (speaker:text) → AudioBuffer (decode 済み)
     this._DECODE_CACHE_MAX = 12;      // メモリリーク防止: 最大12件保持 (LRU)
     this._unlocked = false;           // AudioContext がユーザー操作で resume 済みか
+
+    // ★v5.14.5★ 共有 audio 要素 (永続的に DOM に存在)
+    // 動的に new Audio() で作って即削除すると Pixel 画面録画でキャプチャされないため、
+    // 1つの audio 要素を最初に DOM に attach し、src を切り替えて再利用する。
+    this._sharedAudio = null;
+  }
+
+  /**
+   * ★v5.14.5★ 共有 audio 要素を取得 (なければ作って DOM に attach)
+   * 同じ要素を再利用することで Chromium のメディア要素検出が安定する。
+   */
+  _getSharedAudio() {
+    if (this._sharedAudio && document.body.contains(this._sharedAudio)) {
+      return this._sharedAudio;
+    }
+    const audio = document.createElement('audio');
+    audio.preload = 'auto';
+    audio.setAttribute('playsinline', '');
+    audio.id = 'tts-voice-audio-shared';
+    // 1px 可視 (録画キャプチャされやすい)
+    audio.style.position = 'fixed';
+    audio.style.bottom = '0';
+    audio.style.right = '0';
+    audio.style.width = '1px';
+    audio.style.height = '1px';
+    audio.style.opacity = '0.01';
+    audio.style.pointerEvents = 'none';
+    audio.style.zIndex = '-9999';
+    document.body.appendChild(audio);
+    this._sharedAudio = audio;
+    return audio;
   }
 
   _getAudioCtx() {
@@ -382,32 +413,21 @@ export class GeminiAdapter {
       const fixedText = applyYomigana(text);
 
       try {
-        // ★v5.14.1★ AudioBufferSourceNode → HTMLAudioElement (Android 画面録画対応)
-        // ★v5.14.3★ DOM attach + play直前 rate 設定
-        // ★v5.14.4★ さらに修正:
-        //   1. blob URL → data URL に変更 (Pixel 画面録画でキャプチャされやすくする)
-        //      blob: URL は短時間 PCM 扱いされて録画スルーされる場合があるため
-        //   2. 完全 hidden (opacity:0) → 1px 可視化に変更
-        //      Chromium の一部実装で完全透明はメディア要素として認識されないことがある
+        // ★v5.14.5★ 共有 audio 要素を再利用 (動的生成→即削除をやめる)
+        // Pixel 画面録画は「動的生成・短時間で削除される audio」をキャプチャしない可能性が高い。
+        // 永続的に DOM に存在する audio 要素の src を切り替える方式に変更。
         const { blob } = await this._getOrGenerate(fixedText, speaker);
-        // ★data URL 変換★ (blob URL ではなく)
         const dataUrl = await blobToDataUrl(blob);
-        const audio = new Audio();
-        audio.preload = 'auto';
-        audio.src = dataUrl;
 
-        // ★v5.14.4★ DOM に attach (1px 可視で録画キャプチャ確実化)
-        // 完全 hidden だと一部のブラウザでメディア要素検出から外れる
-        audio.style.position = 'fixed';
-        audio.style.bottom = '0';
-        audio.style.right = '0';
-        audio.style.width = '1px';
-        audio.style.height = '1px';
-        audio.style.opacity = '0.01';        // 完全0より検出されやすい
-        audio.style.pointerEvents = 'none';
-        audio.style.zIndex = '-9999';
-        audio.setAttribute('playsinline', '');  // iOS Safari対策
-        document.body.appendChild(audio);
+        const audio = this._getSharedAudio();
+        // 前の再生があれば停止 (cleanup)
+        try { audio.pause(); } catch (e) {}
+
+        // 全 listener をクリア
+        audio.onended = null;
+        audio.onerror = null;
+
+        audio.src = dataUrl;
 
         // 音量取得
         try {
@@ -425,9 +445,8 @@ export class GeminiAdapter {
           if (resolved) return;
           resolved = true;
           clearTimeout(this.fallbackTimer);
-          // ★v5.14.4★ data URL なので revokeObjectURL は不要
-          // DOM から remove
-          try { audio.remove(); } catch (e) {}
+          // ★v5.14.5★ 共有要素なので DOM remove はしない
+          // src だけクリアしておく (次の speak で上書きされる)
           if (this.currentAudio === audio) this.currentAudio = null;
         };
 
@@ -443,15 +462,14 @@ export class GeminiAdapter {
           resolve();
         };
 
-        // 即時再生 (preload=auto + src 設定済みなら readyState がすぐ上がる)
+        // 即時再生
         const startPlayback = async () => {
           try {
             // ★v5.14.3★ play() 直前に rate と preservesPitch を設定
-            // Android Chrome では canplay 前に設定すると反映されないことがある
             audio.playbackRate = rate;
-            audio.preservesPitch = true;       // 標準
-            audio.mozPreservesPitch = true;    // 古い Firefox
-            audio.webkitPreservesPitch = true; // 古い Safari
+            audio.preservesPitch = true;
+            audio.mozPreservesPitch = true;
+            audio.webkitPreservesPitch = true;
             await audio.play();
           } catch (e) {
             cleanup();
@@ -471,7 +489,7 @@ export class GeminiAdapter {
           audio.load();
         }
 
-        // fallback timer (onended が発火しない場合の保険)
+        // fallback timer
         const estimatedSec = Math.max(1.5, text.length * 0.15 / rate);
         this.fallbackTimer = setTimeout(() => {
           if (!resolved) {
@@ -524,8 +542,8 @@ export class GeminiAdapter {
       this.currentAudio.onended = null;
       this.currentAudio.onerror = null;
       try { this.currentAudio.pause(); } catch (e) {}
-      // ★v5.14.3★ DOM から remove (DOM attach されているため)
-      try { this.currentAudio.remove(); } catch (e) {}
+      // ★v5.14.5★ 共有 audio 要素は DOM remove しない (永続的に保持)
+      // currentAudio 参照だけクリア
       this.currentAudio = null;
     }
   }

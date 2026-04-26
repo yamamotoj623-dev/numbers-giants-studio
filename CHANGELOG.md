@@ -9,7 +9,118 @@
 
 ---
 
-## [5.14.4] - 2026-04-26 - 録画問題への追加対策 + 診断UI
+## [5.14.5] - 2026-04-26 - ★決定打★ 共有 audio 要素方式 + 診断強化
+
+### 動機: v5.14.4 の診断結果から判明した真の原因
+
+ユーザー診断ログ:
+```
+[22:54:26] 診断開始
+UA: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 ... Chrome
+再生前 DOM audio 数: 0
+[22:54:28] 再生終了
+再生中 DOM audio 数: 0    ← ★★★ 0! attach されてない or 既に消えてる ★★★
+```
+
+「テスト」(2文字、約1秒) の再生が短すぎて、setTimeout 500ms の観察時には
+**既に cleanup で DOM remove されていた**。
+
+ただ、それより根本的な問題: **動的に作って即削除する audio 要素は、
+Pixel/Android Chromium のメディア要素検出に引っかからない時間帯がある可能性**。
+
+### 解決策: 共有 audio 要素を永続的に DOM に保持
+
+毎回 `new Audio()` で作るのではなく、**最初に1個だけ作って常時 DOM に存在させ、
+src を切り替えて再生する**方式に変更:
+
+```js
+// constructor で 1回だけ
+this._sharedAudio = null;
+
+// _getSharedAudio() で初回呼び出し時に DOM attach
+const audio = document.createElement('audio');
+audio.id = 'tts-voice-audio-shared';
+audio.preload = 'auto';
+audio.setAttribute('playsinline', '');
+audio.style.position = 'fixed';
+audio.style.bottom = '0';
+audio.style.right = '0';
+audio.style.width = '1px';
+audio.style.height = '1px';
+audio.style.opacity = '0.01';
+document.body.appendChild(audio);
+
+// speak() では再利用
+const audio = this._getSharedAudio();
+audio.src = dataUrl;
+audio.playbackRate = rate;
+await audio.play();
+
+// stop() では DOM remove しない (永続保持)
+audio.pause();
+```
+
+#### この方式の利点
+
+1. **audio 要素は永続的に DOM 内** — Chromium が安定的に「メディア要素」として認識
+2. **動的生成・削除の race condition がない**
+3. **autoplay policy unlock が継続的に効く** (毎回 unlock し直す必要なし)
+4. **Pixel 画面録画でキャプチャされやすい** (継続して同じ要素を観察できる)
+
+### 診断機能を強化
+
+ユーザー診断で判明した「観察タイミングずれ問題」を解消:
+
+#### 改善点
+
+1. **長めのテスト音声**: 「テスト」(約1秒) → 「録画テスト中、聞こえていますか」(約3秒)
+2. **多点観察**: setTimeout 500ms 1回 → 200ms ごとに 8回 (合計 1.6秒)
+3. **共有 audio 要素チェック**: `_getSharedAudio()` が定義されているか
+   (古いコードがキャッシュでロードされてないか確認可能)
+4. **再生終了後の永続性チェック**: `_sharedAudio.inDOM === true` を確認
+
+#### 新しい診断ログのフォーマット
+
+```
+[時刻] 診断開始
+UA: ...
+unlock 完了
+共有 audio 要素: ID=tts-voice-audio-shared, inDOM=true
+テスト発声: "録画テスト中、聞こえていますか"
+再生前: audio 要素数=1                    ← 共有要素 1個
+--- 観察結果 ---
+  200ms: [0] id=tts-voice-audio-shared src=data(...) vol=1.00 rate=1.30 paused=false inDom=true ready=4
+  400ms: [0] id=tts-voice-audio-shared src=data(...) vol=1.00 rate=1.30 paused=false inDom=true ready=4
+  ...
+再生終了後: audio 要素数=1                ← 共有要素は削除されない
+★ 共有 audio 永続: inDOM=true (true なら成功)
+```
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/ttsAdapter.js` | 共有 audio 要素 (`_sharedAudio`) 導入 / `_getSharedAudio()` メソッド追加 / speak() 再利用化 / stop() で DOM remove しない |
+| `src/components/TTSPanel.jsx` | 診断強化 (8回観察 / 長めテキスト / 共有要素確認) |
+| `package.json` / `config.js` | 5.14.4 → 5.14.5 |
+
+### 期待される効果
+
+| シナリオ | 期待される診断ログ |
+|---|---|
+| ✅ 修正成功 | 観察ごとに `inDom=true paused=false ready=4` で安定、録画ファイルに音声入り |
+| ❌ まだダメ (Chromium のさらに別の問題) | 全観察で `inDom=true` なのに録画されない → 別アプローチへ (MediaSource API 等) |
+| ⚠️ コード未デプロイ | `⚠️ _getSharedAudio が未定義` のログが出る |
+
+### v5.14.5 でも録画されなかった場合の次手 (v5.14.6 候補)
+
+最後の砦:
+- **Web Audio API + MediaStreamDestination + audio.srcObject** でストリーム化
+- もしくは **WAV データを別の方法で再生** (例: Audio Worklet + ScriptProcessorNode)
+- iframe 経由で別オリジンとして再生 (Pixel 画面録画の挙動が変わる可能性)
+- **完全可視化** (audio に controls 属性付ける) — UX 影響あり
+
+
 
 ### 動機: v5.14.3 でも録画問題が解消しなかった
 
