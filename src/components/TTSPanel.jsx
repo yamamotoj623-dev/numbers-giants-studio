@@ -10,9 +10,10 @@
  */
 
 import React, { useState } from 'react';
-import { Mic2, Volume2, VolumeX, Gauge, Sparkles, Zap, Loader2, Check, DollarSign, Trash2, AlertCircle, RefreshCw, Search } from 'lucide-react';
+import { Mic2, Volume2, VolumeX, Gauge, Sparkles, Zap, Loader2, Check, DollarSign, Trash2, AlertCircle, RefreshCw, Search, Download, FileAudio } from 'lucide-react';
 import { getAdapter } from '../lib/ttsAdapter';
 import { clearCache, getCacheStats } from '../lib/audioCache';
+import { exportProjectAudio, downloadBlob } from '../lib/audioExporter';
 
 export function TTSPanel({
   engine, setEngine,
@@ -39,7 +40,12 @@ export function TTSPanel({
   const [previewingId, setPreviewingId] = useState(null); // 個別試聴中の id
 
   // ★v5.14.4 新規: 録画診断モード★
-  const [diagnostic, setDiagnostic] = useState(null);  // { audioCount, currentAudios, lastPlayLog }
+  const [diagnostic, setDiagnostic] = useState(null);
+
+  // ★v5.15.0 新規: 動画用音声エクスポート★
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ msg: '', percent: 0 });
+  const [exportResult, setExportResult] = useState(null);  // { blob, sizeBytes, durationSec, missingScripts, filename }  // { audioCount, currentAudios, lastPlayLog }
 
   const refreshCacheStats = async () => {
     try {
@@ -422,6 +428,53 @@ export function TTSPanel({
     }
   };
 
+  /**
+   * ★v5.15.0 新規: 動画用音声をエクスポート (オフライン合成 → WAV)★
+   *
+   * 画面録画では Pixel Chrome が TTS を録音してくれない問題への根本的解決策。
+   * OfflineAudioContext で TTS+BGM+SE+ducking を全部メモリ上で合成して
+   * 1本の WAV として出力する。
+   * 動画編集アプリで「画面録画 (映像のみ) + この WAV」を合成 → 完成動画。
+   */
+  const handleExportAudio = async () => {
+    if (!projectData?.scripts?.length) {
+      alert('scripts が空です');
+      return;
+    }
+    setExporting(true);
+    setExportResult(null);
+    setExportProgress({ msg: '開始...', percent: 0 });
+
+    try {
+      const result = await exportProjectAudio({
+        scripts: projectData.scripts,
+        speechRate,
+        ttsEngine: engine || 'gemini',
+        audio: projectData.audio || {},
+        onProgress: (msg, percent) => setExportProgress({ msg, percent }),
+      });
+
+      const filename = `audio-${(projectData.title || 'untitled').replace(/[^a-zA-Z0-9一-龯ぁ-んァ-ヴ]/g, '_')}-${Date.now()}.wav`;
+      setExportResult({
+        blob: result.blob,
+        sizeBytes: result.sizeBytes,
+        durationSec: result.durationSec,
+        missingScripts: result.missingScripts,
+        filename,
+      });
+    } catch (err) {
+      console.error('export audio failed:', err);
+      alert('音声エクスポート失敗: ' + err.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDownloadExported = () => {
+    if (!exportResult) return;
+    downloadBlob(exportResult.blob, exportResult.filename);
+  };
+
   const handleClearCache = async () => {
     if (!confirm('音声キャッシュを全削除します。よろしいですか？（次回Gemini TTS再生時に再課金されます）')) return;
     await clearCache();
@@ -729,6 +782,79 @@ export function TTSPanel({
                 >
                   <Trash2 size={10}/>キャッシュ削除
                 </button>
+              </div>
+
+              {/* ★v5.15.0 新規: 動画用音声エクスポート★ */}
+              <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg overflow-hidden">
+                <div className="px-2.5 py-2 bg-emerald-100">
+                  <div className="text-[11px] font-black text-emerald-900 flex items-center gap-1.5">
+                    <FileAudio size={12}/>
+                    動画用音声をダウンロード <span className="text-[9px] font-normal text-emerald-700">(画面録画と別に音声ファイルを取得)</span>
+                  </div>
+                </div>
+                <div className="p-2 bg-white space-y-2">
+                  <div className="text-[10px] text-zinc-700 leading-relaxed">
+                    画面録画で TTS が入らない問題への根本解決策。
+                    アプリで <strong>映像だけ画面録画 (音はミュートでOK)</strong> → このボタンで <strong>音声 WAV を取得</strong> → 動画編集アプリで合成。
+                  </div>
+
+                  <button
+                    onClick={handleExportAudio}
+                    disabled={exporting || !projectData?.scripts?.length}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 text-white text-[11px] font-black py-2 rounded-lg flex items-center justify-center gap-2 transition"
+                  >
+                    {exporting ? (
+                      <><Loader2 size={12} className="animate-spin"/> {exportProgress.msg} ({Math.round(exportProgress.percent)}%)</>
+                    ) : (
+                      <><FileAudio size={14}/> 音声トラックを書き出す (TTS + BGM + SE)</>
+                    )}
+                  </button>
+
+                  {/* 進捗バー */}
+                  {exporting && (
+                    <div className="w-full h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all"
+                        style={{ width: `${exportProgress.percent}%` }}
+                      />
+                    </div>
+                  )}
+
+                  {/* 完了結果 */}
+                  {exportResult && !exporting && (
+                    <div className="space-y-1.5">
+                      <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-[10px] text-emerald-900">
+                        <div className="font-bold mb-0.5">✅ 生成完了</div>
+                        <div>長さ: {exportResult.durationSec.toFixed(1)} 秒 / サイズ: {(exportResult.sizeBytes / 1024 / 1024).toFixed(2)} MB</div>
+                        {exportResult.missingScripts.length > 0 && (
+                          <div className="mt-1 text-amber-700">
+                            ⚠️ {exportResult.missingScripts.length} 件の TTS が未生成 (該当部分は無音)
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleDownloadExported}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black py-2 rounded-lg flex items-center justify-center gap-2 transition"
+                      >
+                        <Download size={14}/> WAV をダウンロード
+                      </button>
+                      <div className="text-[9px] text-zinc-500 px-1">
+                        ファイル名: {exportResult.filename}
+                      </div>
+                    </div>
+                  )}
+
+                  <details className="text-[9px] text-zinc-600">
+                    <summary className="cursor-pointer hover:text-zinc-800">使い方</summary>
+                    <div className="pl-3 mt-1 space-y-0.5">
+                      <div>1. アプリで動画再生 → <strong>画面録画開始 (音はミュート)</strong></div>
+                      <div>2. 動画再生終了 → 録画停止 (映像のみのMP4)</div>
+                      <div>3. このボタンで音声 WAV をダウンロード</div>
+                      <div>4. 動画編集アプリ (CapCut, VLLO等) で映像+音声を合成</div>
+                      <div>5. 完成動画を YouTube Shorts に投稿</div>
+                    </div>
+                  </details>
+                </div>
               </div>
 
               {/* ★v5.14.4 新規: 録画診断★ */}

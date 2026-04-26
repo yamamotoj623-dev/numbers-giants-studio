@@ -9,7 +9,164 @@
 
 ---
 
-## [5.14.6] - 2026-04-26 - ★最終手段★ <audio> → <video> 要素に変更 (AUDIO_USAGE_MEDIA 確実化)
+## [5.15.0] - 2026-04-26 - ★方針転換★ ブラウザ録画依存をやめ、音声トラック別書き出し方式に
+
+### 動機: v5.14.x の録画問題が根本的に解決不能だった
+
+v5.14.1〜v5.14.6 で 6回にわたり対策を投入したが、**Pixel 9 Pro Fold の画面録画で**
+**Chrome HTMLMediaElement の音声がキャプチャされない問題が解消できなかった**:
+
+| 試した対策 | 結果 |
+|---|---|
+| v5.14.1: `<audio>` を blob URL で再生 | ❌ |
+| v5.14.3: DOM attach + unlock 拡張 | ❌ |
+| v5.14.4: data URL 化 + 1px 可視化 | ❌ |
+| v5.14.5: 共有 audio 要素永続化 | ❌ |
+| v5.14.6: `<video>` 要素 + MediaSession | ❌ |
+
+ユーザー診断ログでは audio 要素の状態は完璧 (`inDom=true paused=false ready=4`) だったが、
+画面録画には依然として TTS 音声が入らない。
+
+これは Android Chromium が短時間 PCM 音声を `AUDIO_USAGE_MEDIA` として再生していない
+仕様(?)の問題で、**ブラウザサンドボックス内では根本的解決が不可能**と判断。
+
+### ユーザーからの建設的提案
+
+> もう別の方法試した方が良くないですか。音声 (TTS BGM SE) だけ別ダウンロードできるようにするとか
+
+→ **これが正解**。ブラウザに音を出させて録画する発想を捨てて、
+**OfflineAudioContext で完全合成した WAV を別ファイルとしてダウンロード**する方式に転換。
+
+### 新しいワークフロー
+
+```
+従来の運用 (失敗)              新しい運用 (v5.15.0)
+─────────────────              ─────────────────
+画面録画 (映像+音声)            画面録画 (映像のみ、音はミュート)
+↓                               ↓
+完成動画                        + 音声 WAV をアプリから DL
+                                ↓
+                                動画編集アプリで合成
+                                (CapCut, VLLO 等)
+                                ↓
+                                完成動画
+```
+
+### 実装: OfflineAudioContext で全音声を1本に合成
+
+新ファイル `src/lib/audioExporter.js` を作成。`OfflineAudioContext` を使って
+**実際にスピーカー再生せず、メモリ上で音声を完全合成して WAV を出力**する仕組み:
+
+```js
+const offlineCtx = new OfflineAudioContext(2, totalSamples, 48000);
+
+// 各 TTS 音声をスケジュール
+for (const t of ttsTimings) {
+  const blob = await getCachedAudio(t.speaker, t.joinedText);
+  const audioBuffer = await offlineCtx.decodeAudioData(...);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.playbackRate.value = speechRate;
+  source.connect(gainNode);
+  source.start(t.startSec);
+}
+
+// SE もスケジュール
+for (const se of seTimings) { ... }
+
+// BGM (ループ + ducking)
+const bgmSource = offlineCtx.createBufferSource();
+bgmSource.loop = true;
+const bgmGain = offlineCtx.createGain();
+// ducking スケジュール (TTS 中は音量下げ)
+for (const t of ttsTimings) {
+  bgmGain.gain.setValueAtTime(baseBgmVol, t.startSec - 0.05);
+  bgmGain.gain.linearRampToValueAtTime(duckVol, t.startSec + 0.1);
+  bgmGain.gain.setValueAtTime(duckVol, t.endSec - 0.1);
+  bgmGain.gain.linearRampToValueAtTime(baseBgmVol, t.endSec + 0.15);
+}
+
+// レンダリング (重い処理)
+const renderedBuffer = await offlineCtx.startRendering();
+
+// WAV エンコード → Blob → ダウンロード
+const wavBlob = audioBufferToWav(renderedBuffer);
+```
+
+#### 出力される WAV の内容
+
+- ✅ 全 scripts の TTS 音声 (キャッシュ済みのもの)
+- ✅ BGM (ループ + ducking 自動適用)
+- ✅ カスタム SE (登録済みのもの)
+- ✅ 速度変更も反映 (speechRate)
+- ⚠️ 合成音 SE (フォールバック) は除外 (カスタム SE 未登録時)
+- ⚠️ TTS 未生成の script は無音
+
+#### スペック
+
+- **形式**: WAV (16bit PCM, 48kHz, ステレオ)
+- **サイズ**: 1分動画あたり約 11MB
+- **生成時間**: 1分動画あたり 2-5秒 (端末次第)
+
+### UI
+
+TTSPanel に「動画用音声をダウンロード」セクションを追加:
+
+```
+🎵 動画用音声をダウンロード (画面録画と別に音声ファイルを取得)
+─────────────────────────────────────────────
+画面録画で TTS が入らない問題への根本解決策。
+
+[音声トラックを書き出す (TTS + BGM + SE)]
+        ↓
+進捗バー (0% → 100%)
+        ↓
+✅ 生成完了
+長さ: 52.3 秒 / サイズ: 9.8 MB
+[WAV をダウンロード]
+        ↓
+ファイル: audio-プロジェクト名-1234567.wav
+
+▶ 使い方
+  1. アプリで動画再生 → 画面録画開始 (音はミュート)
+  2. 動画再生終了 → 録画停止 (映像のみのMP4)
+  3. このボタンで音声 WAV をダウンロード
+  4. 動画編集アプリ (CapCut, VLLO等) で映像+音声を合成
+  5. 完成動画を YouTube Shorts に投稿
+```
+
+### 推奨動画編集アプリ (Pixel)
+
+| アプリ | 特徴 |
+|---|---|
+| **CapCut** | 無料、Shorts/TikTok 編集に強い、音声+映像合成簡単 |
+| **VLLO** | 直感的、若干有料機能あり |
+| **YouCut** | 軽量、シンプル |
+| **YouTube Shorts エディタ** | アプリ内で完結 (ただし機能限定) |
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/audioExporter.js` | ★新規★ OfflineAudioContext で音声合成 + WAV エンコード |
+| `src/components/TTSPanel.jsx` | 「動画用音声をダウンロード」UI 追加 |
+| `package.json` / `config.js` | 5.14.6 → 5.15.0 (マイナーアップ) |
+
+### v5.14.x の録画対応コードはどうする?
+
+`<video>` 要素方式 (v5.14.6) や DOM attach、共有要素、MediaSession API は**残す**。
+理由:
+- 一部の環境では今後の Chromium アップデートで録画されるようになる可能性
+- アプリ内プレビュー再生は引き続き必要 (映像確認用)
+- BGM/SE のミックス自体はリアルタイム再生でも便利
+
+ただし**メイン運用は「映像のみ録画 + 音声 WAV 別 DL」方式**に切替推奨。
+
+### 録画診断機能はどうする?
+
+「🔍 録画診断」セクションは残す。今後の調査用 + チャット中の検証用。
+
+
 
 ### 動機: v5.14.5 の診断結果から判明した「audio 要素では Pixel 録画NG」事実
 
