@@ -9,7 +9,115 @@
 
 ---
 
-## [5.15.0] - 2026-04-26 - ★方針転換★ ブラウザ録画依存をやめ、音声トラック別書き出し方式に
+## [5.15.1] - 2026-04-26 - audioExporter 2大バグ修正 (速度ピッチ問題 + BGM/SE 取得)
+
+### 動機: v5.15.0 のリリースで判明した不具合
+
+ユーザー報告:
+> ダウンロードできたけど倍速にして音質が変わってる。BGM/SE が入ってない。
+
+### 問題1の原因: AudioBufferSourceNode は preservesPitch をサポートしない
+
+HTMLAudioElement は `preservesPitch=true` でピッチ維持できるが、
+**OfflineAudioContext で使う AudioBufferSourceNode は仕様上 playbackRate を変えると
+ピッチも変わる** (チップマンク効果)。
+
+#### 解決策
+
+**「速度反映」をオプション化**し、デフォルト OFF (TTSの自然な速度で書き出し) に。
+ON にすると速度反映するが音質劣化することを UI で明記する。
+
+```js
+// audioExporter.js
+const effectivePlaybackRate = applySpeechRate ? speechRate : 1.0;
+
+// TTSPanel.jsx
+<label>
+  <input type="checkbox" checked={applySpeechRate} onChange={...} />
+  書き出し時に再生速度 (x{speechRate}) を反映
+  <small>
+    OFF推奨: TTS の自然な速度で書き出し (音質維持)
+    ON: 速度反映するが音質劣化 (機械音化)
+  </small>
+</label>
+```
+
+なお TTS の duration は、speechRate=1.0 時は `audioBuffer.duration` の実音声長を使用するので、
+タイミング計算もより正確になった (旧版は `charMs * 文字数` の推定値だった)。
+
+### 問題2の原因: projectData.audio.bgmId は実は使われていなかった
+
+調査の結果、`projectData.audio.bgmId` は **defaultBatter.js / defaultPitcher.js では `null` で初期化されているが、その後 BGMPanel から書き込まれることはない**ことが判明。
+
+BGMPanel は **直接 mixer.loadBgmFromUrl(blobUrl) を呼ぶ**だけで、projectData には保存しない。
+SE も同様に、SEPanel が直接 mixer.registerCustomSe(id, blob) を呼ぶ仕組み。
+
+audioExporter v5.15.0 は `audio.bgmId` を見ていたので、常に空 → BGM 入らない。
+
+#### 解決策: mixer インスタンスから直接 blob を回収
+
+```js
+// audioExporter.js (v5.15.1)
+import { getMixer } from './mixer';
+
+const mixer = getMixer();
+
+// BGM
+if (mixer.bgmAudioEl && mixer.bgmAudioEl.src) {
+  const bgmBlob = await fetchAsBlob(mixer.bgmAudioEl.src);
+  // ... decode & schedule with ducking
+}
+
+// SE (mixer._seAudioEls Map から各 SE の blob を取得)
+for (const [seId, el] of mixer._seAudioEls.entries()) {
+  const seBlob = await fetchAsBlob(el.src);
+  // scripts を辿って tagged な SE をスケジュール
+}
+```
+
+`fetchAsBlob(blobUrl)` ヘルパーで、blob URL から再度 blob を取得して decode し直す。
+
+### 副次改善: デバッグログ機能を追加
+
+エクスポート結果に `debugLog` 配列を含めて、UI でデバッグログを表示可能に。
+今回みたいに「BGM が入ってない」原因を即座に特定できる:
+
+```
+[audioExporter] applySpeechRate=false, effectivePlaybackRate=1
+[audioExporter] TTS グループ数: 18
+[audioExporter] [GROUP 0] decode成功
+[audioExporter] BGM 検出: src=blob:https://app.../...
+[audioExporter] BGM 追加成功 (vol=0.15)
+[audioExporter] SE 登録数: 4
+[audioExporter] SE blob キャッシュ: 4件
+[audioExporter] SE 追加: 12件 / スキップ: 0件
+```
+
+UI には完了結果に「✓ BGM 含む / ✓ SE 12個」のような summary も表示。
+
+### 副次改善: タイミング計算の精度向上
+
+旧版は `groupTotalChars * charMs / speechRate` の文字数推定だったが、
+新版は **TTS の実際の audioBuffer.duration** を使用する。
+これで「最後の方の TTS が次の TTS と被る」「無音区間が伸びる」問題も解消。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/audioExporter.js` | applySpeechRate オプション追加 / mixer から BGM/SE 取得 / デバッグログ / 実音声長ベース |
+| `src/components/TTSPanel.jsx` | 速度反映チェックボックス UI / 結果に BGM/SE summary / デバッグログ表示 |
+
+### 期待される効果
+
+| 改善前 (v5.15.0) | 改善後 (v5.15.1) |
+|---|---|
+| ❌ 必ず speechRate を反映 → 倍速で機械音化 | ✅ デフォルト 1.0倍 (音質維持) / オプションで反映可 |
+| ❌ BGM 必ず入らない (audio.bgmId が空) | ✅ mixer から取得 → BGM 登録済みなら入る |
+| ❌ SE も同様に入らない | ✅ 登録済みのカスタム SE は入る |
+| ❌ 結果表示が簡素 | ✅ BGM/SE 含有数 + デバッグログ表示 |
+
+
 
 ### 動機: v5.14.x の録画問題が根本的に解決不能だった
 

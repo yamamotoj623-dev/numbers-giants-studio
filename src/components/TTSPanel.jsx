@@ -45,7 +45,9 @@ export function TTSPanel({
   // ★v5.15.0 新規: 動画用音声エクスポート★
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ msg: '', percent: 0 });
-  const [exportResult, setExportResult] = useState(null);  // { blob, sizeBytes, durationSec, missingScripts, filename }  // { audioCount, currentAudios, lastPlayLog }
+  const [exportResult, setExportResult] = useState(null);
+  // ★v5.15.1★ 速度反映オプション (デフォルト OFF で音質維持)
+  const [applySpeechRate, setApplySpeechRate] = useState(false);  // { audioCount, currentAudios, lastPlayLog }
 
   const refreshCacheStats = async () => {
     try {
@@ -449,7 +451,7 @@ export function TTSPanel({
       const result = await exportProjectAudio({
         scripts: projectData.scripts,
         speechRate,
-        ttsEngine: engine || 'gemini',
+        applySpeechRate,                   // ★v5.15.1★
         audio: projectData.audio || {},
         onProgress: (msg, percent) => setExportProgress({ msg, percent }),
       });
@@ -460,6 +462,9 @@ export function TTSPanel({
         sizeBytes: result.sizeBytes,
         durationSec: result.durationSec,
         missingScripts: result.missingScripts,
+        debugLog: result.debugLog || [],
+        bgmAdded: result.bgmAdded,
+        seAddedCount: result.seAddedCount,
         filename,
       });
     } catch (err) {
@@ -798,6 +803,25 @@ export function TTSPanel({
                     アプリで <strong>映像だけ画面録画 (音はミュートでOK)</strong> → このボタンで <strong>音声 WAV を取得</strong> → 動画編集アプリで合成。
                   </div>
 
+                  {/* ★v5.15.1★ 速度反映オプション */}
+                  <label className="flex items-start gap-1.5 text-[10px] text-zinc-700 bg-amber-50 border border-amber-200 rounded p-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={applySpeechRate}
+                      onChange={(e) => setApplySpeechRate(e.target.checked)}
+                      className="mt-0.5 w-3 h-3 accent-amber-600 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <div className="font-bold text-amber-900">
+                        書き出し時に再生速度 (x{speechRate.toFixed(2)}) を反映
+                      </div>
+                      <div className="text-amber-700 mt-0.5">
+                        OFF推奨: TTS の自然な速度で書き出し (音質維持)<br/>
+                        ON: 速度反映するが <strong>音質劣化 (機械音化)</strong> ※ピッチ維持できないため
+                      </div>
+                    </div>
+                  </label>
+
                   <button
                     onClick={handleExportAudio}
                     disabled={exporting || !projectData?.scripts?.length}
@@ -826,6 +850,14 @@ export function TTSPanel({
                       <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-[10px] text-emerald-900">
                         <div className="font-bold mb-0.5">✅ 生成完了</div>
                         <div>長さ: {exportResult.durationSec.toFixed(1)} 秒 / サイズ: {(exportResult.sizeBytes / 1024 / 1024).toFixed(2)} MB</div>
+                        <div className="mt-1 grid grid-cols-2 gap-1">
+                          <div className={exportResult.bgmAdded ? 'text-emerald-700' : 'text-zinc-500'}>
+                            {exportResult.bgmAdded ? '✓ BGM 含む' : '× BGM なし (未登録?)'}
+                          </div>
+                          <div className={exportResult.seAddedCount > 0 ? 'text-emerald-700' : 'text-zinc-500'}>
+                            {exportResult.seAddedCount > 0 ? `✓ SE ${exportResult.seAddedCount}個` : '× SE なし'}
+                          </div>
+                        </div>
                         {exportResult.missingScripts.length > 0 && (
                           <div className="mt-1 text-amber-700">
                             ⚠️ {exportResult.missingScripts.length} 件の TTS が未生成 (該当部分は無音)
@@ -841,6 +873,17 @@ export function TTSPanel({
                       <div className="text-[9px] text-zinc-500 px-1">
                         ファイル名: {exportResult.filename}
                       </div>
+                      {/* デバッグログ表示 */}
+                      {exportResult.debugLog && exportResult.debugLog.length > 0 && (
+                        <details className="text-[9px]">
+                          <summary className="text-zinc-500 cursor-pointer hover:text-zinc-700">デバッグログ ({exportResult.debugLog.length} 行)</summary>
+                          <div className="mt-1 bg-zinc-900 text-emerald-400 font-mono text-[8px] p-1.5 rounded max-h-32 overflow-y-auto">
+                            {exportResult.debugLog.map((line, i) => (
+                              <div key={i}>{line}</div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
                     </div>
                   )}
 
