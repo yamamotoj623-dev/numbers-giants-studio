@@ -170,6 +170,20 @@ id:13 highlight: "bb_9"     "次はBB/9を見てください"
 
 ★ 同じ指標の話が複数 script に渡る場合、**全ての該当 script に同じ highlight** を設定する。
 
+### 5.3 ★v5.14.0★ versus_card / player_spotlight の行強調 (基本成績の迷子防止)
+
+これまで `highlight` は phase==='highlight' の HighlightCard でしか視覚化されなかったが、
+**v5.14.0 から versus_card / player_spotlight の通常表示でも行強調が発火**する:
+
+- comparison.label と versus_card.categoryScores[].label が一致 → その行が脈動 + 数字拡大 + 「話題中」バッジ
+- comparison.label と player_spotlight.primaryStat.label or stats[].label が一致 → 該当カードが脈動 + 「話題中」バッジ
+
+これにより、A が「井上は驚異の【11.20】」と話してる時、画面のどこに 11.20 があるか**一目瞭然**になる。
+
+★ Geminiは highlight をしっかり指定すること。指定が無いと行強調は発火しない。
+★ ラベル一致は **完全一致 or 双方向部分一致 (case-insensitive)**。
+   例: comparison.label="K/9" / categoryScores[].label="奪三振率(K/9)" でも一致する。
+
 ## 6. テキスト強調ルール
 
 ### 6.1 強調記号の意味

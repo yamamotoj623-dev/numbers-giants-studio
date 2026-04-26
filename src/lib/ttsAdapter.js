@@ -323,21 +323,16 @@ export class GeminiAdapter {
    * 次のscriptの音声を事前生成してキャッシュに入れる (speak時のレイテンシ削減)
    * キャッシュ済みなら何もしない。エラーは握りつぶす (prefetchは best effort)
    *
-   * ★v5.11.7★: blob 取得だけでなく、AudioBuffer に decode までしてキャッシュ。
-   * これで speak 時はメモリ上の AudioBuffer を即時再生できる (レイテンシほぼゼロ)。
+   * ★v5.14.1★ HTMLAudioElement に戻したため、blob を IndexedDB キャッシュに保存しておくだけで OK。
+   * Audio 要素は内部で自動 decode する。decoded AudioBuffer のメモリキャッシュは不要。
    */
   async prefetch(text, speaker) {
     if (!text) return;
     try {
       const fixedText = applyYomigana(text);
-      const cacheKey = `${speaker}:${fixedText}`;
-
-      // 既に decode 済みならスキップ
-      if (this._decodedCache.has(cacheKey)) return;
-
-      const { blob } = await this._getOrGenerate(fixedText, speaker);
-      const audioBuffer = await this._decodeBlob(blob);
-      this._putDecoded(cacheKey, audioBuffer);
+      // blob を取得 (キャッシュ済みなら一瞬、未生成なら API call)
+      // 結果は audioCache (IndexedDB) に保存される
+      await this._getOrGenerate(fixedText, speaker);
     } catch (e) {
       // ignore (prefetch は best effort)
     }
@@ -351,74 +346,89 @@ export class GeminiAdapter {
       // 読み仮名置換 (難読語ひらがな化)
       const fixedText = applyYomigana(text);
 
-      // AudioContext を確実に running にする
-      const ctx = this._getAudioCtx();
-      if (ctx.state === 'suspended') {
-        try { await ctx.resume(); } catch (e) {}
-      }
-
       try {
-        // ★v5.11.7: AudioBufferSourceNode で再生 (HTMLAudioElement より低レイテンシ)★
-        const cacheKey = `${speaker}:${fixedText}`;
-        let audioBuffer = this._decodedCache.get(cacheKey);
-
-        if (!audioBuffer) {
-          // decode キャッシュなし → blob 取得して decode (prefetch されてれば一瞬)
-          const { blob } = await this._getOrGenerate(fixedText, speaker);
-          audioBuffer = await this._decodeBlob(blob);
-          this._putDecoded(cacheKey, audioBuffer);
-        }
+        // ★v5.14.1★ AudioBufferSourceNode → HTMLAudioElement に戻す
+        // 理由: Android Chrome の画面録画で AudioContext.destination 経由の音は録音されない。
+        // mixer.js (BGM/SE) は元から HTMLAudioElement で録画対応していたが、
+        // v5.11.7 で TTS だけ AudioBufferSourceNode に切替えた結果、
+        // 「TTS本番再生だけ録画されない」問題が発生していた。
+        // レイテンシは preload + 即時 play で実用範囲に抑える。
+        const { blob } = await this._getOrGenerate(fixedText, speaker);
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio();
+        audio.preload = 'auto';
+        audio.src = url;
+        audio.playbackRate = rate;
+        // ★v5.14.2★ 音程を保持して声質維持 (機械音化を防ぐ)
+        // 速度を上げても声が高くならない (チップマンク効果を防止)
+        audio.preservesPitch = true;
+        audio.mozPreservesPitch = true;        // 古い Firefox 用
+        audio.webkitPreservesPitch = true;     // 古い Safari 用
 
         // 音量取得
-        let voiceVolume = 1.0;
         try {
           const { getMixer } = await import('./mixer.js');
           const mixer = getMixer();
-          voiceVolume = mixer._effectiveVoiceVolume();
-        } catch (e) {}
+          audio.volume = mixer._effectiveVoiceVolume();
+        } catch (e) {
+          audio.volume = 1.0;
+        }
 
-        // SourceNode + GainNode で再生
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.playbackRate.value = rate;
-
-        const gainNode = ctx.createGain();
-        gainNode.gain.value = voiceVolume;
-
-        source.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        this._currentSource = source;
+        this.currentAudio = audio;
 
         let resolved = false;
         const cleanup = () => {
           if (resolved) return;
           resolved = true;
-          if (this._currentSource === source) this._currentSource = null;
           clearTimeout(this.fallbackTimer);
-          try { source.disconnect(); } catch (e) {}
-          try { gainNode.disconnect(); } catch (e) {}
+          try { URL.revokeObjectURL(url); } catch (e) {}
+          if (this.currentAudio === audio) this.currentAudio = null;
         };
 
-        source.onended = () => {
+        audio.onended = () => {
           cleanup();
           onEnd?.();
           resolve();
         };
 
-        // 再生開始 (即時実行、レイテンシほぼゼロ)
-        source.start(0);
+        audio.onerror = (e) => {
+          cleanup();
+          onError?.(e);
+          resolve();
+        };
+
+        // 即時再生 (preload=auto + src 設定済みなら readyState がすぐ上がる)
+        const startPlayback = async () => {
+          try {
+            await audio.play();
+          } catch (e) {
+            cleanup();
+            onError?.(e);
+            resolve();
+          }
+        };
+
+        if (audio.readyState >= 3 /* HAVE_FUTURE_DATA */) {
+          startPlayback();
+        } else {
+          const onCanPlay = () => {
+            audio.removeEventListener('canplay', onCanPlay);
+            startPlayback();
+          };
+          audio.addEventListener('canplay', onCanPlay);
+          audio.load();
+        }
 
         // fallback timer (onended が発火しない場合の保険)
-        const estimatedSec = audioBuffer.duration / rate;
+        const estimatedSec = Math.max(1.5, text.length * 0.15 / rate);
         this.fallbackTimer = setTimeout(() => {
           if (!resolved) {
-            try { source.stop(); } catch (e) {}
+            try { audio.pause(); } catch (e) {}
             cleanup();
             onEnd?.();
             resolve();
           }
-        }, (estimatedSec * 1000) + 1500);
+        }, (estimatedSec * 1000) + 3000);
       } catch (err) {
         const errStr = (err?.message || String(err)).toLowerCase();
         // 429 (quota超過) は「警告表示 + 無音でスキップ」で再生継続
@@ -443,60 +453,12 @@ export class GeminiAdapter {
     });
   }
 
-  // ★削除: 旧 speak の本体★ (上に置き換え済み)
-  _speakLegacyHtmlAudio(text, speaker, opts = {}) {
-    return new Promise(async (resolve) => {
-      const { rate = 1.0, onEnd, onError } = opts;
-      this.stop();
-      const fixedText = applyYomigana(text);
-      try {
-        const { blob } = await this._getOrGenerate(fixedText, speaker);
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.playbackRate = rate;
-        try {
-          const { getMixer } = await import('./mixer.js');
-          const mixer = getMixer();
-          audio.volume = mixer._effectiveVoiceVolume();
-        } catch (e) {
-          audio.volume = 1.0;
-        }
-        this.currentAudio = audio;
-
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          clearTimeout(this.fallbackTimer);
-          onEnd?.();
-          resolve();
-        };
-        audio.onerror = (e) => {
-          URL.revokeObjectURL(url);
-          clearTimeout(this.fallbackTimer);
-          onError?.(e);
-          resolve();
-        };
-        await audio.play();
-
-        const estimatedSec = text.length * 0.15 / rate;
-        this.fallbackTimer = setTimeout(() => {
-          audio.onended = null;
-          audio.onerror = null;
-          audio.pause();
-          URL.revokeObjectURL(url);
-          onEnd?.();
-          resolve();
-        }, (estimatedSec * 1000) + 3000);
-      } catch (err) {
-        console.error('GeminiAdapter._speakLegacyHtmlAudio error:', err);
-        onError?.(err);
-        resolve();
-      }
-    });
-  }
+  // ★v5.14.1★ レガシー _speakLegacyHtmlAudio は削除 (上の speak() 本体が同等の実装に)
 
   stop() {
     clearTimeout(this.fallbackTimer);
     // ★v5.11.7: AudioBufferSourceNode を停止★
+    // ★v5.14.1★ AudioBufferSourceNode は使わなくなったが、念のため残骸を停止
     if (this._currentSource) {
       try {
         this._currentSource.onended = null;
@@ -505,7 +467,7 @@ export class GeminiAdapter {
       } catch (e) {}
       this._currentSource = null;
     }
-    // legacy: HTMLAudioElement (互換のため残す)
+    // 本流: HTMLAudioElement (録画対応のためこちらをデフォルトに)
     if (this.currentAudio) {
       this.currentAudio.onended = null;
       this.currentAudio.onerror = null;
@@ -548,16 +510,8 @@ export class GeminiAdapter {
           fallbackIds.push(s.id);
         }
 
-        // decode もしてキャッシュに保持 (即時再生のため)
-        try {
-          const cacheKey = `${speaker}:${text}`;
-          if (!this._decodedCache.has(cacheKey)) {
-            const audioBuffer = await this._decodeBlob(result.blob);
-            this._putDecoded(cacheKey, audioBuffer);
-          }
-        } catch (decodeErr) {
-          // decode 失敗は致命的ではない (speak 時にもう一度 decode できる)
-        }
+        // ★v5.14.1★ decode キャッシュは廃止 (HTMLAudioElement で再生するため不要)
+        // blob は audioCache (IndexedDB) に既に保存されている (上記 _getOrGenerate or saveCachedAudio で)
       } catch (err) {
         console.error('pregenerate failed for script', s.id, err);
         errors++;
@@ -651,12 +605,8 @@ export class GeminiAdapter {
         generated++;
         costUsd += data.estimatedCostUsd || 0;
 
-        // decode もしてキャッシュに (即時再生のため)
-        try {
-          const cacheKey = `${speaker}:${text}`;
-          const audioBuffer = await this._decodeBlob(wavBlob);
-          this._putDecoded(cacheKey, audioBuffer);
-        } catch (e) {}
+        // ★v5.14.1★ decode キャッシュは廃止 (HTMLAudioElement で再生するため不要)
+        // blob は saveCachedAudio で IndexedDB に既に保存されている
       } catch (err) {
         console.error('pregenerateOnly failed for script', s.id, err);
         errors++;

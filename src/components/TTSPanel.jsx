@@ -32,6 +32,12 @@ export function TTSPanel({
   const [checkingMissing, setCheckingMissing] = useState(false);
   const [retryingId, setRetryingId] = useState(null);  // 個別再生成中の id
 
+  // ★v5.14.2 新規: 全 scripts 操作 (任意選択再生成・個別試聴)★
+  const [showAllScripts, setShowAllScripts] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);   // 一括再生成用
+  const [cachedSet, setCachedSet] = useState(new Set()); // どの id がキャッシュ済か
+  const [previewingId, setPreviewingId] = useState(null); // 個別試聴中の id
+
   const refreshCacheStats = async () => {
     try {
       const stats = await getCacheStats();
@@ -164,12 +170,141 @@ export function TTSPanel({
     }
   };
 
+  /**
+   * ★v5.14.2 新規: キャッシュ済み一覧を取得 (全 scripts ビュー用)★
+   */
+  const refreshCachedSet = async () => {
+    if (!projectData?.scripts?.length) return;
+    try {
+      const adapter = getAdapter('gemini');
+      const missing = await adapter.findMissing(projectData.scripts);
+      const missingIds = new Set(missing.map(m => m.id));
+      const cached = new Set(
+        projectData.scripts
+          .filter(s => !missingIds.has(s.id))
+          .map(s => s.id)
+      );
+      setCachedSet(cached);
+    } catch (e) {
+      console.warn('refreshCachedSet failed:', e);
+    }
+  };
+
+  // 全 scripts ビューを開いた時にキャッシュ状況を取得
+  React.useEffect(() => {
+    if (showAllScripts) refreshCachedSet();
+    // eslint-disable-next-line
+  }, [showAllScripts, projectData?.scripts]);
+
+  /**
+   * ★v5.14.2 新規: 任意 id を個別に試聴 (キャッシュから即時再生)★
+   */
+  const handlePreviewOne = async (id) => {
+    const script = projectData.scripts.find(s => s.id === id);
+    if (!script) return;
+    const text = script.speech || script.text;
+    if (!text) return;
+
+    // 既に試聴中なら停止
+    if (previewingId === id) {
+      try { getAdapter('gemini').stop(); } catch (e) {}
+      setPreviewingId(null);
+      return;
+    }
+
+    setPreviewingId(id);
+    try {
+      const adapter = getAdapter('gemini');
+      if (adapter.unlock) await adapter.unlock();
+      await adapter.speak(text, script.speaker || 'A', {
+        rate: speechRate,
+        onEnd: () => setPreviewingId(null),
+        onError: () => setPreviewingId(null),
+      });
+    } catch (err) {
+      console.error('preview failed:', err);
+      setPreviewingId(null);
+    }
+  };
+
+  /**
+   * ★v5.14.2 新規: 任意 id を強制再生成 (キャッシュ済でも上書き)★
+   */
+  const handleForceRegenerateOne = async (id) => {
+    if (!confirm(`id:${id} を再生成します (既存キャッシュを上書き)。よろしいですか？`)) return;
+    setRetryingId(id);
+    try {
+      const adapter = getAdapter('gemini');
+      const result = await adapter.pregenerateOnly(projectData.scripts, [id]);
+      setTotalCost(prev => prev + result.costUsd);
+      if (result.errors === 0) {
+        // missingList からも削除 (もし含まれていれば)
+        setMissingList(prev => prev.filter(m => m.id !== id));
+        await refreshCacheStats();
+        await refreshCachedSet();
+      } else {
+        alert(`id:${id} の再生成失敗。`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`id:${id} の再生成失敗: ` + err.message);
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  /**
+   * ★v5.14.2 新規: 選択中の id を一括強制再生成★
+   */
+  const handleRegenerateSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`選択した ${selectedIds.length} 件を再生成します (既存キャッシュを上書き)。よろしいですか？`)) return;
+
+    setPregenStatus('loading');
+    setProgress({ current: 0, total: selectedIds.length });
+    try {
+      const adapter = getAdapter('gemini');
+      const result = await adapter.pregenerateOnly(projectData.scripts, selectedIds, (p) => setProgress(p));
+      setTotalCost(prev => prev + result.costUsd);
+      setPregenStatus(result.errors > 0 ? 'partial' : 'done');
+      if (result.failedIds && result.failedIds.length > 0) {
+        const stillFailed = projectData.scripts
+          .filter(s => result.failedIds.includes(s.id))
+          .map(s => ({ id: s.id, speaker: s.speaker, text: s.speech || s.text, reason: '再生成失敗' }));
+        setMissingList(stillFailed);
+      }
+      await refreshCacheStats();
+      await refreshCachedSet();
+      setSelectedIds([]);  // 選択クリア
+      onPregenComplete?.(result);
+    } catch (err) {
+      console.error(err);
+      setPregenStatus('error');
+      alert('再生成失敗: ' + err.message);
+    }
+  };
+
+  /**
+   * ★v5.14.2 新規: 選択チェックボックス★
+   */
+  const toggleSelected = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const selectAll = () => {
+    setSelectedIds((projectData?.scripts || []).map(s => s.id));
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
   const handleClearCache = async () => {
     if (!confirm('音声キャッシュを全削除します。よろしいですか？（次回Gemini TTS再生時に再課金されます）')) return;
     await clearCache();
     await refreshCacheStats();
+    await refreshCachedSet();
     setPregenStatus('idle');
     setMissingList([]);
+    setSelectedIds([]);
   };
 
   return (
@@ -318,7 +453,137 @@ export function TTSPanel({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2 text-[10px]">
+              {/* ★v5.14.2 新規: 全 scripts ビュー (任意選択して再生成 or 試聴)★ */}
+              <div className="bg-zinc-50 border border-zinc-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setShowAllScripts(s => !s)}
+                  className="w-full px-2.5 py-2 flex items-center justify-between hover:bg-zinc-100 transition"
+                >
+                  <span className="text-[11px] font-black text-zinc-700 flex items-center gap-1.5">
+                    <Mic2 size={11}/>
+                    全 scripts ({projectData?.scripts?.length || 0}件)
+                    {selectedIds.length > 0 && (
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded">
+                        {selectedIds.length} 選択中
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">{showAllScripts ? '▼ 閉じる' : '▶ 開く'}</span>
+                </button>
+
+                {showAllScripts && (
+                  <div className="border-t border-zinc-200 bg-white">
+                    {/* 一括操作バー */}
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 bg-zinc-50 border-b border-zinc-200">
+                      <button
+                        onClick={selectAll}
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 px-1.5"
+                      >
+                        全選択
+                      </button>
+                      <button
+                        onClick={clearSelection}
+                        disabled={selectedIds.length === 0}
+                        className="text-[10px] font-bold text-zinc-600 hover:text-zinc-800 disabled:text-zinc-300 px-1.5"
+                      >
+                        選択解除
+                      </button>
+                      <div className="flex-1" />
+                      <button
+                        onClick={handleRegenerateSelected}
+                        disabled={selectedIds.length === 0 || pregenStatus === 'loading'}
+                        className="text-[10px] font-bold bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-300 text-white px-2 py-1 rounded flex items-center gap-1 transition"
+                      >
+                        <RefreshCw size={10}/> 選択 {selectedIds.length} 件を再生成
+                      </button>
+                    </div>
+
+                    {/* scripts リスト */}
+                    <div className="flex flex-col max-h-72 overflow-y-auto custom-scrollbar">
+                      {(projectData?.scripts || []).map(s => {
+                        const isCached = cachedSet.has(s.id);
+                        const isSelected = selectedIds.includes(s.id);
+                        const isPreviewing = previewingId === s.id;
+                        const isRetrying = retryingId === s.id;
+                        const text = s.speech || s.text || '';
+                        return (
+                          <div
+                            key={s.id}
+                            className={`flex items-center gap-1.5 px-2 py-1.5 border-b border-zinc-100 last:border-b-0 ${
+                              isSelected ? 'bg-indigo-50' : 'bg-white hover:bg-zinc-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelected(s.id)}
+                              className="flex-shrink-0 w-3 h-3 accent-indigo-500"
+                            />
+                            <span className="text-[10px] font-mono font-black text-zinc-700 bg-zinc-100 px-1.5 py-0.5 rounded flex-shrink-0 min-w-[32px] text-center">
+                              {s.id}
+                            </span>
+                            <span className={`text-[9px] font-bold px-1 py-0.5 rounded flex-shrink-0 ${
+                              s.speaker === 'A' ? 'bg-orange-100 text-orange-700' : 'bg-rose-100 text-rose-700'
+                            }`}>
+                              {s.speaker === 'A' ? '数原' : 'もえか'}
+                            </span>
+                            {/* キャッシュ状態インジケータ */}
+                            <span
+                              className={`text-[9px] font-bold flex-shrink-0 w-2 h-2 rounded-full ${
+                                isCached ? 'bg-emerald-400' : 'bg-zinc-300'
+                              }`}
+                              title={isCached ? '生成済' : '未生成'}
+                            />
+                            <span className="text-[10px] text-zinc-700 flex-1 truncate" title={text}>
+                              {text || '(空)'}
+                            </span>
+                            {/* 試聴ボタン (生成済みのみ) */}
+                            <button
+                              onClick={() => handlePreviewOne(s.id)}
+                              disabled={!isCached || isRetrying}
+                              className={`text-[10px] font-bold px-1.5 py-0.5 flex-shrink-0 rounded ${
+                                isPreviewing
+                                  ? 'bg-rose-500 text-white'
+                                  : isCached
+                                  ? 'text-emerald-600 hover:bg-emerald-50'
+                                  : 'text-zinc-300 cursor-not-allowed'
+                              }`}
+                              title={isPreviewing ? '停止' : (isCached ? '試聴' : '未生成')}
+                            >
+                              {isPreviewing ? '■' : '▶'}
+                            </button>
+                            {/* 再生成ボタン (任意で) */}
+                            <button
+                              onClick={() => handleForceRegenerateOne(s.id)}
+                              disabled={isRetrying || pregenStatus === 'loading'}
+                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 disabled:text-zinc-400 px-1 py-0.5 flex-shrink-0"
+                              title={isCached ? 'この id を再生成 (キャッシュ上書き)' : 'この id を生成'}
+                            >
+                              {isRetrying ? (
+                                <Loader2 size={10} className="animate-spin"/>
+                              ) : (
+                                <RefreshCw size={10}/>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* 凡例 */}
+                    <div className="px-2 py-1.5 bg-zinc-50 border-t border-zinc-200 text-[9px] text-zinc-500 flex items-center gap-2">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" /> 生成済
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-zinc-300" /> 未生成
+                      </span>
+                      <span className="flex-1" />
+                      <span>▶=試聴 / ↻=再生成</span>
+                    </div>
+                  </div>
+                )}
+              </div>
                 <div className="bg-white p-2 rounded border flex items-center justify-between">
                   <span className="text-zinc-500 flex items-center gap-1"><DollarSign size={10}/>今回コスト</span>
                   <span className="font-mono font-bold text-indigo-600">${totalCost.toFixed(4)}</span>
@@ -341,13 +606,21 @@ export function TTSPanel({
             </>
           )}
 
-          <div className="flex items-center justify-between bg-white p-2 rounded-lg w-full gap-1 border">
-            <Gauge size={14} className="text-zinc-500" />
-            <span className="text-[10px] font-bold text-zinc-500">速さ</span>
-            <button onClick={() => setSpeechRate(p => Math.max(0.5, +(p - 0.1).toFixed(2)))} className="px-1.5 py-0.5 bg-zinc-200 hover:bg-zinc-300 rounded text-[10px] font-bold text-zinc-600">-0.1</button>
-            <input type="range" min="0.5" max="2.5" step="0.05" value={speechRate} onChange={(e) => setSpeechRate(parseFloat(e.target.value))} className="flex-1 cursor-pointer accent-indigo-500"/>
-            <button onClick={() => setSpeechRate(p => Math.min(2.5, +(p + 0.1).toFixed(2)))} className="px-1.5 py-0.5 bg-zinc-200 hover:bg-zinc-300 rounded text-[10px] font-bold text-zinc-600">+0.1</button>
-            <span className="text-[11px] font-mono font-black text-indigo-600 min-w-[40px] text-right">x{speechRate.toFixed(2)}</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between bg-white p-2 rounded-lg w-full gap-1 border">
+              <Gauge size={14} className="text-zinc-500" />
+              <span className="text-[10px] font-bold text-zinc-500">速さ</span>
+              <button onClick={() => setSpeechRate(p => Math.max(0.5, +(p - 0.1).toFixed(2)))} className="px-1.5 py-0.5 bg-zinc-200 hover:bg-zinc-300 rounded text-[10px] font-bold text-zinc-600">-0.1</button>
+              <input type="range" min="0.5" max="2.5" step="0.05" value={speechRate} onChange={(e) => setSpeechRate(parseFloat(e.target.value))} className="flex-1 cursor-pointer accent-indigo-500"/>
+              <button onClick={() => setSpeechRate(p => Math.min(2.5, +(p + 0.1).toFixed(2)))} className="px-1.5 py-0.5 bg-zinc-200 hover:bg-zinc-300 rounded text-[10px] font-bold text-zinc-600">+0.1</button>
+              <span className="text-[11px] font-mono font-black text-indigo-600 min-w-[40px] text-right">x{speechRate.toFixed(2)}</span>
+            </div>
+            {/* ★v5.14.2★ 音程維持の説明 */}
+            <div className="text-[9px] text-zinc-500 px-1">
+              💡 音程維持 ON (preservesPitch) なので速度を上げても声質は変わりません。
+              {speechRate >= 1.4 && <span className="text-amber-600 font-bold ml-1">x1.4以上は早口でも聞き取れる程度に。</span>}
+              {speechRate <= 0.7 && <span className="text-amber-600 font-bold ml-1">x0.7以下は冗長になります。</span>}
+            </div>
           </div>
         </>
       )}

@@ -148,24 +148,26 @@ export function LayoutPanel({ projectData, onChange }) {
       {projectData.layoutType === 'versus_card' && (
         <VersusDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking' || projectData.layoutType === 'player_spotlight' || projectData.layoutType === 'batter_heatmap') && (
+      {projectData.layoutType === 'player_spotlight' && (
+        <SpotlightDataEditor projectData={projectData} onChange={onChange} />
+      )}
+      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking' || projectData.layoutType === 'batter_heatmap') && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
           <div className="font-bold mb-1">📝 {
             projectData.layoutType === 'pitch_arsenal' ? '球種データ' :
             projectData.layoutType === 'team_context' ? 'チーム文脈データ' :
             projectData.layoutType === 'ranking' ? 'ランキングデータ' :
             projectData.layoutType === 'batter_heatmap' ? '打者ゾーンデータ' :
-            'スポットライトデータ'
+            'データ'
           }</div>
           <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.{
             projectData.layoutType === 'pitch_arsenal' ? 'arsenal' :
             projectData.layoutType === 'team_context' ? 'context' :
             projectData.layoutType === 'ranking' ? 'ranking' :
             projectData.layoutType === 'batter_heatmap' ? 'heatmap' :
-            'spotlight'
+            'data'
           }</code> を直接編集してください{
             projectData.layoutType === 'ranking' ? '。mood:"best"|"worst"|"neutral"でトーン切替。' :
-            projectData.layoutType === 'player_spotlight' ? '。複数選手を入れて script.focusEntry で切替可能。' :
             projectData.layoutType === 'team_context' ? '。mode:"single"でチームビュー、mode:"compare"でセ平均比較。' :
             projectData.layoutType === 'pitch_arsenal' ? '。mode:"single"|"compare"|"vs_batter"。' :
             projectData.layoutType === 'batter_heatmap' ? '。mode:"single"|"vs_handedness"。' :
@@ -246,13 +248,13 @@ function TimelineDataEditor({ projectData, onChange }) {
 
 
 function VersusDataEditor({ projectData, onChange }) {
+  // ★v5.14.0★ rawMain/rawSub の v4 仕様に対応 (overall/main/sub スコアは廃止済)
   const versus = projectData.layoutData?.versus || {
-    overall: { main: 85, sub: 78 },
     categoryScores: [
-      { label: '打撃', main: 82, sub: 75 },
-      { label: '守備', main: 88, sub: 70 },
-      { label: '走塁', main: 85, sub: 89 },
-      { label: '総合', main: 85, sub: 78 },
+      { label: '打率',   rawMain: '.285', rawSub: '.265' },
+      { label: '本塁打', rawMain: '12',   rawSub: '5' },
+      { label: '打点',   rawMain: '38',   rawSub: '21' },
+      { label: 'OPS',    rawMain: '.812', rawSub: '.620' },
     ],
   };
 
@@ -260,59 +262,360 @@ function VersusDataEditor({ projectData, onChange }) {
     onChange({ ...projectData, layoutData: { ...(projectData.layoutData || {}), versus: newVersus } });
   };
 
-  const updateOverall = (side, value) => {
-    update({ ...versus, overall: { ...versus.overall, [side]: parseInt(value) || 0 } });
-  };
-
   const updateCat = (i, field, value) => {
-    const cats = [...versus.categoryScores];
-    cats[i] = { ...cats[i], [field]: field === 'label' ? value : parseInt(value) || 0 };
+    const cats = [...(versus.categoryScores || [])];
+    cats[i] = { ...cats[i], [field]: value };
     update({ ...versus, categoryScores: cats });
   };
 
-  const addCat = () => update({ ...versus, categoryScores: [...versus.categoryScores, { label: '新項目', main: 50, sub: 50 }] });
-  const removeCat = (i) => update({ ...versus, categoryScores: versus.categoryScores.filter((_, idx) => idx !== i) });
+  const toggleLowerBetter = (i) => {
+    const cats = [...(versus.categoryScores || [])];
+    cats[i] = { ...cats[i], lowerBetter: !cats[i].lowerBetter };
+    update({ ...versus, categoryScores: cats });
+  };
+
+  const addCat = () => update({
+    ...versus,
+    categoryScores: [...(versus.categoryScores || []), { label: '新指標', rawMain: '', rawSub: '' }],
+  });
+
+  const removeCat = (i) => update({
+    ...versus,
+    categoryScores: (versus.categoryScores || []).filter((_, idx) => idx !== i),
+  });
 
   return (
     <div className="bg-white p-3 rounded-lg border border-zinc-200">
-      <div className="font-bold text-sm text-zinc-700 mb-2">対決カード</div>
+      <div className="font-bold text-sm text-zinc-700 mb-2">対決カード (純粋な数字 vs 数字)</div>
 
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="border border-orange-200 bg-orange-50 rounded p-2">
-          <div className="text-[10px] font-bold text-orange-600 mb-1">Main総合スコア</div>
-          <input
-            type="number"
-            min="0" max="100"
-            value={versus.overall.main}
-            onChange={(e) => updateOverall('main', e.target.value)}
-            className="w-full text-[16px] font-mono font-black text-orange-700 border border-orange-200 rounded px-2 py-1 text-center"
-          />
-        </div>
-        <div className="border border-sky-200 bg-sky-50 rounded p-2">
-          <div className="text-[10px] font-bold text-sky-600 mb-1">Sub総合スコア</div>
-          <input
-            type="number"
-            min="0" max="100"
-            value={versus.overall.sub}
-            onChange={(e) => updateOverall('sub', e.target.value)}
-            className="w-full text-[16px] font-mono font-black text-sky-700 border border-sky-200 rounded px-2 py-1 text-center"
-          />
-        </div>
+      <div className="text-[10px] text-zinc-500 mb-2">
+        左 = {projectData.mainPlayer?.name || 'main'} ({projectData.mainPlayer?.label || ''})
+        / 右 = {projectData.subPlayer?.name || 'sub'} ({projectData.subPlayer?.label || ''})
       </div>
 
-      <div className="text-[11px] font-bold text-zinc-600 mb-1">カテゴリ別比較</div>
-      <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar">
-        {versus.categoryScores.map((cat, i) => (
-          <div key={i} className="flex items-center gap-1">
-            <input type="text"   value={cat.label} onChange={(e) => updateCat(i, 'label', e.target.value)} className="w-20 text-[11px] border border-zinc-200 rounded px-1.5 py-1" />
-            <input type="number" min="0" max="100" value={cat.main} onChange={(e) => updateCat(i, 'main', e.target.value)} className="w-14 text-[11px] font-mono border border-orange-200 bg-orange-50 rounded px-1.5 py-1 text-right" />
-            <span className="text-[10px] text-zinc-400">vs</span>
-            <input type="number" min="0" max="100" value={cat.sub}  onChange={(e) => updateCat(i, 'sub', e.target.value)}  className="w-14 text-[11px] font-mono border border-sky-200 bg-sky-50 rounded px-1.5 py-1 text-right" />
-            <button onClick={() => removeCat(i)} className="text-red-500 text-xs font-bold px-1">×</button>
+      <div className="text-[11px] font-bold text-zinc-600 mb-1">指標別比較</div>
+      <div className="space-y-1.5 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+        {(versus.categoryScores || []).map((cat, i) => (
+          <div key={i} className="border border-zinc-200 bg-zinc-50 rounded p-1.5 space-y-1">
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={cat.label || ''}
+                onChange={(e) => updateCat(i, 'label', e.target.value)}
+                placeholder="指標名"
+                className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1 font-bold"
+              />
+              <input
+                type="text"
+                value={cat.kana || ''}
+                onChange={(e) => updateCat(i, 'kana', e.target.value)}
+                placeholder="読み"
+                className="w-20 text-[10px] border border-zinc-200 rounded px-1.5 py-1"
+              />
+              <button onClick={() => removeCat(i)} className="text-red-500 text-xs font-bold px-1">×</button>
+            </div>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={cat.rawMain || ''}
+                onChange={(e) => updateCat(i, 'rawMain', e.target.value)}
+                placeholder=".285"
+                className="flex-1 text-[12px] font-mono font-black border border-orange-200 bg-orange-50 rounded px-1.5 py-1 text-center"
+              />
+              <span className="text-[10px] text-zinc-400">vs</span>
+              <input
+                type="text"
+                value={cat.rawSub || ''}
+                onChange={(e) => updateCat(i, 'rawSub', e.target.value)}
+                placeholder=".265"
+                className="flex-1 text-[12px] font-mono font-black border border-sky-200 bg-sky-50 rounded px-1.5 py-1 text-center"
+              />
+              <label className="flex items-center gap-1 text-[9px] text-zinc-600 whitespace-nowrap" title="防御率/WHIP/失策など、小さい方が勝ち">
+                <input
+                  type="checkbox"
+                  checked={!!cat.lowerBetter}
+                  onChange={() => toggleLowerBetter(i)}
+                />
+                小↓勝ち
+              </label>
+            </div>
           </div>
         ))}
       </div>
-      <button onClick={addCat} className="mt-2 w-full text-xs bg-zinc-100 hover:bg-zinc-200 py-1.5 rounded font-bold text-zinc-600">＋ カテゴリを追加</button>
+      <button onClick={addCat} className="mt-2 w-full text-xs bg-zinc-100 hover:bg-zinc-200 py-1.5 rounded font-bold text-zinc-600">
+        ＋ 指標を追加
+      </button>
+
+      <div className="mt-2 bg-amber-50 border border-amber-200 rounded p-2 text-[10px] text-amber-800">
+        💡 <code className="bg-amber-100 px-1 rounded">script.highlight</code> の comparison ラベルと一致する指標は
+        「話題中」マーク付きでパルス強調されます (v5.14.0 新)。
+      </div>
+    </div>
+  );
+}
+
+
+// ★v5.14.0 新規★ SpotlightDataEditor — player_spotlight 専用編集UI
+function SpotlightDataEditor({ projectData, onChange }) {
+  const spotlight = projectData.layoutData?.spotlight || {
+    showPlayerName: 'auto',
+    players: [
+      {
+        id: 'sample',
+        label: '26年(今季)',
+        primaryStat: { label: '打率', value: '.285' },
+        stats: [
+          { label: 'OPS', value: '.812' },
+          { label: '本塁打', value: '12' },
+          { label: '打点', value: '38' },
+          { label: '対佐野', value: '.348' },
+        ],
+        comment: '',
+      },
+    ],
+  };
+
+  const update = (newSpotlight) => {
+    onChange({ ...projectData, layoutData: { ...(projectData.layoutData || {}), spotlight: newSpotlight } });
+  };
+
+  const setShowName = (val) => update({ ...spotlight, showPlayerName: val });
+
+  const updatePlayer = (i, field, value) => {
+    const players = [...(spotlight.players || [])];
+    players[i] = { ...players[i], [field]: value };
+    update({ ...spotlight, players });
+  };
+
+  const updatePrimary = (i, field, value) => {
+    const players = [...(spotlight.players || [])];
+    players[i] = { ...players[i], primaryStat: { ...(players[i].primaryStat || {}), [field]: value } };
+    update({ ...spotlight, players });
+  };
+
+  const updateCompareValue = (i, field, value) => {
+    const players = [...(spotlight.players || [])];
+    const cur = players[i].primaryStat?.compareValue || {};
+    const next = { ...cur, [field]: value };
+    // 全部空なら compareValue 削除
+    if (!next.value && !next.label) {
+      const { compareValue, ...rest } = (players[i].primaryStat || {});
+      players[i] = { ...players[i], primaryStat: rest };
+    } else {
+      players[i] = { ...players[i], primaryStat: { ...(players[i].primaryStat || {}), compareValue: next } };
+    }
+    update({ ...spotlight, players });
+  };
+
+  const updateStat = (pi, si, field, value) => {
+    const players = [...(spotlight.players || [])];
+    const stats = [...(players[pi].stats || [])];
+    stats[si] = { ...stats[si], [field]: value };
+    players[pi] = { ...players[pi], stats };
+    update({ ...spotlight, players });
+  };
+
+  const addStat = (pi) => {
+    const players = [...(spotlight.players || [])];
+    const stats = [...(players[pi].stats || []), { label: '新指標', value: '' }];
+    players[pi] = { ...players[pi], stats };
+    update({ ...spotlight, players });
+  };
+
+  const removeStat = (pi, si) => {
+    const players = [...(spotlight.players || [])];
+    const stats = (players[pi].stats || []).filter((_, idx) => idx !== si);
+    players[pi] = { ...players[pi], stats };
+    update({ ...spotlight, players });
+  };
+
+  const addPlayer = () => {
+    update({
+      ...spotlight,
+      players: [...(spotlight.players || []), {
+        id: `p${(spotlight.players?.length || 0) + 1}`,
+        label: '',
+        primaryStat: { label: '', value: '' },
+        stats: [],
+      }],
+    });
+  };
+
+  const removePlayer = (i) => {
+    update({ ...spotlight, players: (spotlight.players || []).filter((_, idx) => idx !== i) });
+  };
+
+  const showNameVal = spotlight.showPlayerName ?? 'auto';
+  const isTeam = projectData.playerType === 'team';
+  const autoResolved = showNameVal === 'auto' ? (isTeam ? 'ON (team自動)' : 'OFF (個人自動)') : null;
+
+  return (
+    <div className="bg-white p-3 rounded-lg border border-zinc-200 space-y-3">
+      <div className="font-bold text-sm text-zinc-700">選手スポット</div>
+
+      {/* 選手名表示トグル */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded p-2">
+        <div className="text-[11px] font-bold text-indigo-800 mb-1.5">
+          選手名表示 (ヘッダー重複防止)
+          {autoResolved && <span className="ml-1.5 text-[10px] font-normal text-indigo-600">→ 現在: {autoResolved}</span>}
+        </div>
+        <div className="grid grid-cols-3 gap-1">
+          {[
+            { val: 'auto', label: '自動', desc: 'team→ON / 個人→OFF' },
+            { val: true,   label: 'ON',   desc: '常に表示' },
+            { val: false,  label: 'OFF',  desc: '常に非表示' },
+          ].map(opt => (
+            <button
+              key={String(opt.val)}
+              onClick={() => setShowName(opt.val)}
+              title={opt.desc}
+              className={`text-[11px] font-bold py-1.5 rounded transition ${
+                showNameVal === opt.val
+                  ? 'bg-indigo-500 text-white'
+                  : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 選手リスト */}
+      <div className="space-y-3 max-h-[480px] overflow-y-auto custom-scrollbar pr-1">
+        {(spotlight.players || []).map((p, pi) => (
+          <div key={pi} className="border border-zinc-200 bg-zinc-50 rounded-lg p-2 space-y-2">
+            {/* ヘッダー: id + label + 削除 */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={p.id || ''}
+                onChange={(e) => updatePlayer(pi, 'id', e.target.value)}
+                placeholder="id"
+                className="w-20 text-[11px] border border-zinc-200 rounded px-1.5 py-1 font-mono"
+              />
+              <input
+                type="text"
+                value={p.label || ''}
+                onChange={(e) => updatePlayer(pi, 'label', e.target.value)}
+                placeholder="期間ラベル (例: 26年(今季))"
+                className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+              />
+              <button onClick={() => removePlayer(pi)} className="text-red-500 text-xs font-bold px-1.5">×</button>
+            </div>
+
+            {/* 選手名/番号 (showPlayerName=true 時に使用) */}
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={p.name || ''}
+                onChange={(e) => updatePlayer(pi, 'name', e.target.value)}
+                placeholder="選手名 (showName=ON時)"
+                className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+              />
+              <input
+                type="text"
+                value={p.number || ''}
+                onChange={(e) => updatePlayer(pi, 'number', e.target.value)}
+                placeholder="背番号"
+                className="w-16 text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+              />
+            </div>
+
+            {/* primaryStat */}
+            <div className="border border-orange-200 bg-orange-50 rounded p-2 space-y-1.5">
+              <div className="text-[10px] font-bold text-orange-700">プライマリ指標 (画面中央の主役)</div>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={p.primaryStat?.label || ''}
+                  onChange={(e) => updatePrimary(pi, 'label', e.target.value)}
+                  placeholder="ラベル (例: WAR / 対佐野通算)"
+                  className="flex-1 text-[11px] border border-orange-200 rounded px-1.5 py-1"
+                />
+                <input
+                  type="text"
+                  value={p.primaryStat?.value || ''}
+                  onChange={(e) => updatePrimary(pi, 'value', e.target.value)}
+                  placeholder="数値"
+                  className="w-20 text-[11px] font-mono font-black text-orange-700 border border-orange-200 rounded px-1.5 py-1 text-center"
+                />
+              </div>
+              <label className="flex items-center gap-1.5 text-[10px] text-orange-700">
+                <input
+                  type="checkbox"
+                  checked={!!p.primaryStat?.isNegative}
+                  onChange={(e) => updatePrimary(pi, 'isNegative', e.target.checked)}
+                />
+                ネガティブ表示 (赤色 + 警告グロー)
+              </label>
+              {/* 比較値 */}
+              <div className="flex gap-1.5 pt-1 border-t border-orange-200">
+                <input
+                  type="text"
+                  value={p.primaryStat?.compareValue?.label || ''}
+                  onChange={(e) => updateCompareValue(pi, 'label', e.target.value)}
+                  placeholder="比較ラベル (例: セ平均)"
+                  className="flex-1 text-[10px] border border-orange-200 rounded px-1.5 py-1"
+                />
+                <input
+                  type="text"
+                  value={p.primaryStat?.compareValue?.value || ''}
+                  onChange={(e) => updateCompareValue(pi, 'value', e.target.value)}
+                  placeholder="比較値"
+                  className="w-20 text-[10px] font-mono border border-orange-200 rounded px-1.5 py-1 text-center"
+                />
+              </div>
+            </div>
+
+            {/* sub stats */}
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold text-zinc-600">サブ指標 (周囲の補助情報、Geminiが柔軟にカスタム可)</div>
+              <div className="space-y-1">
+                {(p.stats || []).map((stat, si) => (
+                  <div key={si} className="flex gap-1.5 items-center">
+                    <input
+                      type="text"
+                      value={stat.label || ''}
+                      onChange={(e) => updateStat(pi, si, 'label', e.target.value)}
+                      placeholder="例: 打率 / 対佐野 / 直近10試合"
+                      className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+                    />
+                    <input
+                      type="text"
+                      value={stat.value || ''}
+                      onChange={(e) => updateStat(pi, si, 'value', e.target.value)}
+                      placeholder="数値"
+                      className="w-20 text-[11px] font-mono border border-zinc-200 rounded px-1.5 py-1 text-center"
+                    />
+                    <button onClick={() => removeStat(pi, si)} className="text-red-500 text-xs font-bold px-1">×</button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => addStat(pi)} className="w-full text-[10px] bg-zinc-100 hover:bg-zinc-200 py-1 rounded font-bold text-zinc-600">＋ サブ指標を追加</button>
+            </div>
+
+            {/* comment */}
+            <input
+              type="text"
+              value={p.comment || ''}
+              onChange={(e) => updatePlayer(pi, 'comment', e.target.value)}
+              placeholder="コメント (任意、画面下部に表示)"
+              className="w-full text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+            />
+          </div>
+        ))}
+      </div>
+
+      <button onClick={addPlayer} className="w-full text-xs bg-indigo-100 hover:bg-indigo-200 py-1.5 rounded font-bold text-indigo-700">
+        ＋ 選手エントリを追加 (script.focusEntry で切替)
+      </button>
+
+      <div className="bg-amber-50 border border-amber-200 rounded p-2 text-[10px] text-amber-800">
+        💡 <strong>ヒント</strong>: <code className="bg-amber-100 px-1 rounded">script.focusEntry</code> で表示する選手を切替できます。
+        ラベルが <code className="bg-amber-100 px-1 rounded">script.highlight</code> の comparison ラベルと一致すると、
+        該当指標が「話題中」マーク付きでパルス強調されます。
+      </div>
     </div>
   );
 }

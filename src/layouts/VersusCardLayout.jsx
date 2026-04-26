@@ -1,7 +1,11 @@
 /**
- * layoutType: versus_card (v4) — シンプル化
+ * layoutType: versus_card (v5) — 行強調追加
  *
- * v4 改修点 (重要):
+ * v5 改修点 (★v5.14.0★):
+ * - 基本成績の視覚的強調: script.highlight が指す comparison の label と
+ *   categoryScores[].label が一致する行をパルス強調 (迷子防止)
+ *
+ * v4 (前回):
  * - ★0-100 スコア廃止★ (意味不明だった)
  * - ★バー廃止★ (見にくかった)
  * - ★装飾バッジ廃止★ (WIN, REF, -差●, 互角 など、選手名にかぶる問題)
@@ -28,12 +32,27 @@ import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
 
+// ラベル一致判定 (完全一致 or 双方向部分一致、case-insensitive)
+function statMatches(statLabel, targetLabel) {
+  if (!statLabel || !targetLabel) return false;
+  const a = String(statLabel).toLowerCase().trim();
+  const b = String(targetLabel).toLowerCase().trim();
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
 export function VersusCardLayout({ projectData, currentScript, animationKey, phase = 'normal' }) {
   if (phase === 'hook') return null;
   if (phase === 'outro') return <OutroPanel projectData={projectData} currentScript={currentScript} />;
 
   const highlightComp = useHighlightComp(projectData, currentScript);
   const isHighlight = phase === 'highlight' && highlightComp;
+
+  // ★v5.14.0★ phase に関係なく、currentScript.highlight があれば行強調を発火
+  const focusedComp = currentScript?.highlight
+    ? projectData.comparisons?.find(c => c.id === currentScript.highlight)
+    : null;
+  const focusedLabel = focusedComp?.label || null;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
 
@@ -115,12 +134,34 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
             const subWin = winner === 'sub';
             const mainDisplay = cat.rawMain ?? cat.main ?? '-';
             const subDisplay = cat.rawSub ?? cat.sub ?? '-';
+            // ★v5.14.0★ 行フォーカス判定
+            const focused = focusedLabel && (statMatches(cat.label, focusedLabel) || statMatches(cat.kana, focusedLabel));
 
             return (
-              <div key={i} className="px-3 py-2.5 border-b border-zinc-800 last:border-b-0">
+              <div
+                key={i}
+                className={`relative px-3 py-2.5 border-b border-zinc-800 last:border-b-0 transition-all duration-300 ${
+                  focused ? 'bg-amber-500/10 animate-pulse-soft' : ''
+                }`}
+              >
+                {/* ★v5.14.0★ フォーカス時の左側矢印インジケータ */}
+                {focused && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 text-amber-400 text-[18px] animate-bounce-x">
+                    ▶
+                  </div>
+                )}
+                {/* ★v5.14.0★ フォーカス時の右上「話題中」バッジ */}
+                {focused && (
+                  <div className="absolute -top-1 right-2 bg-amber-400 text-zinc-900 text-[9px] font-black px-1.5 py-0.5 rounded-full z-30">
+                    話題中
+                  </div>
+                )}
+
                 {/* ラベル中央 */}
                 <div className="text-center mb-1.5">
-                  <span className="text-[12px] font-black text-zinc-200 tracking-widest">
+                  <span className={`text-[12px] font-black tracking-widest ${
+                    focused ? 'text-amber-300' : 'text-zinc-200'
+                  }`}>
                     {cat.label}
                   </span>
                   {cat.kana && <span className="text-[9px] text-zinc-500 ml-1">{cat.kana}</span>}
@@ -130,7 +171,9 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
                 <div className="grid grid-cols-[1fr_30px_1fr] items-center gap-2">
                   {/* main 数値 (大きく) */}
                   <div className="text-right">
-                    <span className={`text-[26px] font-mono font-black leading-none tracking-tighter ${
+                    <span className={`font-mono font-black leading-none tracking-tighter transition-all ${
+                      focused ? 'text-[30px]' : 'text-[26px]'
+                    } ${
                       mainWin ? themeClass.text : 'text-zinc-500'
                     }`} style={mainWin ? { textShadow: `0 0 12px ${themeClass.glow}` } : {}}>
                       {mainDisplay}
@@ -146,7 +189,9 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
                   {/* sub 数値 (大きく) */}
                   <div className="text-left">
-                    <span className={`text-[26px] font-mono font-black leading-none tracking-tighter ${
+                    <span className={`font-mono font-black leading-none tracking-tighter transition-all ${
+                      focused ? 'text-[30px]' : 'text-[26px]'
+                    } ${
                       subWin ? 'text-sky-400' : 'text-zinc-500'
                     }`} style={subWin ? { textShadow: '0 0 12px rgba(56,189,248,0.6)' } : {}}>
                       {subDisplay}

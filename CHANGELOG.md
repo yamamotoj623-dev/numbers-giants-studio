@@ -9,7 +9,352 @@
 
 ---
 
-## [5.13.0] - 2026-04-26 - Knowledge File 大規模再構造化 (戦略の正典化)
+## [5.14.2] - 2026-04-26 - TTS 任意再生成 + 音程維持で速度変更
+
+### 動機: 動画運用で判明した2つの不便
+
+ユーザー報告:
+> 1. 生成したやつについて、あとから部分的に再生成する機能も欲しい (エラーになってなくても)
+> 2. 本番TTSの速度が遅いっぽいので速度変更したいんだけど、声質が変わりすぎて結局機械音みたいになっちゃう
+
+### 改修内容
+
+#### A. ★音程維持で速度変更★ (HTMLAudioElement の preservesPitch)
+
+`audio.playbackRate` を上げると音程も上がる「チップマンク効果」が機械音化の原因だった。
+HTMLAudioElement は **`preservesPitch` プロパティで音程維持**できる:
+
+```js
+const audio = new Audio();
+audio.playbackRate = rate;
+audio.preservesPitch = true;        // 標準 (Chrome / Edge / 新Firefox / 新Safari)
+audio.mozPreservesPitch = true;     // 古い Firefox
+audio.webkitPreservesPitch = true;  // 古い Safari
+```
+
+これで **速度を 1.0 → 1.3 にしても声質は維持される** (機械音化しない)。
+全主要ブラウザ対応 (Android Chrome 含む)。
+
+#### B. ★全 scripts ビュー UI★ (任意再生成・個別試聴)
+
+これまで「不足チェック」で **エラー or 未生成** の script だけしか個別操作できなかったが、
+**生成済みの script も含めて任意に選択して再生成・試聴**できる UI を追加。
+
+##### UI 構成
+
+TTSPanel に折りたたみ式「全 scripts ({N}件)」セクションを追加:
+
+```
+[▶ 開く / ▼ 閉じる]                                      [選択 N 件 を再生成]
+[全選択] [選択解除]
+─────────────────────────────────────────────────────
+[☐] [id:1] [数原]  ●  「【井上温大】奪三振【11.2】...」     [▶] [↻]
+[☑] [id:2] [もえか] ●  「数原さん、今日の井上さん...」     [■] [↻]   ← 試聴中
+[☐] [id:3] [数原]  ○  「直近5試合の防御率...」             [▶] [↻]
+                       ↑生成済(緑)/未生成(灰)
+```
+
+##### 機能
+
+| 機能 | 説明 |
+|---|---|
+| **チェックボックスで複数選択** | 一括再生成のため任意の id を選択 |
+| **▶ 試聴ボタン** | キャッシュ済みの音声を即座に試聴 (現在の speechRate で再生) |
+| **■ 停止ボタン** | 試聴中の停止 |
+| **↻ 個別再生成** | キャッシュを上書きして再生成 (確認ダイアログあり) |
+| **選択 N 件を再生成** | 選択中の id をまとめて再生成 (確認ダイアログあり) |
+| **緑●/灰○ インジケータ** | キャッシュ済 / 未生成を色で表示 |
+
+##### 実装
+
+```js
+// 新しいハンドラ
+handlePreviewOne(id)        // 個別試聴 (停止トグル)
+handleForceRegenerateOne(id) // キャッシュを上書きして再生成
+handleRegenerateSelected()   // 選択中の複数 id を一括再生成
+toggleSelected(id)           // チェックボックス切替
+selectAll() / clearSelection()
+
+// 新しい state
+[showAllScripts, setShowAllScripts]    // セクション開閉
+[selectedIds, setSelectedIds]          // チェックボックスで選択中の id 配列
+[cachedSet, setCachedSet]              // キャッシュ済み id の Set
+[previewingId, setPreviewingId]        // 試聴中の id
+```
+
+##### バックエンド (既に実装済み、UI で繋いだだけ)
+
+`pregenerateOnly(scripts, targetIds, ...)` は v5.11.6 で実装済み。
+キャッシュを無視して強制再生成する機能。今回は UI から任意の targetIds を渡せるようにした。
+
+#### C. 速度スライダーの注釈追加
+
+```
+💡 音程維持 ON (preservesPitch) なので速度を上げても声質は変わりません。
+   ⚠️ x1.4以上は早口でも聞き取れる程度に。 (1.4以上で表示)
+   ⚠️ x0.7以下は冗長になります。 (0.7以下で表示)
+```
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/ttsAdapter.js` | speak() に preservesPitch 設定 |
+| `src/components/TTSPanel.jsx` | 全 scripts ビュー追加、速度注釈 |
+
+### 期待される効果
+
+- ✅ 「もえかちゃんの『えっ?』のニュアンスが違う」と感じたら任意で再生成可能
+- ✅ 試聴ボタンで再生成判断が容易に
+- ✅ 速度を 1.2-1.3 倍にしても声質維持、機械音化しない
+- 🚀 結果的に動画品質改善 + 編集効率UP
+
+
+
+### 動機: ユーザー報告「TTS本番生成したものを画面録画しても音声が入らない」
+
+> TTS本番生成したもので画面録画しても音声が入らない。BGMやSEも同様。
+> テスト版の下書きは問題なく録音もされる。
+
+### 原因: v5.11.7 の AudioBufferSourceNode 化が録画キャプチャを破壊していた
+
+Android Chrome の画面録画 (内部音声キャプチャ) の挙動:
+- `<audio>` 要素 (HTMLAudioElement) → ✅ 録音される
+- **AudioBufferSourceNode + AudioContext.destination → ❌ 録音されない** (環境依存)
+
+実は **mixer.js (BGM/SE) は元からこの問題を把握しており HTMLAudioElement で実装されていた**。
+ファイル冒頭にもコメント:
+```
+* AudioContext の出力 (ctx.destination や MediaStreamDestination経由) は録画で拾われないケースが多い。
+* 音量制御・ducking は element.volume を直接操作 (AudioContext gain 不使用)。
+```
+
+ところが **v5.11.7 で TTS 再生だけ低レイテンシ化のため AudioBufferSourceNode に切替えた結果**、
+TTSの音声が録画キャプチャから漏れる**回帰問題**が発生。
+
+| 機能 | 再生方式 | 画面録画 |
+|---|---|---|
+| TTS下書き (テスト再生) | HTMLAudioElement | ✅ OK |
+| **TTS本番 (v5.11.7-v5.14.0)** | **AudioBufferSourceNode** | **❌ NG** |
+| BGM | HTMLAudioElement | ✅ OK |
+| カスタムSE | HTMLAudioElement | ✅ OK |
+| 合成音SE (フォールバック) | AudioContext | ❌ NG (既知、要件としてはカスタムSE登録推奨) |
+
+### 修正内容
+
+#### A. TTS speak() を HTMLAudioElement に戻す (v5.11.7 の改修を回帰)
+
+`src/lib/ttsAdapter.js` の `speak()` メソッド本体を、レガシー版 `_speakLegacyHtmlAudio` と同等の
+HTMLAudioElement ベースの実装に書き換え:
+
+```js
+// 旧 (v5.11.7-v5.14.0): AudioBufferSourceNode + AudioContext.destination
+const source = ctx.createBufferSource();
+source.buffer = audioBuffer;
+source.connect(gainNode);
+gainNode.connect(ctx.destination);
+source.start(0);
+// ↑ Android 画面録画でキャプチャされない
+
+// 新 (v5.14.1): HTMLAudioElement (preload + 即時 play)
+const audio = new Audio();
+audio.preload = 'auto';
+audio.src = url;
+audio.volume = mixer._effectiveVoiceVolume();
+await audio.play();
+// ↑ Android 画面録画でキャプチャされる
+```
+
+#### B. レイテンシ最小化 (preload + readyState 即時起動)
+
+低レイテンシのため:
+- `audio.preload = 'auto'` で先読み
+- `readyState >= 3` (HAVE_FUTURE_DATA) なら即時 `play()`
+- それ以下なら `canplay` イベントで起動 + `audio.load()` を明示呼び出し
+
+これでHTMLAudioElement でも実用的なレイテンシ (50-100ms 程度) で再生可能。
+
+#### C. AudioBuffer decode キャッシュ廃止
+
+`prefetch()`, `pregenerate()`, `pregenerateOnly()` 内で行っていた
+`_decodeBlob` + `_putDecoded` の処理を削除:
+- HTMLAudioElement は内部で自動 decode するため、メモリ上の AudioBuffer キャッシュは不要
+- blob は引き続き IndexedDB (audioCache.js) に保存される
+- prefetch は「blob を IndexedDB に置いておく」という役割のみに
+
+#### D. レガシー `_speakLegacyHtmlAudio` を削除
+
+speak() 本体が同等の実装になったため、重複していたレガシーメソッドを削除。
+
+#### E. 残骸コード (削除しない)
+
+以下は「使われないコード」になったが、互換性とリスク回避のため削除しない:
+- `this._audioCtx`, `_getAudioCtx()`, `unlock()` — TTSPanel から呼ばれてる、将来用
+- `_decodedCache`, `_decodeBlob`, `_putDecoded`, `_DECODE_CACHE_MAX` — 念のため残置
+- `this._currentSource` — `stop()` 内の停止処理に残骸として残置
+
+### ★ユーザーへの追加案内 (BGM/SE について)
+
+BGM/SE は元から HTMLAudioElement で録画対応済み。ただし:
+
+#### BGM が録画されない場合
+- BGM ファイルを登録してください (BGMPanel)
+- 登録すれば自動で HTMLAudioElement として再生される
+
+#### SE が録画されない場合
+- **カスタムSE を登録してください** (SEStorage)
+- カスタム未登録の場合、合成音 fallback (AudioContext) で再生されるため**録画されません**
+- 合成音 fallback は仕様上の制約 (カスタムSEを推奨)
+
+### 変更ファイル
+
+| ファイル | 変更行数 | 内容 |
+|---|---|---|
+| `src/lib/ttsAdapter.js` | -55行 (約) | AudioBufferSourceNode → HTMLAudioElement |
+| `package.json` | 1行 | 5.14.0 → 5.14.1 |
+| `src/lib/config.js` | 1行 | APP_VERSION 更新 |
+
+### 期待される効果
+
+- ✅ Pixel 9 Pro Fold 画面録画で TTS 本番再生が録音される
+- ✅ 動画生成→投稿の運用フローが回復
+- 📉 レイテンシは僅かに増加 (AudioBufferSourceNode比 +30〜80ms程度)
+  - ただし preload + readyState 即時起動で実用範囲
+
+### 教訓
+
+**最適化を入れる前に、過去の制約事項 (mixer.js のコメント) を確認すべきだった。**
+v5.11.7 で AudioBufferSourceNode を導入した時、mixer.js が HTMLAudioElement のままだった
+理由 (= 画面録画対応) を見落としていた。
+今後、再生系のリファクタは mixer.js のコメントを正典とすること。
+
+
+
+### 動機: 動画テストで判明した2つの構造的課題
+
+v5.13.0 (Knowledge File 大改修) で Gemini の出力品質は構造的に改善されたが、
+表示側 (アプリ) に残っていた問題:
+
+1. **player_spotlight 仕様が硬直**
+   - v4 で「選手名・番号は常に非表示」(ヘッダー重複防止のため)
+   - だがチーム動画 (playerType="team") の場合、ヘッダーは「読売ジャイアンツ」になるので、
+     **個別選手名が画面のどこにも出ない** → 誰の数字か分からない
+   - サブ指標も固定 (打率/OPS/HR/RBI) で、Gemini が「対佐野通算」のような柔軟なカスタムができなかった
+
+2. **基本成績の所在が迷子**
+   - A が「井上は驚異の【11.20】」と話してるが、画面のどこに 11.20 があるか分からない
+   - HighlightCard はハイライト時にカード形式で表示されるが、レイアウト内の該当行が
+     特別な強調を受けない → 視聴者が数字を探す間にスワイプされる
+
+### 改修内容
+
+#### A. player_spotlight v5: showPlayerName 切替
+
+スキーマに `showPlayerName: 'auto' | true | false` を追加:
+- `'auto'` (デフォルト): playerType==='team' なら ON、それ以外は OFF
+- `true`: 常に選手名・背番号を表示 (ヘッダーにチーム名がある時に有効)
+- `false`: 常に非表示 (ヘッダーで既に選手名表示中の重複防止)
+
+| 動画テーマ | playerType | showPlayerName='auto' の挙動 |
+|---|---|---|
+| 個人深掘り (岡本和真) | batter / pitcher | OFF (ヘッダーに既に岡本和真) |
+| チーム動画 (巨人の犠打) | team | ON (ヘッダーは「読売ジャイアンツ」) |
+
+players[i] に `name` / `number` フィールドを追加 (showPlayerName=true 時に使用):
+```jsx
+players: [
+  {
+    id: 'okamoto',
+    name: '岡本和真',     // ★v5.14.0新★
+    number: '25',          // ★v5.14.0新★
+    label: '26年(今季)',
+    primaryStat: { ... },
+    stats: [ ... ]
+  }
+]
+```
+
+#### B. player_spotlight: 専用編集UI (SpotlightDataEditor) 新規作成
+
+これまで「JSON直接編集してください」と案内されていた spotlight が、専用UIで操作可能に:
+- showPlayerName のトグル (自動 / ON / OFF) — 自動時は現在の解決値を表示
+- 選手エントリの追加・削除 (id / label / name / number)
+- primaryStat の label / value / isNegative / compareValue 編集
+- stats[] の label / value をフリー入力で追加・削除 (例: 「対佐野通算」)
+- comment 編集
+
+これで Gemini がカスタム指標 (「対佐野通算」「直近10試合」) を出した時も、
+ユーザーが UI で柔軟に修正できる。
+
+#### C. VersusDataEditor を v4 仕様に更新
+
+VersusCardLayout が v4 (rawMain/rawSub 形式、scores 0-100 廃止) になったのに、
+編集UIが v3 のままだった (overall.main/sub と main/sub の 0-100 数値) のを修正:
+- rawMain / rawSub の数値入力
+- kana (読み) フィールド
+- lowerBetter チェックボックス (防御率/WHIP/失策などで小さい方が勝ち)
+
+#### D. ★最重要★ 基本成績の視覚的強調 (versus_card / player_spotlight)
+
+これまで `script.highlight` は phase==='highlight' の HighlightCard でしか視覚化されなかったが、
+**通常表示中も行強調が発火**するように改修:
+
+##### versus_card 行強調
+- `comparison.label` と `categoryScores[].label` が一致した行を強調:
+  - 行全体が脈動 (pulse-soft アニメ)
+  - 左に▶矢印 (bounce-x アニメ)
+  - 右上に「話題中」黄色バッジ
+  - 数字フォント 26px → 30px に拡大
+  - ラベル文字を amber 色に
+  - 行背景に薄いオレンジ tint
+
+##### player_spotlight 行強調
+- `comparison.label` と `primaryStat.label` が一致 → 中央主役カードが脈動
+- `comparison.label` と `stats[].label` が一致 → 該当サブ指標カードが脈動
+  - スケール 1.05倍 + amber リング + 「話題中」バッジ + 数字 amber 色
+
+##### ラベル一致ロジック
+- 完全一致 or 双方向部分一致 (case-insensitive)
+- 例: `comparison.label="K/9"` と `stats[].label="奪三振率(K/9)"` でも一致
+
+##### Tailwind カスタムアニメーション追加
+```js
+animation: {
+  'pulse-soft': 'pulse-soft 1.4s ease-in-out infinite',
+  'bounce-x': 'bounce-x 0.9s ease-in-out infinite',
+}
+```
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/layouts/PlayerSpotlightLayout.jsx` | v4 → v5 (showPlayerName 切替 + 行強調) |
+| `src/layouts/VersusCardLayout.jsx` | v4 → v5 (行強調追加) |
+| `src/components/LayoutPanel.jsx` | SpotlightDataEditor 新規 + VersusDataEditor 更新 |
+| `tailwind.config.js` | pulse-soft / bounce-x アニメ追加 |
+| `docs/layout-direction.md` | player_spotlight v5 仕様、versus_card 行強調を追記 |
+| `docs/structure-playbook.md` | 5.3 「v5.14.0 行強調」セクション追加 |
+
+### 期待される効果
+
+| 改善前の問題 | v5.14.0 での解消 |
+|---|---|
+| チーム動画で個別選手名が出ない | showPlayerName=auto/true で出せる |
+| サブ指標が打率/OPS固定で柔軟性なし | UI でフリー入力、Gemini も柔軟にカスタム可 |
+| 基本成績が画面のどこにあるか分からない | 行強調 + 「話題中」バッジで一目瞭然 |
+| script.highlight がカード表示でしか発火しない | 通常表示中も該当行が脈動 |
+
+### Gemini への運用指示 (v5.13.0 Knowledge Files に統合済)
+
+1. **チーム動画**では `layoutData.spotlight.showPlayerName: true` を指定し、
+   `players[i].name / number` に個別選手名を入れる
+2. **個人動画**では `showPlayerName: 'auto'` (デフォルト) で重複を回避
+3. **stats[] にカスタム指標**を入れて柔軟性を活用 (例: 「対佐野」「直近10試合」)
+4. **script.highlight を必ず指定**し、対応する comparison.label と一致させる
+   (これで行強調が発火し、視聴者が数字を探さない)
+
+
 
 ### 動機: v5.12.0 でも残った構造的問題
 
