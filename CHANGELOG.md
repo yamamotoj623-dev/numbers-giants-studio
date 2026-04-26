@@ -9,7 +9,151 @@
 
 ---
 
-## [5.14.2] - 2026-04-26 - TTS 任意再生成 + 音程維持で速度変更
+## [5.14.3] - 2026-04-26 - ★緊急修正★ Android Chrome の3つの音声問題を統合解決
+
+### 動機: ユーザー報告の3つの問題
+
+> 1. 速度変えても本番TTSが早くならない (下書きは問題なく早くなる)
+> 2. 画面録画で本番TTSが依然録音できない
+> 3. 生成後の動画再生で読み上げバグが多発して、結局何度か再生しないと安定しない
+
+v5.14.1 で HTMLAudioElement に戻したが、**Android Chrome の音声再生に関する3つの落とし穴**を踏んでいた。それぞれ別の原因だが、全部 HTMLAudioElement の挙動を理解すれば一発で解決する。
+
+### 問題と原因の整理
+
+#### 問題1: 速度が反映されない (本番のみ)
+
+**原因**: `audio.playbackRate = rate` を **`src` 設定後・`canplay` 前** に設定していた。
+Android Chrome では **`canplay` イベント発火前に rate を設定しても無効化される**ことが報告されている。
+`new Audio()` のデフォルト 1.0 のまま再生されてしまっていた。
+
+下書き (Web Speech API) は OS の TTS エンジン側で速度制御してるため、この問題は出ない。
+
+#### 問題2: 画面録画で録音されない (依然)
+
+**原因**: `new Audio()` で作った要素を **DOM にアタッチせず**に直接 play() していた。
+Android の画面録画 (内部音声キャプチャ) は **DOM ツリーに存在する HTMLMediaElement** しかキャプチャしない仕様/挙動がある。
+
+mixer.js の BGM/SE も `new Audio()` を作るだけで attach してなかった (= BGM 登録してても録画されてなかった可能性)。
+
+#### 問題3: 何度か再生しないと安定しない
+
+**原因**: Android Chrome の **autoplay policy unlock 問題**。
+`new Audio()` 経由で動的に作った音源は、ユーザー操作起点の play() permission が無いと、最初は無音 or block される。
+unlock() メソッド自体は既存だが **Player の togglePlay() から呼ばれていなかった**ので、再生開始時にメディア再生 permission が取れていなかった。
+
+### 修正内容
+
+#### A. audio 要素を DOM に attach (録画対応)
+
+`ttsAdapter.js` / `mixer.js` で `new Audio()` を作る全ての箇所で、画面外に隠して DOM ツリーに追加:
+
+```js
+audio.style.position = 'fixed';
+audio.style.bottom = '-100px';
+audio.style.opacity = '0';
+audio.style.pointerEvents = 'none';
+audio.setAttribute('playsinline', '');  // iOS Safari対策
+document.body.appendChild(audio);
+```
+
+cleanup / stop 時には `audio.remove()` で DOM から削除。
+これで Android 画面録画でキャプチャされる。
+
+#### B. playbackRate と preservesPitch を play() 直前に設定
+
+`startPlayback()` 内で play() の直前に設定:
+
+```js
+const startPlayback = async () => {
+  // ★play() 直前に設定 (Android Chrome で確実に反映)★
+  audio.playbackRate = rate;
+  audio.preservesPitch = true;
+  audio.mozPreservesPitch = true;
+  audio.webkitPreservesPitch = true;
+  await audio.play();
+};
+```
+
+これで Android Chrome でも速度が反映され、かつ音程維持される。
+
+#### C. unlock() を拡張: HTMLMediaElement の autoplay unlock も実行
+
+```js
+async unlock() {
+  // 1. AudioContext unlock (既存)
+  const ctx = this._getAudioCtx();
+  if (ctx.state === 'suspended') await ctx.resume();
+
+  // 2. ★v5.14.3 新★ HTMLMediaElement unlock
+  if (!this._mediaUnlocked) {
+    const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==');
+    silent.volume = 0;
+    await silent.play().catch(() => {});
+    silent.pause();
+    this._mediaUnlocked = true;
+  }
+}
+```
+
+silent.wav を一度ユーザー操作起点で play() することで、以降の `new Audio().play()` が
+autoplay block されなくなる。これで「最初の再生だけ無音」が解消。
+
+#### D. ★最重要★ Player の togglePlay() で unlock() を呼ぶ
+
+```js
+const togglePlay = useCallback(async () => {
+  if (!isPlaying) {
+    // ★v5.14.3 新★ メディア再生 unlock
+    try {
+      if (adapterRef.current?.unlock) {
+        await adapterRef.current.unlock();
+      }
+    } catch (e) {}
+    ...
+    setIsPlaying(true);
+  }
+  ...
+});
+```
+
+これまで TTSPanel の試聴ボタンと事前生成ボタンからしか呼ばれてなかった unlock() を、
+動画再生開始時にも呼ぶようにした。これで「再生開始時にメディア permission が取れない」問題が解消。
+
+#### E. BGM / SE も DOM attach + 旧要素の DOM remove を徹底
+
+`mixer.js` の `loadBgmFromUrl()`, `registerCustomSe()`, `playSe()` の clone 全てで
+DOM attach + cleanup の徹底化。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/ttsAdapter.js` | speak(): DOM attach + play直前 rate 設定 / unlock(): HTMLMediaElement unlock追加 / stop(): DOM remove |
+| `src/lib/mixer.js` | loadBgmFromUrl / registerCustomSe / playSe で DOM attach 徹底 |
+| `src/hooks/usePlaybackEngine.js` | togglePlay() で unlock() を await |
+| `package.json` / `config.js` | 5.14.2 → 5.14.3 |
+
+### 期待される効果
+
+| 改善前 (v5.14.2) | 改善後 (v5.14.3) |
+|---|---|
+| ❌ 速度変更が本番TTSで反映されない | ✅ 反映される (play直前設定) |
+| ❌ 画面録画で本番TTSが録音されない | ✅ 録音される (DOM attach) |
+| ❌ BGM/SEも一部録画されない可能性 | ✅ 全部録画される (DOM attach) |
+| ❌ 最初の再生が無音、何度か再生し直す必要 | ✅ 一発で正常再生 (unlock呼び出し) |
+
+### 教訓
+
+**Android Chrome の HTMLMediaElement は3つの落とし穴がある**:
+1. **DOM attach 必須** (画面録画対応)
+2. **playbackRate は play 直前に設定** (canplay 前は反映されない)
+3. **autoplay policy unlock 必須** (silent.wav で先に許可取得)
+
+mixer.js のコメントに「AudioContext は録画されない」と書いてあったが、上記3点も
+今後の正典にすべき。本ファイル群の冒頭コメントに反映する形で運用ルール化したい。
+
+
 
 ### 動機: 動画運用で判明した2つの不便
 

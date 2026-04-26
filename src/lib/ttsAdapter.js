@@ -199,22 +199,45 @@ export class GeminiAdapter {
   }
 
   /**
-   * AudioContext を「unlock」する (suspended → running)
+   * AudioContext と HTMLMediaElement の両方を「unlock」する。
    * ブラウザの自動再生ポリシーで初回はユーザー操作が必要。
-   * 「事前生成」ボタンや再生ボタンを押した時に呼んでおくとレイテンシゼロで再生開始可能。
+   * 「事前生成」ボタンや再生ボタンを押した時に呼んでおくと、
+   * 後続の new Audio() が autoplay block されない & レイテンシゼロで再生開始可能。
+   *
+   * ★v5.14.3★ HTMLMediaElement の autoplay policy unlock も追加。
+   *   silent.wav を一度 play() すると以降の new Audio() が許可される。
+   *   これがないと Android Chrome で「最初の再生だけ無音」「何度かやり直すと出る」現象が発生する。
    */
   async unlock() {
-    const ctx = this._getAudioCtx();
-    if (ctx.state === 'suspended') {
-      try {
+    // 1. AudioContext unlock (既存)
+    try {
+      const ctx = this._getAudioCtx();
+      if (ctx.state === 'suspended') {
         await ctx.resume();
-        this._unlocked = true;
-      } catch (e) {
-        console.warn('AudioContext resume failed:', e);
       }
-    } else {
-      this._unlocked = true;
+    } catch (e) {
+      console.warn('AudioContext resume failed:', e);
     }
+
+    // 2. ★v5.14.3★ HTMLMediaElement unlock
+    if (!this._mediaUnlocked) {
+      try {
+        // 最小の silent WAV (ヘッダのみ、空 PCM)
+        const silentDataUrl = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==';
+        const silent = new Audio(silentDataUrl);
+        silent.volume = 0;
+        const p = silent.play();
+        if (p && typeof p.then === 'function') {
+          await p.catch(() => {});  // play 失敗は無視 (まだunlockされてないだけ)
+        }
+        try { silent.pause(); } catch (e) {}
+        this._mediaUnlocked = true;
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    this._unlocked = true;
   }
 
   /**
@@ -347,23 +370,25 @@ export class GeminiAdapter {
       const fixedText = applyYomigana(text);
 
       try {
-        // ★v5.14.1★ AudioBufferSourceNode → HTMLAudioElement に戻す
-        // 理由: Android Chrome の画面録画で AudioContext.destination 経由の音は録音されない。
-        // mixer.js (BGM/SE) は元から HTMLAudioElement で録画対応していたが、
-        // v5.11.7 で TTS だけ AudioBufferSourceNode に切替えた結果、
-        // 「TTS本番再生だけ録画されない」問題が発生していた。
-        // レイテンシは preload + 即時 play で実用範囲に抑える。
+        // ★v5.14.1★ AudioBufferSourceNode → HTMLAudioElement (Android 画面録画対応)
+        // ★v5.14.3★ 追加修正:
+        //   1. audio を DOM に attach (画面録画でキャプチャされるように)
+        //   2. playbackRate と preservesPitch は play() 直前に設定 (Android Chrome で確実に反映)
+        //   3. これらの修正で「速度が反映されない」「録画されない」「最初の再生が無音」を全部解消
         const { blob } = await this._getOrGenerate(fixedText, speaker);
         const url = URL.createObjectURL(blob);
         const audio = new Audio();
         audio.preload = 'auto';
         audio.src = url;
-        audio.playbackRate = rate;
-        // ★v5.14.2★ 音程を保持して声質維持 (機械音化を防ぐ)
-        // 速度を上げても声が高くならない (チップマンク効果を防止)
-        audio.preservesPitch = true;
-        audio.mozPreservesPitch = true;        // 古い Firefox 用
-        audio.webkitPreservesPitch = true;     // 古い Safari 用
+
+        // ★v5.14.3★ DOM に attach (画面録画でキャプチャ可能に)
+        // 画面外に配置するが DOM ツリーには存在させる
+        audio.style.position = 'fixed';
+        audio.style.bottom = '-100px';
+        audio.style.opacity = '0';
+        audio.style.pointerEvents = 'none';
+        audio.setAttribute('playsinline', '');  // iOS Safari対策
+        document.body.appendChild(audio);
 
         // 音量取得
         try {
@@ -382,6 +407,8 @@ export class GeminiAdapter {
           resolved = true;
           clearTimeout(this.fallbackTimer);
           try { URL.revokeObjectURL(url); } catch (e) {}
+          // ★v5.14.3★ DOM から remove
+          try { audio.remove(); } catch (e) {}
           if (this.currentAudio === audio) this.currentAudio = null;
         };
 
@@ -400,6 +427,12 @@ export class GeminiAdapter {
         // 即時再生 (preload=auto + src 設定済みなら readyState がすぐ上がる)
         const startPlayback = async () => {
           try {
+            // ★v5.14.3★ play() 直前に rate と preservesPitch を設定
+            // Android Chrome では canplay 前に設定すると反映されないことがある
+            audio.playbackRate = rate;
+            audio.preservesPitch = true;       // 標準
+            audio.mozPreservesPitch = true;    // 古い Firefox
+            audio.webkitPreservesPitch = true; // 古い Safari
             await audio.play();
           } catch (e) {
             cleanup();
@@ -472,6 +505,8 @@ export class GeminiAdapter {
       this.currentAudio.onended = null;
       this.currentAudio.onerror = null;
       try { this.currentAudio.pause(); } catch (e) {}
+      // ★v5.14.3★ DOM から remove (DOM attach されているため)
+      try { this.currentAudio.remove(); } catch (e) {}
       this.currentAudio = null;
     }
   }

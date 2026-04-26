@@ -205,8 +205,19 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     };
   }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, ttsEngine, getSpeakerGroupInfo]);
 
-  const togglePlay = useCallback(() => {
+  const togglePlay = useCallback(async () => {
     if (!isPlaying) {
+      // ★v5.14.3★ メディア再生 unlock (Android Chrome 対策)
+      // ユーザー操作起点で AudioContext + HTMLMediaElement の autoplay policy を解除する。
+      // これがないと「最初の再生だけ無音」「何度かやり直すと出る」現象が発生する。
+      try {
+        if (adapterRef.current?.unlock) {
+          await adapterRef.current.unlock();
+        }
+      } catch (e) {
+        console.warn('unlock failed (continuing):', e);
+      }
+
       if (currentIndex >= scripts.length - 1) {
         setCurrentIndex(0);
         setElapsedTime(0);
