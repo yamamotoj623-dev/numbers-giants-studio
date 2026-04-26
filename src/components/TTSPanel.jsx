@@ -584,6 +584,8 @@ export function TTSPanel({
                   </div>
                 )}
               </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px]">
                 <div className="bg-white p-2 rounded border flex items-center justify-between">
                   <span className="text-zinc-500 flex items-center gap-1"><DollarSign size={10}/>今回コスト</span>
                   <span className="font-mono font-bold text-indigo-600">${totalCost.toFixed(4)}</span>

@@ -109,6 +109,22 @@ selectAll() / clearSelection()
 - ✅ 速度を 1.2-1.3 倍にしても声質維持、機械音化しない
 - 🚀 結果的に動画品質改善 + 編集効率UP
 
+### バグ修正 (本リリース内で再修正)
+
+**初回 commit (6d1e122) で Vercel build エラー:**
+
+```
+TTSPanel.jsx:595:16: ERROR: Unexpected closing "div" tag does not match opening fragment tag
+```
+
+**原因**: 全 scripts ビューを挿入する str_replace で、コスト表示セクションの開始タグ
+`<div className="grid grid-cols-2 gap-2 text-[10px]">` を誤って削除していた。
+閉じタグ `</div>` だけ残っていたため JSX 構造が壊れていた。
+
+**修正**: 開始タグを復元 (line 588) して構造整合。
+ローカルで Node.js 経由の構文チェックは通っていたが、JSX 構造のチェックは esbuild
+が必要なため、ビルド環境がない手元では検出できなかった。
+
 
 
 ### 動機: ユーザー報告「TTS本番生成したものを画面録画しても音声が入らない」
