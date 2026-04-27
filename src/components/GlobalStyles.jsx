@@ -467,6 +467,50 @@ const CSS_TEXT = `
   .phase[data-p="normal"].active .radar-label-group:nth-of-type(5) { animation-delay: 0.75s; }
   @keyframes radarFadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
+  /* ★v5.18.5★ zoomBoost (shake/zoom) 発火時は出現アニメを完全抑制
+     ★v5.18.6★ ハイライト系・テロップ・stats-table も追加 (出現アニメすべて)
+     キーフレームアニメだけが純粋に走るようにする (シェイクが「描画途中の動き」と被らない)
+     注: 継続する infinite 系アニメ (cardPulse, numberPulse 等) は止めない
+         → 初回出現タイミングだけ即時化
+  */
+  /* radar 系 (チャート本体) */
+  .anim-layer[data-zoom-active="true"] .radar-main-poly,
+  .anim-layer[data-zoom-active="true"] .radar-sub-poly,
+  .anim-layer[data-zoom-active="true"] .radar-dot,
+  .anim-layer[data-zoom-active="true"] .radar-label-group,
+  .anim-layer[data-zoom-active="true"] .radar-legend {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  /* ハイライト系 (radar 縮小 + 頂点グロー + ハイライトカード)
+     ※ cardPulse 2.5s infinite は維持したいので、cardExpand だけスキップしたい
+       → highlight-card は animation を上書きして cardPulse 単独に */
+  .anim-layer[data-zoom-active="true"] .hl-radar-svg-box {
+    animation: none !important;
+    transform: scale(1) !important;  /* radarShrink の終了状態 */
+    opacity: 1 !important;
+  }
+  .anim-layer[data-zoom-active="true"] .vertex-glow {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .anim-layer[data-zoom-active="true"] .highlight-card {
+    /* cardExpand スキップ + cardPulse だけ無限再生 */
+    animation: cardPulse 2.5s ease-in-out infinite !important;
+    opacity: 1 !important;
+    transform: translateY(0) scaleY(1) !important;
+  }
+  /* テロップ吹き出し (常時 0.3s 遅延スライドアップ) */
+  .anim-layer[data-zoom-active="true"] .telop-wrap-normal .telop-bg,
+  .anim-layer[data-zoom-active="true"] .telop-wrap-hl .telop-bg {
+    animation: none !important;
+  }
+  /* stats-table (radar の下にある選手成績テーブル、1.7s遅延) */
+  .anim-layer[data-zoom-active="true"] .stats-table {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
   .radar-legend { margin-top: 4px; display: flex; gap: 12px; justify-content: center; opacity: 0; }
   .phase[data-p="normal"].active .radar-legend { animation: telopSlideUp 0.4s ease-out 1.5s forwards; }
   /* highlight phase では legend は即時表示 */

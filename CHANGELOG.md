@@ -9,7 +9,180 @@
 
 ---
 
-## [5.18.4] - 2026-04-27 - 残タスク6項目対応 (保存機能 / シェイクバグ / フォーカス選択 / 球団名 / Ken Burns / 余白調整)
+## [5.18.6] - 2026-04-27 - zoomBoost 抑制対象を全要素に拡大 (ハイライト/テロップ/stats-table)
+
+### 動機: ユーザー指摘
+
+> ハイライトとか他の要素も同じ現象起きてない?
+
+v5.18.5 ではレーダーチャート本体の出現アニメだけ抑制していたが、調査の結果、**他にも複数の出現アニメ**が zoomBoost と同時発火していた:
+
+| 要素 | アニメ | 遅延 |
+|---|---|---|
+| `.stats-table` (radar下の選手成績) | telopSlideUp 0.4s | 1.7秒 |
+| `.telop-wrap-normal/hl .telop-bg` (テロップ吹き出し) | telopSlideUp 0.35s | 0.3秒 |
+| `.hl-radar-svg-box` (ハイライト時のレーダー縮小) | radarShrink 0.5s | 0秒 |
+| `.vertex-glow` (ハイライト頂点のグロー) | vertexZoomLight 0.6s | 0.5秒 |
+| `.highlight-card` (ハイライトカード) | cardExpand 0.5s + cardPulse 2.5s infinite | 0.3秒 |
+
+特に **ハイライト時** は `cardExpand` (カード拡大) + `radarShrink` (レーダー縮小) が同時発火するため、shake と被ると**画面全体がガタガタ**動いて意図した演出にならない。
+
+### 修正
+
+`data-zoom-active="true"` の抑制ルールを上記すべてに適用:
+
+```css
+/* radar (既存) */
+.anim-layer[data-zoom-active="true"] .radar-main-poly,
+.anim-layer[data-zoom-active="true"] .radar-sub-poly,
+.anim-layer[data-zoom-active="true"] .radar-dot,
+.anim-layer[data-zoom-active="true"] .radar-label-group,
+.anim-layer[data-zoom-active="true"] .radar-legend {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* ハイライト系 (新規) */
+.anim-layer[data-zoom-active="true"] .hl-radar-svg-box {
+  animation: none !important;
+  transform: scale(1) !important;
+  opacity: 1 !important;
+}
+.anim-layer[data-zoom-active="true"] .vertex-glow {
+  animation: none !important;
+  opacity: 1 !important;
+}
+.anim-layer[data-zoom-active="true"] .highlight-card {
+  /* cardExpand スキップ + cardPulse だけ維持 (脈動は持続させたい) */
+  animation: cardPulse 2.5s ease-in-out infinite !important;
+  opacity: 1 !important;
+  transform: translateY(0) scaleY(1) !important;
+}
+
+/* テロップ系 (新規) */
+.anim-layer[data-zoom-active="true"] .telop-wrap-normal .telop-bg,
+.anim-layer[data-zoom-active="true"] .telop-wrap-hl .telop-bg {
+  animation: none !important;
+}
+
+/* stats-table (新規) */
+.anim-layer[data-zoom-active="true"] .stats-table {
+  animation: none !important;
+  opacity: 1 !important;
+}
+```
+
+### 設計の判断
+
+**継続する infinite 系アニメは維持**:
+- `cardPulse` 2.5s infinite (ハイライトカードの脈動)
+- `numberPulse` 1.5s infinite (hookの数字脈動)
+- `pulse` 2s infinite (日付バッジ等)
+
+これらは初回出現後ずっと続くので、zoomBoost 時だけ消すと不自然。
+**抑制するのは「初回出現タイミングの遅延付きアニメ」だけ**。
+
+### 効果
+
+| シーン | 改善前 (v5.18.5) | 改善後 (v5.18.6) |
+|---|---|---|
+| `zoomBoost: 'shake'` + `highlight: 'isop'` | カード拡大 + レーダー縮小 + シェイクが全部同時で混乱 | カード/レーダーは即時表示、シェイクだけ純粋発火 |
+| `zoomBoost: 'shake'` + 通常 script | テロップがスライドアップしながらシェイク | テロップは即時表示、シェイクだけ純粋発火 |
+| `zoomBoost` なし | (変化なし) | (変化なし) |
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/components/GlobalStyles.jsx` | 抑制ルールをハイライト/テロップ/stats-table に拡大 |
+| `package.json` / `config.js` | 5.18.5 → 5.18.6 |
+
+### 既知の限界
+
+- 他レイアウト (ranking, player_spotlight, versus_card) には CSS 出現アニメがないので影響なし
+- 将来別レイアウトで CSS 出現アニメを追加する場合は同じ抑制パターンで対応すること
+
+
+
+### 動機: ユーザー報告
+
+> レーダーレイアウトの初期アニメーションがキーフレームアニメでシェイクさせたいのに
+> チャートが出てくるアニメーションと一緒になって嫌だ。キーフレームだけにしたい。
+
+### 原因
+
+レーダーチャートには初回マウント時に CSS 遅延アニメーションが約 2 秒間走る:
+
+```css
+.phase[data-p="normal"].active .radar-main-poly { animation: radarFadeIn 0.5s ease-out forwards; }
+.phase[data-p="normal"].active .radar-sub-poly { animation: radarFadeIn 0.5s ease-out 0.15s backwards; }
+.phase[data-p="normal"].active .radar-dot { animation: radarFadeIn 0.3s ease-out backwards; }
+.phase[data-p="normal"].active .radar-dot:nth-of-type(1) { animation-delay: 0.3s; }
+... (5個のドット、5個のラベルが順次フェードイン)
+.phase[data-p="normal"].active .radar-legend { animation: telopSlideUp 0.4s ease-out 1.5s forwards; }
+```
+
+合計 **0〜1.9 秒** にわたって、ポリゴン/ドット/ラベル/凡例が順次出現する。
+
+`script.zoomBoost: 'shake'` を id:1 など最初の方の script に指定すると:
+- チャート出現アニメ (0〜1.9秒) が走っている**最中に**
+- シェイク (0.4秒) も同時発火
+- ユーザー視点では「**画面全体が揺れながらチャートが出てくる**」状態 → やりたい演出ではない
+
+### 解決: zoomBoost 発火時はチャート出現アニメを抑制
+
+#### A. LayoutRouter で `data-zoom-active` 属性を付与
+
+```jsx
+<div
+  className={`anim-layer ${animClass}`}
+  data-zoom-active={animClass ? 'true' : 'false'}  // ← 新規
+  key={innerAnimKey}
+>
+  <Layout {...props} />
+</div>
+```
+
+#### B. GlobalStyles でチャート出現アニメを上書き
+
+```css
+.anim-layer[data-zoom-active="true"] .radar-main-poly,
+.anim-layer[data-zoom-active="true"] .radar-sub-poly,
+.anim-layer[data-zoom-active="true"] .radar-dot,
+.anim-layer[data-zoom-active="true"] .radar-label-group,
+.anim-layer[data-zoom-active="true"] .radar-legend {
+  animation: none !important;
+  opacity: 1 !important;
+}
+```
+
+これで:
+- **zoomBoost なし**: チャート出現アニメ通常発火 (現状維持)
+- **zoomBoost あり**: チャートは即座に静止状態で表示 → シェイク/ズームだけが純粋に発火
+
+### 効果
+
+| シーン | 改善前 (v5.18.4) | 改善後 (v5.18.5) |
+|---|---|---|
+| zoomBoost なしの id:1 | チャートがふわっと出現 | (変化なし) チャートがふわっと出現 |
+| zoomBoost: 'shake' の id:1 | チャート出現中にシェイクも同時発火で「動きがゴチャゴチャ」 | チャートは即座に表示、シェイクだけ純粋に発火 |
+| zoomBoost: 'zoom' の id:5 (途中) | 通常の挙動 | (変化なし) zoomBoost 単独発火 |
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/layouts/LayoutRouter.jsx` | `data-zoom-active` 属性付与 |
+| `src/components/GlobalStyles.jsx` | チャート出現アニメ抑制ルール追加 |
+| `package.json` / `config.js` | 5.18.4 → 5.18.5 |
+
+### 注意
+
+他のレイアウト (player_spotlight, ranking, versus_card 等) は CSS 出現アニメを持っていないので、今回の対応で全レイアウトカバー済み。
+
+将来別レイアウトに出現アニメを追加した場合は、同じ `data-zoom-active="true"` セレクタで抑制ルールを追加すること。
+
+
 
 ### 動機
 

@@ -119,9 +119,12 @@ export function LayoutRouter(props) {
 
   return (
     <div className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'}`}>
-      {/* ★v5.18.4★ animation 専用の内側 wrapper - key 変更で animation だけ再発火 */}
+      {/* ★v5.18.4★ animation 専用の内側 wrapper - key 変更で animation だけ再発火
+          ★v5.18.5★ zoomBoost 指定時は data-zoom-active="true" を付与 →
+          子レイアウトの「チャート出現アニメ」を CSS で抑制し、zoomBoost だけが純粋に発火する */}
       <div
         className={`anim-layer ${animClass}`}
+        data-zoom-active={animClass ? 'true' : 'false'}
         key={innerAnimKey}
         style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
       >
