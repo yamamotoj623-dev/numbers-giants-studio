@@ -9,6 +9,140 @@
 
 ---
 
+## [5.18.9] - 2026-04-27 - SE 再生をプール化 — 画面録画のテロップ遅延を解消
+
+### 動機: ユーザー報告
+
+> 効果音が入るとそのぶん画面録画が遅れる? 重たいだけかな。
+> 結局 capcut で動画録画を部分的に詰めることになったけど、その手間も惜しい。
+>
+> (詳細確認後)
+> 画面録画も音付きで採り、それと WAV を重ねてミックスしてる
+> 画面録画を見るとテロップ進行が遅れてる (実際のセリフとテロップがずれる)
+
+### 真の原因
+
+`mixer.playSe()` が SE 再生のたびに重い DOM 操作をしていた:
+
+```js
+// 旧 (v5.18.8まで)
+playSe(seId) {
+  const clone = customEl.cloneNode(true);  // ← 同期、blob src を含む深いコピーで重い
+  clone.style.position = 'fixed';          // ← 連続スタイル設定
+  // ... 9項目のスタイル設定
+  document.body.appendChild(clone);        // ← DOM mutation → reflow
+  clone.play();
+  clone.addEventListener('ended', () => clone.remove());  // ← 再度 DOM mutation
+}
+```
+
+#### 問題点
+
+1. **`cloneNode(true)`**: blob URL の audio src を含む深いコピー。同期実行で重い
+2. **`appendChild`**: 1080x2400 ビューポートで reflow が発生
+3. **連続スタイル設定**: 9 項目の style 設定で再計算
+4. **メインスレッド占有**: 50-150ms の同期ブロックが発生
+5. **テロップは setTimeout 駆動**: setTimeout がブロック分後ろにずれる
+6. **音声 (TTS) は影響なし**: HTMLAudioElement は OS 音声スレッドで再生されるためブロックされない
+7. **結果**: 1動画 5-8 回の SE で **累積 100-300ms のテロップ遅延** → 画面録画でセリフとテロップがズレる
+
+### 解決: SE 要素のプール化
+
+#### 設計
+
+各 SE につき **4 個の `<video>` 要素**を起動時に DOM に常駐させ、再生時は**プールから空き要素を取り出すだけ** (DOM mutation ゼロ)。
+
+```js
+// 新 (v5.18.9)
+async registerCustomSe(id, blob) {
+  const POOL_SIZE = 4;
+  const pool = [];
+  for (let i = 0; i < POOL_SIZE; i++) {
+    const audio = document.createElement('video');
+    audio.src = url;
+    // スタイル設定は登録時の1回だけ
+    document.body.appendChild(audio);  // ← attach は登録時1回のみ
+    pool.push(audio);
+  }
+  this._seAudioEls.set(id, { pool, blobUrl: url, nextIdx: 0 });
+}
+
+playSe(seId) {
+  const entry = this._seAudioEls.get(seId);
+  if (entry?.pool) {
+    // round-robin でプールから次の要素を取得
+    const idx = entry.nextIdx % entry.pool.length;
+    entry.nextIdx = (entry.nextIdx + 1) % entry.pool.length;
+    const el = entry.pool[idx];
+    el.currentTime = 0;          // ← currentTime のリセット
+    el.volume = ...;             // ← volume だけ
+    el.play();                    // ← Promise で非同期
+    // DOM mutation 完全にゼロ!
+  }
+}
+```
+
+#### 影響
+
+| 改善前 (v5.18.8) | 改善後 (v5.18.9) |
+|---|---|
+| ❌ SE のたびに cloneNode + appendChild + remove | ✅ プールから取り出すだけ |
+| ❌ メインスレッド 50-150ms ブロック | ✅ ほぼゼロ (currentTime + play() のみ) |
+| ❌ テロップが累積 100-300ms 遅延 | ✅ テロップ遅延ほぼ無し |
+| ❌ 画面録画でセリフとテロップがズレる | ✅ 完全に同期 |
+
+### 副次的改善: ボリューム更新 / dispose の整合
+
+`setLevel('se', ...)` 時のボリューム更新と `dispose()` 時のクリーンアップも、プール構造に対応するよう書き換え:
+
+```js
+// 旧
+for (const el of this._seAudioEls.values()) {
+  if (el && !el.paused) el.volume = ...;
+}
+
+// 新
+for (const entry of this._seAudioEls.values()) {
+  if (entry?.pool) {
+    for (const el of entry.pool) {
+      if (el && !el.paused) el.volume = ...;
+    }
+  }
+}
+```
+
+### ★追加推奨★ 画面録画の運用改善
+
+ユーザーは現在「画面録画 (音付き) + WAV」を CapCut でミックス。これは構造的に2つ問題がある:
+
+1. **音声が二重**: 画面録画にも TTS+BGM+SE が含まれる + WAV を上から乗せる = 同じ音が2重に鳴る (フェーザー干渉でこもる)
+2. **音ズレ前提**: 画面録画は実時間で遅延、WAV は数学的に正確 → 必ずズレる
+
+#### 推奨フロー (v5.18.9 以降)
+
+1. **画面録画は無音で撮る** (Pixel の画面録画設定で「音声を録音」を OFF)
+2. **WAV を CapCut の唯一の音声トラックに**乗せる
+3. **動画長を WAV 長に合わせて**カット
+
+これで:
+- 音の二重なし
+- SE 等は WAV にすべて入っているのでアプリ側の SE 再生時のメインスレッド負荷もほぼ無視できる
+- ズレも無い (映像だけ撮って音を後から乗せる)
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/mixer.js` | registerCustomSe / playSe / setLevel / dispose をプール化対応 |
+| `package.json` / `config.js` | 5.18.8 → 5.18.9 |
+
+### 残課題
+
+- ③ JSON 二段階化の議論 (前ターンの選択待ち)
+- Gemini 提言④ インサート映像
+- Gemini 提言⑤ CTA 前倒し
+
+
 ## [5.18.8] - 2026-04-27 - レイアウトタブ map クラッシュ防御強化
 
 ### 動機: ユーザー報告

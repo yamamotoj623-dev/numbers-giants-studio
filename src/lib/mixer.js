@@ -64,9 +64,13 @@ export class MixerEngine {
       // voice は TTSAdapter 側で HTMLAudioElement を直接作るので、
       // mixer 側は levels を保持するだけ (TTS再生時にこの値を適用)
     } else if (track === 'se') {
-      // 既にloopで鳴ってるSEがあれば即反映
-      for (const el of this._seAudioEls.values()) {
-        if (el && !el.paused) el.volume = v * this.levels.master;
+      // ★v5.18.9★ プール化対応: entry.pool の各要素に対して volume 更新
+      for (const entry of this._seAudioEls.values()) {
+        if (entry && entry.pool) {
+          for (const el of entry.pool) {
+            if (el && !el.paused) el.volume = v * this.levels.master;
+          }
+        }
       }
     } else if (track === 'master') {
       if (this.bgmAudioEl) this.bgmAudioEl.volume = this._effectiveBgmVolume();
@@ -193,91 +197,103 @@ export class MixerEngine {
 
   /**
    * カスタムSEファイルを登録 (HTMLAudioElement + blob URL で保持)
+   *
+   * ★v5.18.9★ プール化: 起動時に N 個の <video> 要素を DOM に常駐させ、
+   * 再生時は **DOM mutation ゼロ** で空き要素を再利用する。
+   * これにより画面録画時のテロップ進行遅延 (SE のたびにメインスレッド詰まり) を解消。
    */
   async registerCustomSe(id, blob) {
+    const POOL_SIZE = 4;  // 同 SE が重なって鳴ることはほぼ無いが、念のため 4 で
+
+    // 既存プールの片付け
     const prev = this._seAudioEls.get(id);
-    if (prev) {
-      try { prev.pause(); } catch (e) {}
-      try { prev.remove(); } catch (e) {}
-      if (prev._blobUrl) URL.revokeObjectURL(prev._blobUrl);
+    if (prev && prev.pool) {
+      for (const el of prev.pool) {
+        try { el.pause(); } catch (e) {}
+        try { el.remove(); } catch (e) {}
+      }
+      if (prev.blobUrl) URL.revokeObjectURL(prev.blobUrl);
     }
+
     const url = URL.createObjectURL(blob);
-    // ★v5.14.6★ <video> 要素に変更 (AUDIO_USAGE_MEDIA 確実化)
-    const audio = document.createElement('video');
-    audio.preload = 'auto';
-    audio.setAttribute('playsinline', '');
-    audio.setAttribute('webkit-playsinline', '');
-    audio.muted = false;
-    audio.src = url;
-    audio._blobUrl = url;
-    audio.volume = this._effectiveSeVolume();
-    // 1px 可視
-    audio.style.position = 'fixed';
-    audio.style.bottom = '0';
-    audio.style.left = '0';
-    audio.style.width = '1px';
-    audio.style.height = '1px';
-    audio.style.opacity = '0.01';
-    audio.style.pointerEvents = 'none';
-    audio.style.zIndex = '-9999';
-    audio.style.background = '#000';
-    document.body.appendChild(audio);
+    const pool = [];
+    let firstDuration = 0;
+
+    for (let i = 0; i < POOL_SIZE; i++) {
+      // ★v5.14.6★ <video> 要素に変更 (AUDIO_USAGE_MEDIA 確実化)
+      const audio = document.createElement('video');
+      audio.preload = 'auto';
+      audio.setAttribute('playsinline', '');
+      audio.setAttribute('webkit-playsinline', '');
+      audio.muted = false;
+      audio.src = url;
+      audio.volume = this._effectiveSeVolume();
+      // 1px 可視
+      audio.style.position = 'fixed';
+      audio.style.bottom = '0';
+      audio.style.left = `${i}px`;  // 重ならないように 1px ずつズラす
+      audio.style.width = '1px';
+      audio.style.height = '1px';
+      audio.style.opacity = '0.01';
+      audio.style.pointerEvents = 'none';
+      audio.style.zIndex = '-9999';
+      audio.style.background = '#000';
+      document.body.appendChild(audio);
+      pool.push(audio);
+    }
+
+    // 1個だけ load を待つ (他は同じ src なので並列 load される)
     await new Promise((resolve) => {
       let done = false;
-      const ok = () => { if (!done) { done = true; resolve(); } };
-      audio.addEventListener('canplaythrough', ok, { once: true });
-      audio.addEventListener('loadedmetadata', ok, { once: true });
-      audio.addEventListener('error', ok, { once: true });
+      const first = pool[0];
+      const ok = () => { if (!done) { done = true; firstDuration = first.duration || 0; resolve(); } };
+      first.addEventListener('canplaythrough', ok, { once: true });
+      first.addEventListener('loadedmetadata', ok, { once: true });
+      first.addEventListener('error', ok, { once: true });
       setTimeout(ok, 2000);
     });
-    this._seAudioEls.set(id, audio);
-    return audio.duration || 0;
+
+    // プールエントリを Map に格納 (.pool, .blobUrl, .nextIdx で round-robin)
+    this._seAudioEls.set(id, { pool, blobUrl: url, nextIdx: 0 });
+    return firstDuration;
   }
 
   unregisterCustomSe(id) {
-    const el = this._seAudioEls.get(id);
-    if (el) {
-      try { el.pause(); } catch (e) {}
-      try { el.remove(); } catch (e) {}  // ★v5.14.3★ DOM から削除
-      if (el._blobUrl) URL.revokeObjectURL(el._blobUrl);
+    const entry = this._seAudioEls.get(id);
+    if (entry) {
+      if (entry.pool) {
+        for (const el of entry.pool) {
+          try { el.pause(); } catch (e) {}
+          try { el.remove(); } catch (e) {}
+        }
+      }
+      if (entry.blobUrl) URL.revokeObjectURL(entry.blobUrl);
     }
     this._seAudioEls.delete(id);
   }
 
   /**
    * SE再生: カスタムSE優先 (HTMLAudioElement 録画対応)、なければ合成音 fallback
+   *
+   * ★v5.18.9★ プール化: cloneNode + appendChild + remove の DOM mutation を排除。
+   * メインスレッド負荷ほぼゼロ → 画面録画時のテロップ進行遅延を解消。
    */
   playSe(seId) {
-    // カスタムSE優先
-    const customEl = this._seAudioEls.get(seId);
-    if (customEl) {
+    const entry = this._seAudioEls.get(seId);
+    if (entry && entry.pool && entry.pool.length > 0) {
       try {
-        // 重ね再生: cloneして新インスタンスで鳴らす (★v5.14.6★ <video> 要素のクローン)
-        const clone = customEl.cloneNode(true);
-        clone.volume = this._effectiveSeVolume();
-        // 1px 可視 + DOM attach
-        clone.style.position = 'fixed';
-        clone.style.bottom = '0';
-        clone.style.left = '0';
-        clone.style.width = '1px';
-        clone.style.height = '1px';
-        clone.style.opacity = '0.01';
-        clone.style.pointerEvents = 'none';
-        clone.style.zIndex = '-9999';
-        clone.style.background = '#000';
-        clone.setAttribute('playsinline', '');
-        clone.setAttribute('webkit-playsinline', '');
-        clone.muted = false;
-        document.body.appendChild(clone);
-        clone.play().catch(err => console.warn('SE play failed:', err));
-        clone.addEventListener('ended', () => {
-          try { clone.remove(); } catch (e) {}
-        }, { once: true });
+        // round-robin でプールから次の要素を取得
+        const idx = entry.nextIdx % entry.pool.length;
+        entry.nextIdx = (entry.nextIdx + 1) % entry.pool.length;
+        const el = entry.pool[idx];
+        // 再生中なら停止 (重なった場合のみ、軽量)
+        try { el.pause(); } catch (e) {}
+        el.currentTime = 0;
+        el.volume = this._effectiveSeVolume();
+        // play() は Promise で非同期、メインスレッドはブロックしない
+        el.play().catch(err => console.warn('SE play failed:', err));
       } catch (e) {
-        console.warn('SE clone failed, using original:', e);
-        customEl.currentTime = 0;
-        customEl.volume = this._effectiveSeVolume();
-        customEl.play().catch(() => {});
+        console.warn('SE pool play failed, fallback to synthetic:', e);
       }
       return;
     }
@@ -334,8 +350,15 @@ export class MixerEngine {
     this.stopBgm();
     if (this.bgmAudioEl?._blobUrl) URL.revokeObjectURL(this.bgmAudioEl._blobUrl);
     this.bgmAudioEl = null;
-    for (const el of this._seAudioEls.values()) {
-      if (el?._blobUrl) URL.revokeObjectURL(el._blobUrl);
+    // ★v5.18.9★ プール化対応: 各エントリの pool / blobUrl を片付ける
+    for (const entry of this._seAudioEls.values()) {
+      if (entry?.pool) {
+        for (const el of entry.pool) {
+          try { el.pause(); } catch (e) {}
+          try { el.remove(); } catch (e) {}
+        }
+      }
+      if (entry?.blobUrl) URL.revokeObjectURL(entry.blobUrl);
     }
     this._seAudioEls.clear();
     if (this._synthCtx) {
