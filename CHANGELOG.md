@@ -9,6 +9,73 @@
 
 ---
 
+## [5.18.11] - 2026-04-27 - PWA アイコン PNG 化 (ホーム画面追加でオリジナルアイコン反映)
+
+### 動機: ユーザー報告
+
+> Firefox でホーム画面アプリに追加した。アイコンの設定をお願い。
+
+ホーム画面に追加した時に G党Studio オリジナルアイコンが表示されていなかった。
+原因: `manifest.webmanifest` で SVG だけを指定しており、Firefox/Chrome の PWA は **PNG を期待**するため。
+
+### 修正
+
+#### 1. PNG アイコン生成
+
+`favicon.svg` (イタリック G + ダーク背景 + オレンジ文字) のデザインを忠実に再現:
+- `public/icon-192.png` (192×192) — Android/Firefox 標準サイズ
+- `public/icon-512.png` (512×512) — 高解像度ディスプレイ用
+- `public/icon-512-maskable.png` (512×512) — Android maskable (内側にパディング、ホーム画面で切れない)
+
+#### 2. `manifest.webmanifest` を PNG 優先に書き換え
+
+```json
+{
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
+```
+
+#### 3. `index.html` に apple-touch-icon 追加
+
+```html
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+```
+
+これで iPhone Safari の「ホーム画面に追加」でも正しく表示される。
+
+### ★デプロイ後の手順★
+
+1. `git add . && git commit && git push` で Vercel デプロイ
+2. **既存のホーム画面アイコンを削除** (古いアイコン情報がキャッシュされているため)
+3. 再度 Firefox で URL を開いて「ホーム画面に追加」
+4. オリジナルアイコンで追加されることを確認
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `public/icon-192.png` | ★新規★ |
+| `public/icon-512.png` | ★新規★ |
+| `public/icon-512-maskable.png` | ★新規★ |
+| `public/manifest.webmanifest` | PNG 優先に書き換え |
+| `index.html` | apple-touch-icon + PNG icon link 追加 |
+| `package.json` / `config.js` | 5.18.10 → 5.18.11 |
+
+### 残課題 (次ターン以降)
+
+- ② JSON 分割 (データ/台本) + データ充実
+- ③ レイアウト/グラフ等の細かい手動編集 UI 強化
+- Gemini 提言④ インサート映像
+- Gemini 提言⑤ CTA 前倒し
+
+
 ## [5.18.10] - 2026-04-27 - 合成音 SE → WAV 化 (画面録画でデフォルト SE も拾える)
 
 ### 動機: ユーザー報告
