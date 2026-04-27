@@ -859,8 +859,16 @@ export function TTSPanel({
                           </div>
                         </div>
                         {exportResult.missingScripts.length > 0 && (
-                          <div className="mt-1 text-amber-700">
-                            ⚠️ {exportResult.missingScripts.length} 件の TTS が未生成 (該当部分は無音)
+                          <div className="mt-2 bg-amber-100 border border-amber-300 rounded p-1.5 text-amber-900">
+                            <div className="font-bold mb-0.5">⚠️ {exportResult.missingScripts.length} 件の TTS が未生成 (該当部分は無音)</div>
+                            <div className="text-[9px] mb-1">
+                              「全 scripts」セクションで該当 id を再生成してから書き出してください:
+                            </div>
+                            <div className="text-[9px] font-mono space-y-0.5 max-h-20 overflow-y-auto">
+                              {exportResult.missingScripts.map((m, i) => (
+                                <div key={i}>id:{m.idx} ({m.speaker}) {m.text}</div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>

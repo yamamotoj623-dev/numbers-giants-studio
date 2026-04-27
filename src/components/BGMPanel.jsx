@@ -18,7 +18,14 @@ export function BGMPanel() {
   const [selectedBgmKey, setSelectedBgmKey] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [levels, setLevels] = useState({ voice: 1.0, bgm: 0.15, se: 0.6, master: 1.0 });
+  const [levels, setLevels] = useState(() => {
+    // ★v5.15.5★ localStorage から復元
+    try {
+      const saved = localStorage.getItem('mixer-levels');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return { voice: 1.0, bgm: 0.15, se: 0.6, master: 1.0 };
+  });
   const [duckingAmount, setDuckingAmount] = useState(0.25);
   const [isPreviewingBgm, setIsPreviewingBgm] = useState(false);
   const [stats, setStats] = useState({ count: 0, totalBytes: 0 });
@@ -35,6 +42,10 @@ export function BGMPanel() {
 
   // 起動時: 保存済みBGM一覧を復元
   useEffect(() => {
+    // ★v5.15.5★ localStorage の levels を mixer に反映
+    try {
+      Object.entries(levels).forEach(([track, val]) => mixer.setLevel(track, val));
+    } catch (e) {}
     (async () => {
       try {
         const saved = await listBgms();
@@ -221,14 +232,20 @@ export function BGMPanel() {
     }
   };
 
+  // ★v5.15.5★ レベル変更時に localStorage にも保存 (audioExporter から参照可能に)
   const updateLevel = (track, val) => {
-    setLevels(prev => ({ ...prev, [track]: val }));
+    setLevels(prev => {
+      const next = { ...prev, [track]: val };
+      try { localStorage.setItem('mixer-levels', JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
     mixer.setLevel(track, val);
   };
 
   const updateDucking = (val) => {
     setDuckingAmount(val);
     mixer.setDuckingAmount(val);
+    try { localStorage.setItem('mixer-ducking', String(val)); } catch (e) {}
   };
 
   const formatBytes = (b) => {

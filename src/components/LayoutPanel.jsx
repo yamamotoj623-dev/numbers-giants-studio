@@ -22,6 +22,25 @@ export function LayoutPanel({ projectData, onChange }) {
     onChange(updated);
   };
 
+  // ★v5.15.5★ layoutType を変更する時は、scripts 各要素の layoutType を一括クリア
+  // (LayoutRouter は scripts[i].layoutType を優先するため、UI 側で変えるだけでは反映されない)
+  const setLayoutType = (newType) => {
+    const updated = {
+      ...projectData,
+      layoutType: newType,
+      scripts: (projectData.scripts || []).map(s => {
+        if (!s.layoutType) return s;
+        // 既存の script.layoutType を削除 (削除すると projectData.layoutType に従う)
+        const { layoutType, ...rest } = s;
+        return rest;
+      }),
+    };
+    onChange(updated);
+  };
+
+  // scripts に layoutType 上書きが含まれているか
+  const hasScriptLayoutOverrides = (projectData.scripts || []).some(s => s.layoutType);
+
   return (
     <div className="p-4 space-y-4">
 
@@ -38,7 +57,7 @@ export function LayoutPanel({ projectData, onChange }) {
               <button
                 key={key}
                 disabled={planned}
-                onClick={() => setField('layoutType', key)}
+                onClick={() => setLayoutType(key)}
                 title={info.desc}
                 className={`text-center px-1.5 py-2 rounded-lg border transition ${
                   selected
@@ -380,6 +399,8 @@ function SpotlightDataEditor({ projectData, onChange }) {
   };
 
   const setShowName = (val) => update({ ...spotlight, showPlayerName: val });
+  // ★v5.15.5★ mode 切替
+  const setMode = (val) => update({ ...spotlight, mode: val });
 
   const updatePlayer = (i, field, value) => {
     const players = [...(spotlight.players || [])];
@@ -452,6 +473,36 @@ function SpotlightDataEditor({ projectData, onChange }) {
   return (
     <div className="bg-white p-3 rounded-lg border border-zinc-200 space-y-3">
       <div className="font-bold text-sm text-zinc-700">選手スポット</div>
+
+      {/* ★v5.15.5★ 表示モード切替 */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded p-2">
+        <div className="text-[11px] font-bold text-emerald-800 mb-1.5">
+          表示モード
+          <span className="ml-1.5 text-[10px] font-normal text-emerald-600">→ 現在: {spotlight.mode || 'default'}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {[
+            { val: 'default',       label: '標準',       desc: '主指標+サブ指標 (現状)' },
+            { val: 'single_metric', label: '1指標巨大',  desc: '主指標を超巨大表示' },
+            { val: 'stats_grid',    label: '基本成績',   desc: '指標を等価で網羅' },
+            { val: 'quote',         label: '発言ピック', desc: '選手の発言を大きく' },
+          ].map(opt => (
+            <button
+              key={opt.val}
+              onClick={() => setMode(opt.val)}
+              title={opt.desc}
+              className={`text-[11px] font-bold py-1.5 rounded transition ${
+                (spotlight.mode || 'default') === opt.val
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              {opt.label}
+              <div className="text-[8px] font-normal opacity-80 mt-0.5">{opt.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* 選手名表示トグル */}
       <div className="bg-indigo-50 border border-indigo-200 rounded p-2">
@@ -603,6 +654,27 @@ function SpotlightDataEditor({ projectData, onChange }) {
               placeholder="コメント (任意、画面下部に表示)"
               className="w-full text-[11px] border border-zinc-200 rounded px-1.5 py-1"
             />
+
+            {/* ★v5.15.5★ quote モード用 (発言・出典) */}
+            {(spotlight.mode === 'quote') && (
+              <div className="mt-1 p-2 bg-emerald-50 border border-emerald-200 rounded space-y-1">
+                <div className="text-[10px] font-bold text-emerald-700">発言ピック (quote モード時に使用)</div>
+                <textarea
+                  value={p.quote || ''}
+                  onChange={(e) => updatePlayer(pi, 'quote', e.target.value)}
+                  placeholder="例: 4三振したのが本当に悔しいです、明日また打ちます"
+                  rows={2}
+                  className="w-full text-[11px] border border-emerald-200 rounded px-1.5 py-1 resize-none"
+                />
+                <input
+                  type="text"
+                  value={p.quoteSource || ''}
+                  onChange={(e) => updatePlayer(pi, 'quoteSource', e.target.value)}
+                  placeholder="出典 (例: 試合後インタビュー 4/15)"
+                  className="w-full text-[11px] border border-emerald-200 rounded px-1.5 py-1"
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>

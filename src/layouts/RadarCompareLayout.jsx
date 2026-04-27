@@ -11,6 +11,7 @@
 import React from 'react';
 import { RadarChartSVG } from '../components/RadarChartSVG.jsx';
 import { OutroPanel } from '../components/OutroPanel.jsx';
+import { isEnglishMetric } from '../lib/metricUtils';
 
 export function RadarCompareLayout({ projectData, currentScript, currentIndex, phase = 'normal', animationKey, isPlaying }) {
   if (phase === 'hook') return null;
@@ -128,17 +129,17 @@ function HighlightView({ projectData, comp }) {
 
       {/* ハイライトカード (keyをcomp.idにするとIDが変わった時だけ再マウント、レーダーは維持) */}
       <div className="highlight-card" key={highlightId}>
-        {/* 1行統合ヘッダー */}
+        {/* 1行統合ヘッダー (★v5.15.5★ 英語指標のみ kana/formula) */}
         <div className="hl-header-compact">
           <span className="hl-radar-badge">📊 {comp.radarMatch || comp.label}</span>
           <div className="hl-label-group">
-            <span className="hl-kana-compact">{comp.kana}</span>
+            {isEnglishMetric(comp.label) && comp.kana && <span className="hl-kana-compact">{comp.kana}</span>}
             <span className="hl-label-compact">{comp.label}</span>
           </div>
         </div>
 
-        {/* 計算式 */}
-        {comp.formula && (
+        {/* 計算式 (英語指標のみ) */}
+        {isEnglishMetric(comp.label) && comp.formula && (
           <div className="hl-formula-compact">
             <span className="eq-label">式</span>
             <span className="eq-text">{formatFormula(comp.formula)}</span>

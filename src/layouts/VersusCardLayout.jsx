@@ -92,7 +92,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
   return (
     <>
-      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[34%] px-3">
+      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-10 pb-[40%] px-3">
 
         {/* ヘッダー: 両選手のラベルと VS のみ (装飾バッジ無し) */}
         <div className="z-20 mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -141,30 +141,23 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
               <div
                 key={i}
                 className={`relative px-3 py-2.5 border-b border-zinc-800 last:border-b-0 transition-all duration-300 ${
-                  focused ? 'bg-amber-500/10 animate-pulse-soft' : ''
+                  focused ? 'bg-amber-500/15 animate-pulse-soft ring-2 ring-amber-400/60 rounded-md' : ''
                 }`}
               >
-                {/* ★v5.14.0★ フォーカス時の左側矢印インジケータ */}
+                {/* ★v5.15.5★ フォーカス時は左側矢印 + 行全体ハイライト (テキスト「話題中」は削除) */}
                 {focused && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 text-amber-400 text-[18px] animate-bounce-x">
+                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 text-amber-400 text-[20px] animate-bounce-x drop-shadow-lg">
                     ▶
                   </div>
                 )}
-                {/* ★v5.14.0★ フォーカス時の右上「話題中」バッジ */}
-                {focused && (
-                  <div className="absolute -top-1 right-2 bg-amber-400 text-zinc-900 text-[9px] font-black px-1.5 py-0.5 rounded-full z-30">
-                    話題中
-                  </div>
-                )}
 
-                {/* ラベル中央 */}
-                <div className="text-center mb-1.5">
+                {/* ラベル中央 (★v5.15.5★ kana 削除、縦の間延び解消) */}
+                <div className="text-center mb-1">
                   <span className={`text-[12px] font-black tracking-widest ${
                     focused ? 'text-amber-300' : 'text-zinc-200'
                   }`}>
                     {cat.label}
                   </span>
-                  {cat.kana && <span className="text-[9px] text-zinc-500 ml-1">{cat.kana}</span>}
                 </div>
 
                 {/* ★純粋な数字比較★: main 数値 / 矢印 / sub 数値 */}

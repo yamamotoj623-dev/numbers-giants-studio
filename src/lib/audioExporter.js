@@ -1,12 +1,11 @@
 /**
- * audioExporter.js (★v5.15.2★)
+ * audioExporter.js (★v5.15.4★)
  *
  * 動画用音声トラックをオフライン合成して WAV ファイルとしてダウンロード可能にする。
  *
- * ★v5.15.2 修正★:
- * - SoundTouchJS で TTS のピッチを維持したまま速度変更可能に
- *   (OfflineAudioContext の playbackRate だとピッチが変わる問題を解決)
- * - applySpeechRate=true でも音質劣化なし
+ * ★v5.15.2★ SoundTouchJS で TTS のピッチを維持したまま速度変更可能に
+ * ★v5.15.3★ BGM/SE は IndexedDB + localStorage 直接アクセス (mixer 経由をやめて確実化)
+ * ★v5.15.4★ 合成音 SE フォールバック (カスタム SE 未登録の preset でも音が出るように)
  */
 
 import { getCachedAudio } from './audioCache';
@@ -14,6 +13,48 @@ import { applyYomigana } from './yomigana';
 import { getBgmBlob } from './bgmStorage';
 import { listSes, getSeBlob } from './seStorage';
 import { PitchShifter } from 'soundtouchjs';
+
+/**
+ * ★v5.15.4★ 合成音 SE のプリセット定義 (mixer.js と同期)
+ * カスタム SE が未登録の場合、これらの合成音を OfflineAudioContext で再現する。
+ */
+const SYNTHETIC_SE_PRESETS = {
+  hook_impact:       { freqs: [80, 40],          type: 'sawtooth', attack: 0.01,  release: 0.25, gain: 0.5 },
+  highlight_ping:    { freqs: [880, 1320],       type: 'sine',     attack: 0.005, release: 0.18, gain: 0.3 },
+  stat_reveal:       { freqs: [523, 784],        type: 'triangle', attack: 0.01,  release: 0.22, gain: 0.35 },
+  shock_hit:         { freqs: [200, 100],        type: 'square',   attack: 0.005, release: 0.3,  gain: 0.4 },
+  success_chime:     { freqs: [659, 988, 1319],  type: 'sine',     attack: 0.01,  release: 0.4,  gain: 0.3 },
+  warning_alert:     { freqs: [440, 415],        type: 'square',   attack: 0.01,  release: 0.2,  gain: 0.3 },
+  transition_swoosh: { freqs: [1500, 200],       type: 'sawtooth', attack: 0.02,  release: 0.25, gain: 0.25 },
+  click_tap:         { freqs: [2000],            type: 'square',   attack: 0.001, release: 0.04, gain: 0.2 },
+  radar_ping:        { freqs: [1200],            type: 'sine',     attack: 0.005, release: 0.15, gain: 0.25 },
+  outro_fade:        { freqs: [440, 330, 220],   type: 'sine',     attack: 0.02,  release: 0.6,  gain: 0.3 },
+};
+
+/**
+ * ★v5.15.4★ 合成音 SE を OfflineAudioContext にスケジュール
+ * mixer.js の playSe の合成音ロジックを移植。
+ */
+function scheduleSyntheticSe(offlineCtx, seId, startSec, seVolume) {
+  const preset = SYNTHETIC_SE_PRESETS[seId] || SYNTHETIC_SE_PRESETS.click_tap;
+  const finalGain = preset.gain * seVolume;
+
+  const gain = offlineCtx.createGain();
+  gain.connect(offlineCtx.destination);
+  gain.gain.setValueAtTime(0, startSec);
+  gain.gain.linearRampToValueAtTime(finalGain, startSec + preset.attack);
+  gain.gain.exponentialRampToValueAtTime(0.001, startSec + preset.attack + preset.release);
+
+  preset.freqs.forEach((freq, idx) => {
+    const osc = offlineCtx.createOscillator();
+    osc.type = preset.type;
+    const oscStart = startSec + idx * 0.04;
+    osc.frequency.setValueAtTime(freq, oscStart);
+    osc.connect(gain);
+    osc.start(oscStart);
+    osc.stop(oscStart + preset.attack + preset.release + 0.05);
+  });
+}
 
 /**
  * AudioBuffer を WAV blob に変換 (16bit PCM)
@@ -134,6 +175,15 @@ export async function exportProjectAudio({
     debugLog.push(msg);
     console.log('[audioExporter]', msg);
   };
+
+  // ★v5.15.5★ localStorage から音量レベルを取得 (BGMPanel で設定された最新値)
+  // projectData.audio (固定値) よりも localStorage を優先
+  let mixerLevels = { voice: 1.0, bgm: 0.15, se: 0.6, master: 1.0 };
+  try {
+    const saved = localStorage.getItem('mixer-levels');
+    if (saved) mixerLevels = { ...mixerLevels, ...JSON.parse(saved) };
+  } catch (e) {}
+  log(`音量レベル: voice=${mixerLevels.voice} bgm=${mixerLevels.bgm} se=${mixerLevels.se} master=${mixerLevels.master}`);
 
   const sampleRate = 48000;
   const numChannels = 2;
@@ -259,7 +309,7 @@ export async function exportProjectAudio({
     // playbackRate は使わない (時間伸縮は事前に SoundTouch で済んでる)
 
     const gain = offlineCtx.createGain();
-    gain.gain.value = audio.voiceVolume ?? 1.0;
+    gain.gain.value = mixerLevels.voice * mixerLevels.master;
     source.connect(gain);
     gain.connect(offlineCtx.destination);
     source.start(t.startSec);
@@ -302,7 +352,7 @@ export async function exportProjectAudio({
         // BGM は元の速度のまま (倍速にしない)
 
         const bgmGain = offlineCtx.createGain();
-        const baseBgmVol = audio.bgmVolume ?? 0.15;
+        const baseBgmVol = mixerLevels.bgm * mixerLevels.master;
         const duckVol = baseBgmVol * 0.5;
 
         bgmGain.gain.setValueAtTime(baseBgmVol, 0);
@@ -346,29 +396,34 @@ export async function exportProjectAudio({
     } catch (e) {}
     log(`SE assignment マップ: ${Object.keys(assignments).length} 件`);
 
+    // ★v5.15.4★ カスタム SE 0件でも合成音 fallback を実行する
+    // preset id → blob のマップを構築 (空ならカスタムは使わず全部合成音)
+    const presetToBlob = new Map();
     if (seList.length === 0) {
-      log(`SE 未登録`);
+      log(`カスタム SE 未登録 → 全 SE は合成音 fallback`);
     } else {
-      // preset id → blob のマップを構築
       // assignments[seKey] = presetId なので逆引き
-      const presetToBlob = new Map();
       for (const seMeta of seList) {
         const presetId = assignments[seMeta.key];
         if (!presetId) {
-          log(`  SE ${seMeta.key} (${seMeta.name}) は preset 未割り当て → スキップ`);
+          log(`  SE ${seMeta.key} (${seMeta.name}) は preset 未割り当て → 合成音 fallback`);
           continue;
         }
         const blob = await getSeBlob(seMeta.key);
         if (!blob) {
-          log(`  ⚠️ SE blob 取得失敗 key=${seMeta.key}`);
+          log(`  ⚠️ SE blob 取得失敗 key=${seMeta.key} → 合成音 fallback`);
           continue;
         }
         presetToBlob.set(presetId, blob);
         log(`  SE ${presetId} ← ${seMeta.name} (${blob.size} bytes)`);
       }
-      log(`SE preset マッピング完了: ${presetToBlob.size} preset 利用可能`);
+      log(`SE preset マッピング完了: カスタム ${presetToBlob.size} preset / その他は合成音`);
+    }
 
-      // scripts を順次たどって SE を配置
+    {
+      // scripts を順次たどって SE を配置 (★v5.15.4★ カスタムなければ合成音 fallback)
+      let syntheticCount = 0;
+      const seVolume = mixerLevels.se * mixerLevels.master;
       for (const t of ttsTimings) {
         let scriptCursor = t.startSec;
         const groupTotalChars = t.joinedText.length || 1;
@@ -386,24 +441,39 @@ export async function exportProjectAudio({
                 source.buffer = seBuffer;
                 // SE も元の速度のまま (倍速にしない)
                 const gain = offlineCtx.createGain();
-                gain.gain.value = audio.seVolume ?? 0.6;
+                gain.gain.value = seVolume;
                 source.connect(gain);
                 gain.connect(offlineCtx.destination);
                 source.start(scriptCursor);
                 seAddedCount++;
               } catch (e) {
-                log(`  ⚠️ SE ${seId} decode 失敗: ${e.message}`);
-                seSkippedCount++;
+                log(`  ⚠️ SE ${seId} decode 失敗 → 合成音 fallback`);
+                // 合成音 fallback
+                if (SYNTHETIC_SE_PRESETS[seId]) {
+                  scheduleSyntheticSe(offlineCtx, seId, scriptCursor, seVolume);
+                  syntheticCount++;
+                } else {
+                  seSkippedCount++;
+                }
               }
             } else {
-              seSkippedCount++;
+              // ★v5.15.4★ カスタム SE 未登録 → 合成音 fallback
+              if (SYNTHETIC_SE_PRESETS[seId]) {
+                scheduleSyntheticSe(offlineCtx, seId, scriptCursor, seVolume);
+                syntheticCount++;
+              } else {
+                log(`  ⚠️ SE ${seId} は preset もカスタムもなし → スキップ`);
+                seSkippedCount++;
+              }
             }
           }
           const thisChars = (s.speech || s.text || '').length;
           scriptCursor += (thisChars / groupTotalChars) * groupDuration;
         }
       }
-      log(`✅ SE 配置: ${seAddedCount} 件追加 / ${seSkippedCount} 件スキップ`);
+      log(`✅ SE 配置: カスタム ${seAddedCount} 件 / 合成音 ${syntheticCount} 件 / スキップ ${seSkippedCount} 件`);
+      // seAddedCount に合成音もカウント (UI表示用)
+      seAddedCount += syntheticCount;
     }
   } catch (e) {
     log(`⚠️ SE 取得失敗: ${e.message}`);

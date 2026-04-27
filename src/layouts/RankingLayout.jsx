@@ -41,6 +41,7 @@ import React from 'react';
 import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
+import { isEnglishMetric } from '../lib/metricUtils';
 
 // mood ごとのスタイル定義
 const MOOD_STYLES = {
@@ -163,7 +164,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                     : 'bg-zinc-800/80 text-zinc-400 border border-zinc-700/50'
                 }`}
               >
-                {metric.label}{metric.kana ? `(${metric.kana})` : ''}
+                {metric.label}{isEnglishMetric(metric.label) && metric.kana ? `(${metric.kana})` : ''}
               </button>
             ))}
           </div>
@@ -173,7 +174,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
         <div className="z-20 mb-3 text-center">
           <span className={`text-[18px] font-black ${moodStyle.headerColor || themeClass.text}`}>
             {activeMetric.label}
-            {activeMetric.kana ? <span className="text-[11px] opacity-80 ml-1">{activeMetric.kana}</span> : null}
+            {isEnglishMetric(activeMetric.label) && activeMetric.kana ? <span className="text-[11px] opacity-80 ml-1">{activeMetric.kana}</span> : null}
             <span className="ml-1">{moodStyle.titleSuffix}</span>
           </span>
         </div>

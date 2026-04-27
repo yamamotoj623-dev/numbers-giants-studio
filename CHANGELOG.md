@@ -9,7 +9,333 @@
 
 ---
 
-## [5.15.3] - 2026-04-26 - BGM/SE 取得を IndexedDB 直接アクセスに切替 (確実に動くように)
+## [5.15.5] - 2026-04-26 - UX 8項目修正 (バグ2件 + UI改善6件)
+
+### 動機: ユーザー報告の8項目
+
+> ①対決カードの指標名の読みはいらん。縦に間伸びすぎるから上に詰めて下のテロップエリアは空けた方がいい
+> ②テロップエリアは別に左端は使っていいから、右端に侵食しない程度の幅で
+> ③もえかと数原の名前がアイコンにもうちょい近いもしくはくっつくぐらい
+> ④指標名の強調に「話題中」ってのはダサい。文字不要だから強調されてることがわかれば良さそう
+> ⑤指標名の読みと式は英語の指標名のみ有効でいい
+> ⑥選手フォーカスのレイアウト、何パターンかあるといい
+> ⑦UIでレイアウト変更しても動画に反映されない
+> ⑧音量ミキサーがアウトプットの方で調整できない (変更)
+
+### 修正内容
+
+#### ⑦【バグ修正】レイアウト変更が動画再生に反映されない
+
+**原因**: LayoutRouter は `scripts[i].layoutType` を最優先する仕様。
+Gemini 生成 JSON は最初の script に `layoutType` を持ってることが多く、UIで
+`projectData.layoutType` を変更してもそれが上書きされて反映されなかった。
+
+**修正**: LayoutPanel.jsx に `setLayoutType(newType)` 関数を追加:
+```js
+const setLayoutType = (newType) => {
+  const updated = {
+    ...projectData,
+    layoutType: newType,
+    // ★全 scripts から layoutType を削除して projectData.layoutType に統一
+    scripts: (projectData.scripts || []).map(s => {
+      if (!s.layoutType) return s;
+      const { layoutType, ...rest } = s;
+      return rest;
+    }),
+  };
+  onChange(updated);
+};
+```
+タイル onClick を `setField('layoutType', key)` から `setLayoutType(key)` に変更。
+
+#### ⑧【バグ修正】音量ミキサーが出力 (audioExporter) に反映されない
+
+**原因**: BGMPanel の levels は React state + mixer に直接反映してたが、
+`audioExporter` は `projectData.audio.voiceVolume` (固定値) を見ていたため
+mixer の最新 levels が出力に反映されなかった。
+
+**修正**:
+- BGMPanel: `updateLevel` で localStorage("mixer-levels") に保存、ducking も同様
+- BGMPanel: 初期化時 localStorage から復元、mixer に反映
+- audioExporter: localStorage から `mixerLevels` を取得して使用
+  - `audio.voiceVolume` → `mixerLevels.voice * mixerLevels.master`
+  - `audio.bgmVolume` → `mixerLevels.bgm * mixerLevels.master`
+  - `audio.seVolume` → `mixerLevels.se * mixerLevels.master`
+
+これでミキサーで調整した音量が出力 WAV にもそのまま反映される。
+
+#### ① 対決カードの kana 削除、上に詰める
+
+VersusCardLayout.jsx:
+- `cat.kana` の `<span>` 削除 (縦の間延び解消)
+- `pt-12 → pt-10` (上部 padding 詰める)
+- `pb-[34%] → pb-[40%]` (テロップエリア確保)
+- ラベル中央 `mb-1.5 → mb-1`
+
+#### ② テロップ: 左端使える、右端のセーフゾーンだけ守る
+
+GlobalStyles.jsx の telop padding 調整:
+- speaker-a (数原): `padding-left: 60px / padding-right: 32px`
+- speaker-b (もえか): `padding-left: 14px / padding-right: 60px`
+- `.telop-bg max-width: 240px → 260px` (左端使えるので拡大)
+
+これで左端は使い切れて、右端のジェスチャー領域だけ確保される。
+
+#### ③ アバター名前をアイコンに近づける
+
+GlobalStyles.jsx の `.avatar-hl .avatar-name`:
+- `top: 50px → 40px` (アイコン直下に密着)
+- `font-size: 10px → 9px` (コンパクト化)
+- `padding: 2px 7px → 1px 6px` (高さ詰める)
+- `letter-spacing: 1px → 0.5px`
+
+#### ④ 「話題中」テキスト削除、視覚効果のみ
+
+VersusCardLayout.jsx:
+- 黄色「話題中」バッジ削除
+- 行全体に `ring-2 ring-amber-400/60 + bg-amber-500/15 + animate-pulse-soft` で十分強調
+- 矢印 `▶` は残す (drop-shadow-lg 追加)
+
+PlayerSpotlightLayout.jsx:
+- stat focused の「話題中」バッジ削除
+- boxShadow 強化 + amber 色のみで強調
+
+#### ⑤ kana/formula は英語指標のみ表示
+
+新ファイル `src/lib/metricUtils.js`:
+```js
+export function isEnglishMetric(label) {
+  if (!label) return false;
+  const en = (label.match(/[A-Za-z]/g) || []).length;
+  const ja = (label.match(/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g) || []).length;
+  return en >= 1 && (ja === 0 || en >= ja);
+}
+```
+
+判定:
+- `OPS` (英字3, 日本語0) → 英語指標 ✅ (kana 表示)
+- `K/9` (英字1, 日本語0) → 英語指標 ✅
+- `打率` (英字0, 日本語2) → 日本語指標 ❌ (kana 非表示)
+- `本塁打` (英字0, 日本語3) → 日本語指標 ❌
+- `防御率` → 日本語指標 ❌
+
+適用先:
+- `HighlightCard.jsx`: `showKanaFormula = isEnglishMetric(comp.label)` で kana と formula を条件表示
+- `RadarCompareLayout.jsx`: 同じく条件表示
+- `RankingLayout.jsx`: ボタン文字 / タイトル の kana 条件表示
+- `VersusCardLayout.jsx`: kana を完全削除 (①と統合)
+
+#### ⑥ player_spotlight に4モード追加
+
+新スキーマ:
+```js
+layoutData.spotlight = {
+  mode: 'default' | 'quote' | 'stats_grid' | 'single_metric',  // ★新★
+  showPlayerName: 'auto' | true | false,
+  players: [{
+    primaryStat, stats, comment,
+    quote: '...',           // ★quote モード用★
+    quoteSource: '出典',     // ★quote モード用★
+  }]
+}
+```
+
+##### default (現状)
+primaryStat 巨大 + サブ指標 grid + コメント
+
+##### single_metric (1指標フォーカス)
+- primaryStat の数値を 120px の超巨大表示
+- ラベル + 比較値のみ周辺に配置
+- 「.348」「-0.4」「11.20」などの**衝撃値**を最大限演出
+
+##### stats_grid (基本成績網羅)
+- primaryStat も含めて全指標を等価で grid 表示 (2x2 or 3x2)
+- フォーカスなし、淡々と見せる
+- 「打率/HR/打点/OPS/出塁率/長打率」のような網羅的データ向け
+
+##### quote (発言ピック)
+- 引用記号 (") + 大きな文字でセリフ表示
+- 出典表記 (試合後インタビュー、監督コメント 等)
+- 「腐らずやってきた」のような人間性エピソード向け
+- ★視聴維持率79.69%だった「泉口バケモノ」型コンテンツに最適★
+
+LayoutPanel.jsx の SpotlightDataEditor 拡張:
+- mode 切替トグル (default / 1指標巨大 / 基本成績 / 発言ピック)
+- mode='quote' 時のみ quote / quoteSource フィールドを表示
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/components/LayoutPanel.jsx` | setLayoutType / mode 切替UI / quote フィールド |
+| `src/components/BGMPanel.jsx` | levels を localStorage に永続化 |
+| `src/components/HighlightCard.jsx` | isEnglishMetric で kana/formula 条件表示 |
+| `src/components/GlobalStyles.jsx` | telop padding / avatar-name 詰める |
+| `src/lib/audioExporter.js` | mixerLevels を localStorage から取得 |
+| `src/lib/metricUtils.js` | ★新規★ isEnglishMetric ヘルパー |
+| `src/layouts/VersusCardLayout.jsx` | kana 削除 / 「話題中」削除 / 上に詰める |
+| `src/layouts/PlayerSpotlightLayout.jsx` | 4モード対応 / 「話題中」削除 |
+| `src/layouts/RadarCompareLayout.jsx` | isEnglishMetric 適用 |
+| `src/layouts/RankingLayout.jsx` | isEnglishMetric 適用 |
+
+### 期待される効果
+
+| 改善前 | 改善後 |
+|---|---|
+| ❌ レイアウト変更しても反映されない | ✅ 一発で全 scripts に反映 |
+| ❌ ミキサー変更が出力に出ない | ✅ localStorage 経由で出力にも反映 |
+| ❌ 対決カードが縦に間延び | ✅ 上に詰めて下のテロップエリア確保 |
+| ❌ テロップが画面右端に侵食 | ✅ 左端は使い、右端は 32-60px セーフゾーン |
+| ❌ アバター名がアイコンから離れすぎ | ✅ 40px の距離でアイコン直下密着 |
+| ❌「話題中」バッジがダサい | ✅ 視覚効果のみで十分強調 |
+| ❌ 日本語指標にも冗長な kana 表示 | ✅ 英語指標のみ表示 |
+| ❌ player_spotlight が1パターン固定 | ✅ 4モード (発言/巨大/網羅/標準) で表現の幅 |
+
+### Gemini Custom Gem への運用指示 (今後)
+
+新スキーマ `layoutData.spotlight.mode` の使い分けを Knowledge Files に反映予定:
+- 衝撃データ系 → `single_metric` (「11.20」を画面いっぱい)
+- 人間性エピソード → `quote` (発言ピック)
+- 総合プレイヤー紹介 → `stats_grid` (基本成績網羅)
+- 通常の深掘り → `default` (主指標 + サブ)
+
+
+
+### 動機: v5.15.3 のログから判明した残課題
+
+ユーザー診断ログ:
+```
+✅ BGM 追加成功 (vol=0.15, ducking 適用)
+SE 一覧: 3 件登録済み
+SE assignment マップ: 3 件
+SE hook_impact ← 和太鼓でドドン.mp3 (38592 bytes)
+SE hook_impact ← 和太鼓でドドン.mp3 (38592 bytes)   ← 同じ preset に3回割当?
+SE hook_impact ← 和太鼓でドドン.mp3 (38592 bytes)
+SE preset マッピング完了: 1 preset 利用可能
+✅ SE 配置: 1 件追加 / 22 件スキップ      ← 22件 スキップ!!
+```
+
+> 入りました。効果音はデフォルトのやつが入らないな
+
+カスタム SE は `hook_impact` 1個だけ登録されてて、それ以外の preset (highlight_ping / stat_reveal / shock_hit / success_chime / warning_alert / transition_swoosh / outro_fade 等) は **合成音 fallback** で再生される設計だった。
+ただし audioExporter v5.15.3 ではこの合成音 fallback を再現していなかったので、22件全部スキップされていた。
+
+### 改修内容
+
+#### A. ★最重要★ 合成音 SE を OfflineAudioContext で再現
+
+mixer.js の `playSe` 内の合成音生成ロジック (oscillator + gain envelope) を audioExporter に
+移植。OfflineAudioContext でも同じ合成音が出せるように:
+
+```js
+const SYNTHETIC_SE_PRESETS = {
+  hook_impact:       { freqs: [80, 40],          type: 'sawtooth', attack: 0.01,  release: 0.25, gain: 0.5 },
+  highlight_ping:    { freqs: [880, 1320],       type: 'sine',     attack: 0.005, release: 0.18, gain: 0.3 },
+  stat_reveal:       { freqs: [523, 784],        type: 'triangle', attack: 0.01,  release: 0.22, gain: 0.35 },
+  shock_hit:         { freqs: [200, 100],        type: 'square',   attack: 0.005, release: 0.3,  gain: 0.4 },
+  success_chime:     { freqs: [659, 988, 1319],  type: 'sine',     attack: 0.01,  release: 0.4,  gain: 0.3 },
+  warning_alert:     { freqs: [440, 415],        type: 'square',   attack: 0.01,  release: 0.2,  gain: 0.3 },
+  transition_swoosh: { freqs: [1500, 200],       type: 'sawtooth', attack: 0.02,  release: 0.25, gain: 0.25 },
+  click_tap:         { freqs: [2000],            type: 'square',   attack: 0.001, release: 0.04, gain: 0.2 },
+  radar_ping:        { freqs: [1200],            type: 'sine',     attack: 0.005, release: 0.15, gain: 0.25 },
+  outro_fade:        { freqs: [440, 330, 220],   type: 'sine',     attack: 0.02,  release: 0.6,  gain: 0.3 },
+};
+
+function scheduleSyntheticSe(offlineCtx, seId, startSec, seVolume) {
+  const preset = SYNTHETIC_SE_PRESETS[seId] || SYNTHETIC_SE_PRESETS.click_tap;
+  const finalGain = preset.gain * seVolume;
+
+  const gain = offlineCtx.createGain();
+  gain.connect(offlineCtx.destination);
+  gain.gain.setValueAtTime(0, startSec);
+  gain.gain.linearRampToValueAtTime(finalGain, startSec + preset.attack);
+  gain.gain.exponentialRampToValueAtTime(0.001, startSec + preset.attack + preset.release);
+
+  preset.freqs.forEach((freq, idx) => {
+    const osc = offlineCtx.createOscillator();
+    osc.type = preset.type;
+    const oscStart = startSec + idx * 0.04;
+    osc.frequency.setValueAtTime(freq, oscStart);
+    osc.connect(gain);
+    osc.start(oscStart);
+    osc.stop(oscStart + preset.attack + preset.release + 0.05);
+  });
+}
+```
+
+mixer.js と完全に同じ周波数・envelope なので、オフライン書き出しの合成音は
+リアルタイム再生と聴感上区別がつかない。
+
+#### B. SE 配置ループに合成音 fallback ロジック追加
+
+カスタム SE blob が無い preset は合成音で代替:
+
+```js
+if (seId) {
+  const seBlob = presetToBlob.get(seId);
+  if (seBlob) {
+    // カスタム SE を decode して配置
+    seAddedCount++;
+  } else {
+    // ★v5.15.4★ カスタム SE 未登録 → 合成音 fallback
+    if (SYNTHETIC_SE_PRESETS[seId]) {
+      scheduleSyntheticSe(offlineCtx, seId, scriptCursor, seVolume);
+      syntheticCount++;
+    } else {
+      seSkippedCount++;
+    }
+  }
+}
+```
+
+カスタム SE 0件でも合成音だけ動くように、`if (seList.length === 0)` ブランチも修正。
+
+#### C. ログ強化
+
+```
+✅ SE 配置: カスタム 1 件 / 合成音 22 件 / スキップ 0 件
+```
+
+カスタム/合成音/スキップを別カウントで表示。
+
+#### D. 未生成 TTS の警告強化
+
+`exportResult.missingScripts` の中身を UI に表示し、どの id を再生成すべきか分かるように:
+
+```
+⚠️ 3 件の TTS が未生成 (該当部分は無音)
+「全 scripts」セクションで該当 id を再生成してから書き出してください:
+
+id:3 (A) 数原さん、これって…
+id:6 (A) 直近10試合で見ると…
+id:17 (A) でも気になるのは…
+```
+
+ユーザーは TTSPanel の「全 scripts」セクションで該当 id を再生成 → 再書き出しの流れで完成度を上げられる。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/audioExporter.js` | SYNTHETIC_SE_PRESETS / scheduleSyntheticSe 関数追加 / SE スケジュールに合成音 fallback / import 順整理 |
+| `src/components/TTSPanel.jsx` | 未生成 TTS 警告で id 一覧と再生成導線を表示 |
+
+### 期待される効果
+
+| 改善前 (v5.15.3) | 改善後 (v5.15.4) |
+|---|---|
+| ❌ 合成音 SE が完全にスキップされる (22件無音) | ✅ 合成音 fallback で全 SE が鳴る |
+| ❌ 未生成 TTS の id が画面に出ない | ✅ id 一覧 + 再生成導線を表示 |
+
+### 動作確認手順 (v5.15.4)
+
+1. アプリで動画再生 → 全 scripts の TTS を確認 (未生成があれば再生成)
+2. 「動画用音声をダウンロード」を実行
+3. デバッグログ確認:
+   - `✅ SE 配置: カスタム N 件 / 合成音 M 件 / スキップ 0 件` (スキップが 0 になればOK)
+4. WAV ダウンロード → 再生確認 (全ての SE が鳴る)
+
+
 
 ### 動機: v5.15.2 でも BGM/SE が入らなかった
 

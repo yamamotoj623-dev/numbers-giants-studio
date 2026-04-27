@@ -2,46 +2,34 @@
  * layoutType: player_spotlight (v5)
  * 1選手のデータを「主役感」で見せるレイアウト。
  *
+ * ★v5.15.5★ mode で複数パターン切替:
+ *   - 'default' (or undefined): primaryStat + stats grid (現状)
+ *   - 'quote': 選手の発言・コメントを大きな文字でピック表示
+ *   - 'stats_grid': 基本成績を等価で網羅 (4-6指標、フォーカスなし)
+ *   - 'single_metric': 1指標を画面いっぱいに超巨大表示
+ *
  * v5 改修点 (★v5.14.0★):
  * - showPlayerName: 'auto'|true|false 追加
- *   - 'auto' (or undefined): playerType==='team' なら true、それ以外 false
- *   - true: 選手名・背番号を表示 (期間ラベル下)
- *   - false: 表示しない (ヘッダーで既に表示されてる時に重複防止)
- * - 基本成績の視覚的強調: script.highlight が指す comparison の label と
- *   primaryStat / stats[].label が一致する項目をパルス強調 (迷子防止)
- *
- * v4 (前回) からの継続:
- * - プライマリ指標を画面の「主役」として巨大表示
- * - 比較値併記でドラマ性
- * - サブ指標は補助情報
+ * - 基本成績の視覚的強調
  *
  * layoutData.spotlight スキーマ:
  * {
- *   showPlayerName?: 'auto' | true | false,   // ★v5新★
+ *   mode?: 'default' | 'quote' | 'stats_grid' | 'single_metric',  // ★v5.15.5新★
+ *   showPlayerName?: 'auto' | true | false,
  *   players: [
  *     {
  *       id: "okamoto",
  *       label: "26年(今季)",
- *       name?: "岡本和真",          // ★showPlayerName=true 時に使用★
- *       number?: "25",              // ★showPlayerName=true 時に使用★
- *       primaryStat: {
- *         label: "WAR",
- *         value: "-0.4",
- *         isNegative: true,
- *         compareValue?: { value: "0.0", label: "セ平均" }
- *       },
- *       stats: [
- *         { label: "打率",  value: ".220" },
- *         { label: "対佐野", value: ".348" }   // ★Geminiが柔軟にカスタム可★
- *       ],
- *       comment: "..."
+ *       name?: "岡本和真",
+ *       number?: "25",
+ *       primaryStat: { label, value, isNegative, compareValue? },  // default / single_metric
+ *       stats: [{ label, value }, ...],                             // default / stats_grid
+ *       quote?: "...",                                              // quote モード用 (発言)
+ *       quoteSource?: "監督インタビュー (4/15)",                     // quote の出典
+ *       comment?: "..."
  *     }
  *   ]
  * }
- *
- * ※ team 動画 (playerType="team") の場合: ヘッダーが「読売ジャイアンツ」になるので
- *    showPlayerName=true で「岡本和真」など個別選手名を画面内に表示する。
- *    その他の動画 (個人深掘り等) はヘッダーに既に選手名があるので showPlayerName=false。
  */
 
 import React from 'react';
@@ -143,9 +131,12 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   const primaryFocused = focusedLabel && statMatches(player.primaryStat?.label, focusedLabel);
   const isStatFocused = (statLabel) => focusedLabel && statMatches(statLabel, focusedLabel);
 
+  // ★v5.15.5★ mode 解決 (default | quote | stats_grid | single_metric)
+  const mode = data.mode || 'default';
+
   return (
     <>
-      <div key={`zoom-${animationKey}-${player.id || 'p'}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[34%] px-3">
+      <div key={`zoom-${animationKey}-${player.id || 'p'}-${mode}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[34%] px-3">
 
         {/* スポットライト感の背景 */}
         <div className="absolute inset-0 pointer-events-none" style={{
@@ -173,100 +164,199 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
           </div>
         )}
 
-        {/* ★プライマリ指標★ 画面のメイン主役、巨大表示 */}
-        {player.primaryStat && (
-          <div
-            className={`z-20 mb-4 bg-zinc-900/78 rounded-2xl p-4 backdrop-blur-sm relative overflow-hidden transition-all duration-300 ${
-              primaryFocused
-                ? 'border-[3px] border-amber-400/80 scale-[1.02] animate-pulse-soft'
-                : 'border-2 border-zinc-700/60'
-            }`}
-            style={{ boxShadow: primaryFocused
-              ? `0 0 40px ${themeClass.glow}80, 0 0 16px rgba(251,191,36,0.5)`
-              : `0 0 32px ${themeClass.glow}40` }}
-          >
-            {/* 装飾: 背景に薄くラベル文字 */}
-            <div className="absolute -top-3 right-2 text-[42px] font-black opacity-[0.06] leading-none select-none pointer-events-none"
-                 style={{ color: themeClass.primary }}>
+        {/* ★v5.15.5★ mode 別本体 */}
+        {mode === 'quote' && (
+          <div className="z-20 flex-1 flex flex-col items-center justify-center px-2">
+            {/* 引用記号 装飾 */}
+            <div className="text-[80px] leading-none opacity-20 -mb-4 select-none" style={{ color: themeClass.primary }}>
+              "
+            </div>
+            <div className="text-[20px] font-black text-white text-center leading-snug px-3 py-2"
+                 style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+              {player.quote || player.comment || '(発言が登録されていません)'}
+            </div>
+            <div className="text-[60px] leading-none opacity-20 self-end -mt-4 mr-4 select-none" style={{ color: themeClass.primary }}>
+              "
+            </div>
+            {player.quoteSource && (
+              <div className={`mt-4 text-[10px] font-bold tracking-wider ${themeClass.text} opacity-80`}>
+                — {player.quoteSource}
+              </div>
+            )}
+          </div>
+        )}
+
+        {mode === 'single_metric' && player.primaryStat && (
+          <div className="z-20 flex-1 flex flex-col items-center justify-center">
+            <div className={`text-[16px] font-black tracking-widest mb-2 ${themeClass.text}`}>
               {player.primaryStat.label}
             </div>
+            <div
+              className={`font-mono font-black tracking-tighter leading-none ${
+                isNeg ? 'text-red-400' : themeClass.text
+              }`}
+              style={{
+                fontSize: '120px',
+                textShadow: isNeg
+                  ? '0 0 40px rgba(248,113,113,0.8), 0 4px 8px rgba(0,0,0,0.9)'
+                  : `0 0 40px ${themeClass.glow}, 0 4px 8px rgba(0,0,0,0.9)`,
+              }}
+            >
+              {player.primaryStat.value}
+            </div>
+            {compareValue && (
+              <div className="mt-4 text-center">
+                <span className="text-[12px] text-zinc-500 mr-2">{compareValue.label}:</span>
+                <span className="text-[20px] font-mono font-bold text-zinc-300">{compareValue.value}</span>
+              </div>
+            )}
+          </div>
+        )}
 
-            {/* ★v5.14.0★ フォーカス時の左側矢印インジケータ */}
-            {primaryFocused && (
-              <div className="absolute -left-1 top-1/2 -translate-y-1/2 text-amber-400 text-[20px] animate-bounce-x">
-                ▶
+        {mode === 'stats_grid' && (
+          <div className="z-20 flex-1 flex flex-col justify-center">
+            <div className={`grid gap-2 ${displayStats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {/* primaryStat も等価で grid 内に取り込む */}
+              {player.primaryStat && (
+                <div
+                  key="_primary"
+                  className="bg-zinc-900/78 rounded-lg p-3 backdrop-blur-sm border border-zinc-700/50 relative overflow-hidden"
+                  style={{ boxShadow: `0 0 16px ${themeClass.glow}30` }}
+                >
+                  <div className={`text-[11px] font-black tracking-widest mb-1 ${themeClass.text}`}>
+                    {player.primaryStat.label}
+                  </div>
+                  <div className={`text-[26px] font-mono font-black tracking-tighter ${
+                    isNeg ? 'text-red-400' : 'text-white'
+                  }`}>
+                    {player.primaryStat.value}
+                  </div>
+                  {compareValue && (
+                    <div className="text-[9px] text-zinc-500 mt-0.5">
+                      {compareValue.label}: {compareValue.value}
+                    </div>
+                  )}
+                </div>
+              )}
+              {displayStats.map((stat, i) => (
+                <div
+                  key={i}
+                  className="bg-zinc-900/78 rounded-lg p-3 backdrop-blur-sm border border-zinc-700/50"
+                >
+                  <div className="text-[11px] font-black text-zinc-300 tracking-widest mb-1">
+                    {stat.label}
+                  </div>
+                  <div className="text-[24px] font-mono font-black tracking-tighter text-white">
+                    {stat.value}
+                  </div>
+                  {stat.sub && <div className="text-[9px] text-zinc-500 mt-0.5">{stat.sub}</div>}
+                </div>
+              ))}
+            </div>
+            {player.comment && (
+              <div className={`mt-3 bg-zinc-900/78 border-l-4 ${themeClass.border} rounded p-2 backdrop-blur-sm`}>
+                <div className="text-[11px] font-bold text-zinc-200 leading-snug">{player.comment}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ★default モード★ 既存の primaryStat 巨大 + stats grid */}
+        {mode === 'default' && (
+          <>
+            {/* ★プライマリ指標★ 画面のメイン主役、巨大表示 */}
+            {player.primaryStat && (
+              <div
+                className={`z-20 mb-4 bg-zinc-900/78 rounded-2xl p-4 backdrop-blur-sm relative overflow-hidden transition-all duration-300 ${
+                  primaryFocused
+                    ? 'border-[3px] border-amber-400/80 scale-[1.02] animate-pulse-soft'
+                    : 'border-2 border-zinc-700/60'
+                }`}
+                style={{ boxShadow: primaryFocused
+                  ? `0 0 40px ${themeClass.glow}80, 0 0 16px rgba(251,191,36,0.5)`
+                  : `0 0 32px ${themeClass.glow}40` }}
+              >
+                {/* 装飾: 背景に薄くラベル文字 */}
+                <div className="absolute -top-3 right-2 text-[42px] font-black opacity-[0.06] leading-none select-none pointer-events-none"
+                     style={{ color: themeClass.primary }}>
+                  {player.primaryStat.label}
+                </div>
+
+                {/* ★v5.14.0★ フォーカス時の左側矢印インジケータ */}
+                {primaryFocused && (
+                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 text-amber-400 text-[20px] animate-bounce-x">
+                    ▶
+                  </div>
+                )}
+
+                <div className="relative flex items-end justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[12px] font-black text-zinc-300 tracking-widest mb-1">
+                      {player.primaryStat.label}
+                    </span>
+                    {/* ★巨大数値★ */}
+                    <span className={`text-[60px] font-mono font-black tracking-tighter leading-none ${
+                      isNeg ? 'text-red-400' : themeClass.text
+                    }`} style={{
+                      textShadow: isNeg
+                        ? '0 0 24px rgba(248,113,113,0.7), 0 2px 4px rgba(0,0,0,0.8)'
+                        : `0 0 24px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)`
+                    }}>
+                      {player.primaryStat.value}
+                    </span>
+                  </div>
+
+                  {/* 比較値 (右下) */}
+                  {compareValue && (
+                    <div className="flex flex-col items-end pb-2">
+                      <span className="text-[10px] font-bold text-zinc-500 tracking-wider mb-0.5">
+                        {compareValue.label}
+                      </span>
+                      <span className="text-[24px] font-mono font-bold text-zinc-300">
+                        {compareValue.value}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            <div className="relative flex items-end justify-between">
-              <div className="flex flex-col">
-                <span className="text-[12px] font-black text-zinc-300 tracking-widest mb-1">
-                  {player.primaryStat.label}
-                </span>
-                {/* ★巨大数値★ */}
-                <span className={`text-[60px] font-mono font-black tracking-tighter leading-none ${
-                  isNeg ? 'text-red-400' : themeClass.text
-                }`} style={{
-                  textShadow: isNeg
-                    ? '0 0 24px rgba(248,113,113,0.7), 0 2px 4px rgba(0,0,0,0.8)'
-                    : `0 0 24px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)`
-                }}>
-                  {player.primaryStat.value}
-                </span>
-              </div>
-
-              {/* 比較値 (右下) */}
-              {compareValue && (
-                <div className="flex flex-col items-end pb-2">
-                  <span className="text-[10px] font-bold text-zinc-500 tracking-wider mb-0.5">
-                    {compareValue.label}
-                  </span>
-                  <span className="text-[24px] font-mono font-bold text-zinc-300">
-                    {compareValue.value}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* サブ指標グリッド */}
-        {displayStats.length > 0 && (
-          <div className={`z-20 grid gap-1.5 mb-2 ${displayStats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-            {displayStats.map((stat, i) => {
-              const focused = isStatFocused(stat.label);
-              return (
-                <div
-                  key={i}
-                  className={`bg-zinc-900/78 rounded-lg p-2 backdrop-blur-sm transition-all duration-300 relative ${
-                    focused
-                      ? 'border-2 border-amber-400/80 scale-105 animate-pulse-soft'
-                      : 'border border-zinc-700/50'
-                  }`}
-                  style={focused ? { boxShadow: '0 0 16px rgba(251,191,36,0.5)' } : {}}
-                >
-                  {/* フォーカス時の右上マーク */}
-                  {focused && (
-                    <div className="absolute -top-2 -right-2 bg-amber-400 text-zinc-900 text-[9px] font-black px-1.5 py-0.5 rounded-full">
-                      話題中
+            {/* サブ指標グリッド */}
+            {displayStats.length > 0 && (
+              <div className={`z-20 grid gap-1.5 mb-2 ${displayStats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                {displayStats.map((stat, i) => {
+                  const focused = isStatFocused(stat.label);
+                  return (
+                    <div
+                      key={i}
+                      className={`bg-zinc-900/78 rounded-lg p-2 backdrop-blur-sm transition-all duration-300 relative ${
+                        focused
+                          ? 'border-2 border-amber-400/80 scale-105 animate-pulse-soft'
+                          : 'border border-zinc-700/50'
+                      }`}
+                      style={focused ? { boxShadow: '0 0 20px rgba(251,191,36,0.6), 0 0 8px rgba(251,191,36,0.4)' } : {}}
+                    >
+                      {/* ★v5.15.5★ フォーカス時は枠 + scale + amber 色のみ (テキスト「話題中」削除) */}
+                      <div className={`text-[10px] font-black tracking-widest mb-0.5 ${
+                        focused ? 'text-amber-300' : 'text-zinc-300'
+                      }`}>{stat.label}</div>
+                      <div className={`text-[18px] font-mono font-black tracking-tighter ${
+                        focused ? 'text-amber-300' : 'text-white'
+                      }`}>{stat.value}</div>
+                      {stat.sub && <div className="text-[9px] text-zinc-500">{stat.sub}</div>}
                     </div>
-                  )}
-                  <div className="text-[10px] font-black text-zinc-300 tracking-widest mb-0.5">{stat.label}</div>
-                  <div className={`text-[18px] font-mono font-black tracking-tighter ${
-                    focused ? 'text-amber-300' : 'text-white'
-                  }`}>{stat.value}</div>
-                  {stat.sub && <div className="text-[9px] text-zinc-500">{stat.sub}</div>}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  );
+                })}
+              </div>
+            )}
 
-        {/* コメント */}
-        {player.comment && (
-          <div className={`z-20 bg-zinc-900/78 border-l-4 ${themeClass.border} rounded p-2 backdrop-blur-sm`}>
-            <div className="text-[11px] font-bold text-zinc-200 leading-snug">{player.comment}</div>
-          </div>
+            {/* コメント */}
+            {player.comment && (
+              <div className={`z-20 bg-zinc-900/78 border-l-4 ${themeClass.border} rounded p-2 backdrop-blur-sm`}>
+                <div className="text-[11px] font-bold text-zinc-200 leading-snug">{player.comment}</div>
+              </div>
+            )}
+          </>
         )}
 
       </div>

@@ -352,17 +352,16 @@ const CSS_TEXT = `
 
   /* デフォルト配置=中央 */
   .telop-wrap-normal, .telop-wrap-hl { align-items: center; }
-  /* ★v5.15.2★ speaker-a (数原) が喋る場合: より左寄り、右側にセーフゾーン確保
-     旧: padding-left:70px / padding-right:14px (右セーフゾーン狭い)
-     新: padding-left:62px / padding-right:36px (右側により余裕、Pixelの右端通知やジェスチャー領域回避)
-     max-width も 270px → 240px に絞って画面右端への侵食を防止 */
+  /* ★v5.15.5★ 左端は使っていい、右端のセーフゾーンだけ守る方針
+     speaker-a (数原): アバターの右に少し余裕入れて、右側はジェスチャー領域確保 */
   .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 62px; padding-right: 36px; }
-  /* speaker-b (もえか): 対称に左に余裕 */
+  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 60px; padding-right: 32px; }
+  /* speaker-b (もえか): 右側のセーフゾーン確保 */
   .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 36px; padding-right: 62px; }
+  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 14px; padding-right: 60px; }
 
-  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 240px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+  /* ★v5.15.5★ max-width を 260px に拡大 (左端は使えるので横幅取れる) */
+  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 260px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
 
   /* speaker-a: オレンジ枠 */
   .telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); box-shadow: 0 4px 16px rgba(249,115,22,0.35), 0 0 24px rgba(249,115,22,0.15); }
@@ -594,19 +593,19 @@ const CSS_TEXT = `
   .avatar-hl.b.active .circle { border-color: var(--rose); box-shadow: 0 0 16px rgba(251,113,133,0.6); }
   .avatar-hl .emoji { font-size: 22px; line-height: 1; }
 
-  /* ★アバター名ラベル (v5.11.5 新規) — 数原 / もえか をアイコン下に表示★ */
+  /* ★アバター名ラベル (v5.15.5 修正) — アイコン直下に近づける&セーフエリア対策 */
   .avatar-hl .avatar-name {
     position: absolute;
-    top: 50px;
+    top: 40px;             /* 旧 50px → 40px (アイコン直下に密着) */
     left: 50%;
     transform: translateX(-50%);
-    font-size: 10px;
+    font-size: 9px;        /* 旧 10px → 9px (コンパクト化) */
     font-weight: 900;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     white-space: nowrap;
-    background: rgba(24,24,27,0.85);
-    padding: 2px 7px;
-    border-radius: 8px;
+    background: rgba(24,24,27,0.92);
+    padding: 1px 6px;      /* 旧 2px 7px → 1px 6px (高さ詰める) */
+    border-radius: 6px;
     backdrop-filter: blur(6px);
     transition: all 0.3s;
   }
