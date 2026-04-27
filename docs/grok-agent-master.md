@@ -51,6 +51,9 @@ hook 「{13字以内}」
 ### 構造
 - scripts 25-30個、60秒未満、末尾は二択疑問
 - 2-3レイアウト切替 (15秒間隔、意味ある時のみ)
+- ★v5.18★ トップレベルに `smartLoop: true` を入れる (デフォルト推奨)
+  → アウトロ静止画は出ないので、末尾→冒頭がシームレスに繋がる締めにする
+  → outroCta は省略可 (表示されない)
 
 ### playerType/silhouette
 - batter: right/left/stance/runner
@@ -69,6 +72,24 @@ hook 「{13字以内}」
 - valSub・layoutDataは実数 (丸めNG、「.267(セ平均)」OK)
 - ranking 5人なら player_spotlight で深掘り
 - timeline 最低3点
+
+### ★v5.18★ 新スキーマ要素
+
+#### player_spotlight.mode (4種)
+- `default` (省略時): 主指標+サブ指標の標準
+- `single_metric`: 衝撃の1指標を画面いっぱいに (「対佐野 .348」など驚き系)
+- `stats_grid`: 基本成績を等価で網羅 (フォーカスなし)
+- `quote`: 選手の発言ピック (`quote` + `quoteSource` 必須、人間性エピソード向け)
+
+#### script.zoomBoost (1動画 2-3 箇所まで)
+- `"zoom"`: ポジティブ衝撃 (「OPS .950超え」)
+- `"shake"`: ネガティブ驚き (「実は防御率11.20」)
+- `"zoomShake"`: オチ直前の最大盛り上げ (「覚醒の理由は…」)
+- ★id:1 (hook) には不要★ — 自動でフラッシュ + hook_impact SE が入る
+
+#### versus_card の kana は不要
+- `categoryScores[].kana` は v5.15.5 で表示廃止、出力に含めても無視される
+- 出力する必要なし (省略推奨)
 
 ## データ取得
 - 訓練データ禁止、web_search/x_search で最新+URL明記、推測禁止
@@ -90,6 +111,9 @@ hook 「{13字以内}」
 6. speech 難読語ひらがな化、★yomigana 必参照★
 7. ★valSub 実数値 (丸めるNG)★
 8. ★ranking 5人なら spotlight で深掘り★、★timeline 最低3点★
+9. ★v5.18★ smartLoop: true で末尾→冒頭が違和感なく繋がる締めか?
+10. ★v5.18★ zoomBoost が 2-3 箇所以内? (乱用NG、id:1には不要)
+11. ★v5.18★ player_spotlight 使う時、テーマに合った mode 選択? (衝撃データ→single_metric / 発言→quote / 通常→default)
 
 ## 禁止
 - 感情論で曖昧化、訓練データ記憶ベースの数字、完璧主義の遅延

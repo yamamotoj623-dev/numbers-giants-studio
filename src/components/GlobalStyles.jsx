@@ -467,31 +467,33 @@ const CSS_TEXT = `
 
   /* デフォルト配置=中央 */
   .telop-wrap-normal, .telop-wrap-hl { align-items: center; }
-  /* ★v5.15.5★ 左端は使っていい、右端のセーフゾーンだけ守る方針
-     speaker-a (数原): アバターの右に少し余裕入れて、右側はジェスチャー領域確保 */
+  /* ★v5.18.1★ テロップは bottom:20% の位置にあり、アバター(bottom:13% +高さ85px≒17%) より上にあるので
+     左端まで使ってよい。アバターの真上を通過しても重ならない。
+     - speaker-a (数原): 左端〜右端32pxまで使える
+     - speaker-b (もえか): 左端14px〜右端60px (Shorts右UI回避) */
   .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 60px; padding-right: 32px; }
+  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 8px; padding-right: 32px; }
   /* speaker-b (もえか): 右側のセーフゾーン確保 */
   .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 14px; padding-right: 60px; }
+  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 8px; padding-right: 60px; }
 
-  /* ★v5.15.5★ max-width を 260px に拡大 (左端は使えるので横幅取れる) */
-  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 260px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+  /* ★v5.18.1★ max-width を 280px に拡大 (左端使えるので幅取れる) */
+  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 280px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
 
-  /* speaker-a: オレンジ枠 */
-  .telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); box-shadow: 0 4px 16px rgba(249,115,22,0.35), 0 0 24px rgba(249,115,22,0.15); }
-  /* speaker-b: 水色枠 */
+  /* ★v5.18.1★ speaker-a (数原): オレンジ→青系へ (オレンジは数値強調用に取っておく) */
+  .telop-bg[data-speaker="a"] { border-color: rgba(56,189,248,0.85); box-shadow: 0 4px 16px rgba(56,189,248,0.4), 0 0 24px rgba(56,189,248,0.2); }
+  /* speaker-b (もえか): ローズピンク枠 (変更なし) */
   .telop-bg[data-speaker="b"] { border-color: rgba(251,113,133,0.85); box-shadow: 0 4px 16px rgba(251,113,133,0.35), 0 0 24px rgba(251,113,133,0.15); }
 
   /* 吹き出し尻尾: 話者アバター方向に出す */
   .telop-bg::before, .telop-bg::after { content: ''; position: absolute; width: 0; height: 0; border-style: solid; display: none; }
 
-  /* speaker-a: 左下尻尾(アナリストアバターに向かう) */
+  /* ★v5.18.1★ speaker-a: 尻尾も青系に */
   .telop-bg[data-speaker="a"]::before {
     display: block;
     left: 22px; bottom: -14px;
     border-width: 14px 12px 0 0;
-    border-color: rgba(249,115,22,0.85) transparent transparent transparent;
+    border-color: rgba(56,189,248,0.85) transparent transparent transparent;
   }
   .telop-bg[data-speaker="a"]::after {
     display: block;

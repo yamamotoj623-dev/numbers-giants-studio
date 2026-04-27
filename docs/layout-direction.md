@@ -263,13 +263,15 @@
   ...
 ```
 
-#### スキーマ (v4 シンプル)
+#### スキーマ (★v5.15.5★ kana削除、上に詰めた)
 ```
 {
   categoryScores: [
-    { label, kana?, rawMain, rawSub, lowerBetter? }
+    { label, rawMain, rawSub, lowerBetter? }
   ]
 }
+// ★v5.15.5★ kana は表示されなくなった (縦の間延び解消、上に詰めて下のテロップエリア確保)
+//   → 出力に含めても無視される。Gemini は出力しなくてOK
 // overall, mood, main/sub (0-100) は廃止 (互換性のため受け取るが無視)
 ```
 
@@ -285,9 +287,10 @@
 **設計原則**: **「対決感」は装飾ではなく、数字のコントラストで生まれる。** 余計な装飾は全部ノイズ。
 
 #### ★v5.14.0★ 行強調 (基本成績の迷子防止)
-`script.highlight` の comparison ラベルと一致する行は**パルス強調**+「話題中」バッジ:
-- categoryScores[].label が一致 → その行が脈動 + 数字フォントが 26px → 30px に拡大
+`script.highlight` の comparison ラベルと一致する行は **視覚効果のみで強調** (枠+ハイライト):
+- categoryScores[].label が一致 → その行が脈動 + 数字が 28px → 34px に拡大
 - A が「井上は驚異の【11.20】」と話してる時、K/9 行が一目で見つかる
+- ★v5.15.5★ 「話題中」テキストバッジは削除 (視覚効果のみで強調)
 - comparison ラベルとの一致は完全一致 or 双方向部分一致 (case-insensitive)
 
 ---
@@ -507,10 +510,11 @@ primaryStat.compareValue で「リーグ平均」「セ平均」「同年齢の 
 - 単独の数字より比較値ありの方が物語性が強い
 
 #### ★v5.14.0★ 行強調 (基本成績の迷子防止)
-`script.highlight` の comparison ラベルと一致する指標は**パルス強調**+「話題中」バッジ表示:
+`script.highlight` の comparison ラベルと一致する指標は **視覚効果のみで強調** (枠+scale+amber発光):
 - primaryStat.label が一致 → 中央の主役カードが脈動
 - stats[].label が一致 → 該当サブ指標カードが脈動
 - これで A が話している指標が**一目瞭然**
+- ★v5.15.5★ 「話題中」テキストバッジは削除 (視覚効果だけで十分強調)
 
 #### ★v5.14.0★ Geminiが指標を柔軟にカスタムできる
 固定の打率/OPS/HR ではなく、**動画テーマに合わせて自由設定**:
@@ -520,16 +524,36 @@ primaryStat.compareValue で「リーグ平均」「セ平均」「同年齢の 
 - 「無死1塁時打率」 (.380)
 これがチャンネルの強み「観察を肯定する」に直結する。
 
-#### データスキーマ (v5)
+#### ★v5.15.5★ 表現モード (4種) — テーマに合わせて使い分ける
+
+`spotlight.mode` で表示パターンを切替。**動画の狙い**で選ぶ:
+
+| mode | 用途 | 必須フィールド | 効果 |
+|---|---|---|---|
+| `default` (省略時) | 通常の深掘り | primaryStat + stats | 主指標巨大 + サブ4個 (現状の標準) |
+| `single_metric` | 衝撃データを際立たせる | primaryStat | **140pxの極太ネオン数値で画面いっぱい**。「.348」「11.20」「-0.4」など驚き系の1指標に最適 |
+| `stats_grid` | 総合的な選手紹介 | primaryStat + stats (3-5個) | 全指標を等価で grid 表示。フォーカスなし、淡々と網羅 |
+| `quote` | 人間性エピソード | quote + quoteSource | 引用記号付きで発言を大きく表示。「腐らずやってきた」のような言葉ピックに最適 |
+
+★mode 選択ガイド:
+- 「対佐野 .348」のような**シンプル衝撃データ** → `single_metric` (Gemini提言「一点突破型UI」に対応)
+- 「打率/HR/OPS/打点で見ると…」のような**横並び紹介** → `stats_grid`
+- 「監督が『腐らず練習し続けた』とコメント」のような**人間性ピック** → `quote`
+- 上記に当てはまらない一般の深掘り → `default` (省略でOK)
+
+#### データスキーマ (v5.15.5)
 ```
 layoutData.spotlight = {
-  showPlayerName?: 'auto' | true | false,    // ★v5新★
+  mode?: 'default' | 'single_metric' | 'stats_grid' | 'quote',  // ★v5.15.5新★
+  showPlayerName?: 'auto' | true | false,
   players: [{
     id, label,
-    name?, number?,                           // ★v5新: showPlayerName=true 時に使用★
-    primaryStat: { label, value, isNegative, compareValue? },
-    stats: [{label, value}, ...],
-    comment?
+    name?, number?,
+    primaryStat: { label, value, isNegative, compareValue? },   // default / single_metric / stats_grid
+    stats: [{label, value}, ...],                                // default / stats_grid
+    comment?,
+    quote?: '...',                                                // ★v5.15.5新★ quote モード用
+    quoteSource?: '出典 (例: 試合後インタビュー 4/15)',           // ★v5.15.5新★
   }]
 }
 ```

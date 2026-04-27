@@ -9,7 +9,127 @@
 
 ---
 
-## [5.18.0] - 2026-04-27 - Gemini提言1の残り3項目: キーフレームアニメ + 冒頭フラッシュ + 無限ループ
+## [5.18.1] - 2026-04-27 - UX 5項目修正 (アニメ再発火バグ + 数原色変更 + レイアウト微調整)
+
+### 動機: ユーザー報告 5項目
+
+> ① 数原のテロップ枠線は青系がいいかな
+> ② 同じレイアウト・指標が続くときにアニメーションが毎回発火するバグが起きてる
+> ③ 対決カードはテロップエリアにかからない程度にもう少し下スペースを空けて上に詰めた方がいい
+> ④ 選手スポットの各レイアウトも画面中央ではなくて少し上寄りにしてテロップで隠れないように
+> ⑤ テキストテロップが左端まで使っていいと思うけど
+
+### ②【最重要バグ修正】アニメーションが毎回再発火する問題
+
+#### 原因
+
+v5.18.0 の LayoutRouter で、wrapper の `key` を以下のように設定していた:
+```js
+const animKey = `${animClass}-${currentIndex}-${animationKey}`;
+```
+
+これだと `currentIndex` が変わるたびに wrapper の `key` が変わり、**zoomBoost を指定していない script でも子レイアウトが毎回 remount** していた。結果、同じレイアウト・指標が続いている時でもチャート/数値/フェードイン等の演出が毎 script ごとに再発火し、目障りな状態に。
+
+#### 修正
+
+**zoomBoost 指定がある時だけ key を更新する** ロジックに変更:
+```js
+const animKey = animClass
+  ? `${animClass}-${currentIndex}-${props.animationKey || 0}`  // 指定あり: 該当 script で remount
+  : 'stable';                                                   // 指定なし: 固定 key で remount しない
+```
+
+これで:
+- zoomBoost 未指定の通常 script → wrapper は維持、子レイアウトの内部 state とアニメは継続
+- zoomBoost 指定あり script → その時だけ remount してアニメ発火
+
+副次効果として、同じレイアウト・指標が続く時のチャート/数値/フェードイン演出も**初回のみ**発火するようになる (本来の意図通りの挙動)。
+
+### ① 数原(A)のテロップ枠線をオレンジ→青系に
+
+オレンジは「重要数値の強調色」として大事な役割があるため、テロップの常時枠色とは分離するべき、というユーザー判断。
+青系 (`rgba(56,189,248,0.85)` = sky-400 相当) に変更:
+
+```css
+/* 旧 */
+.telop-bg[data-speaker="a"] { border-color: rgba(249,115,22,0.85); ... }
+
+/* 新 (v5.18.1) */
+.telop-bg[data-speaker="a"] { border-color: rgba(56,189,248,0.85); box-shadow: ...rgba(56,189,248,...); }
+```
+
+枠線・尻尾・shadow すべて青系に統一。
+※ 数原のアバター本体 (`.avatar-hl.a`) はオレンジのまま (テロップとアバターは独立した視覚要素)。
+
+### ③ 対決カードを上に詰める
+
+```jsx
+/* 旧: pt-10 / pb-[40%] */
+/* 新: pt-8 / pb-[46%]  ← 上6%詰めて、下に46%確保 */
+```
+
+テロップエリア (画面下20%) との衝突を確実に避ける。
+
+### ④ 選手スポット 各モードを上寄りに
+
+外側 wrapper:
+```jsx
+/* 旧: pt-12 / pb-[34%] */
+/* 新: pt-8 / pb-[44%]  ← 下のテロップエリア確保 */
+```
+
+3モードの内部 alignment も画面中央 → 上寄りに:
+
+| モード | 旧 | 新 |
+|---|---|---|
+| `quote` | `justify-center` | `justify-start pt-4` |
+| `single_metric` | `justify-center` | `justify-start pt-6` |
+| `stats_grid` | `justify-center` | `justify-start pt-2` |
+
+これでテロップとの被りを防ぎつつ、視覚的バランスを保つ。
+
+### ⑤ テロップを左端まで使えるように
+
+調査の結果、テロップは `bottom: 20%` に配置されており、アバター (bottom: 13% + 高さ約85px ≒ 17%) **の上**にある。つまり**重ならない**ので、左端まで使ってOK。
+
+```css
+/* 旧: speaker-a は padding-left:60px (アバター完全回避) */
+/* 新: speaker-a も padding-left:8px (左端まで使える)
+       padding-right:32px のセーフゾーンは維持 */
+.telop-wrap-normal:has(.telop-bg[data-speaker="a"]) {
+  padding-left: 8px; padding-right: 32px;
+}
+.telop-wrap-normal:has(.telop-bg[data-speaker="b"]) {
+  padding-left: 8px; padding-right: 60px;
+}
+
+/* max-width も 260px → 280px に拡大 */
+.telop-bg { max-width: 280px; }
+```
+
+これで横幅をたっぷり使えて、長めのセリフも改行少なく収まる。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/layouts/LayoutRouter.jsx` | ★アニメ再発火バグ修正★ 'stable' key で remount 防止 |
+| `src/components/GlobalStyles.jsx` | speaker-a 青系 / telop padding-left:8px / max-width:280px |
+| `src/layouts/VersusCardLayout.jsx` | pt-10→pt-8 / pb-40%→pb-46% |
+| `src/layouts/PlayerSpotlightLayout.jsx` | pt-12→pt-8 / pb-34%→pb-44% / 3モード justify-start |
+| `package.json` / `config.js` | 5.18.0 → 5.18.1 |
+
+### 期待される効果
+
+| 改善前 | 改善後 |
+|---|---|
+| ❌ 同じ指標続いても毎回チャート再描画 | ✅ 初回のみ発火、同じ指標続いても維持 |
+| ❌ 数原テロップがオレンジで重要数値と被る | ✅ 青系で役割分離 |
+| ❌ 対決カードがテロップにかかる | ✅ 上に詰めて46%確保 |
+| ❌ 選手スポットが画面中央でテロップに被る | ✅ 上寄り配置 |
+| ❌ テロップ左端60px不使用で詰まって見える | ✅ 左端8pxまで使えて max-width 280px |
+
+
 
 ### 動機: Gemini戦略提言の残課題
 

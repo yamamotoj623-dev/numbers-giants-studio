@@ -65,7 +65,8 @@
   radarStats: { isop, isod, bb_k, rc27, ab_hr } 各 {main:0-100, sub:0-100, label:"日本語"},
   layoutData: <使うレイアウト分すべて格納>,
   comparisons: [5項目必須] 各 {id, label, kana, desc, formula, criteria, radarMatch, valMain, valSub, unit, winner:"main|sub"},
-  scripts: [28-30個、id 1から連番]   ★structure-playbook.md 参照★
+  scripts: [28-30個、id 1から連番],   ★structure-playbook.md 参照★
+  smartLoop: true   ★v5.18新★ 末尾→冒頭シームレスループ。デフォルトtrueでOK (アウトロCTAは表示されないので outroCta も不要)
 }
 </schema_top_level>
 
@@ -77,7 +78,8 @@
 - timeline:         layoutData: { timeline: { unit, metric, points:[{label, value, isPeak?, isBottom?, highlight?}] } }
 - ranking:          layoutData: { ranking: { metric, mode, items:[{rank, name, value, isMainPlayer?}] } }
 - versus_card:      layoutData: { versus: { mood?, categoryScores:[{label, kana, rawMain, rawSub, lowerBetter?}] } }
-- player_spotlight: layoutData: { spotlight: { showPlayerName?, players:[{id, label, primaryStat:{label,value,compareValue?}, stats:[{label,value}], comment}] } }
+- player_spotlight: layoutData: { spotlight: { mode?, showPlayerName?, players:[{id, label, primaryStat:{label,value,compareValue?}, stats:[{label,value}], comment, quote?, quoteSource?}] } }
+  ★mode 4種★: "default"(標準=主指標+サブ) / "single_metric"(1指標を超巨大、衝撃データ向け) / "stats_grid"(基本成績網羅) / "quote"(発言ピック=quote/quoteSource使用、人間性エピソード向け)
 - pitch_arsenal:    layoutData: { arsenal: { mode, pitches:[...], comparePitches?, vsBatter? } }
 - team_context:     layoutData: { context: { mode, lineup?, rotation?, comparison? } }
 - batter_heatmap:   layoutData: { heatmap: { mode, zones?, vsRight?, vsLeft? } }
@@ -96,8 +98,14 @@
   highlight: "comparisonsのid",  ← 該当指標の話してる時
   focusEntry: "spotlight時のid",
   textSize: "xl|l|m|s",  ← フェーズB-D で使用
+  zoomBoost: "zoom|shake|zoomShake",  ← ★v5.18新★ 重要発言の演出。1動画 2-3 箇所まで(乱用NG)
   se: "hook_impact|highlight_ping|stat_reveal|shock_hit|success_chime|warning_alert|transition_swoosh|outro_fade|null"
 }
+★zoomBoost 使い分け★
+  - "zoom": ポジティブな衝撃データ (「OPS .950超え」)
+  - "shake": ネガティブ驚き (「実は防御率11.20」)
+  - "zoomShake": オチ直前の最大盛り上げ (「覚醒の理由は…」)
+★id:1 (hook) は zoomBoost 指定不要★ — 自動で冒頭フラッシュ + 太鼓SEが入る
 </schema_script>
 
 ---

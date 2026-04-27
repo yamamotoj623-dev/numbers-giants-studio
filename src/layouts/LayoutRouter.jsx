@@ -94,19 +94,28 @@ export function LayoutRouter(props) {
   const Layout = LAYOUT_COMPONENTS[activeLayout] || RadarCompareLayout;
 
   // ★v5.18.0★ キーフレームアニメ (Gemini提言: 重要発言時のズーム/シェイク)
-  // currentScript.zoomBoost で指定:
-  //   'zoom'    - グッと寄る (定石)
-  //   'shake'   - 揺れる (衝撃発言)
-  //   'zoomShake' - ズーム+揺れ (最強、覚醒系)
+  //   'zoom'    - グッと寄る
+  //   'shake'   - 揺れる
+  //   'zoomShake' - ズーム+揺れ (最強)
   //   undefined - 何もしない
+  //
+  // ★v5.18.1 バグ修正★
+  // 旧 (v5.18.0): animKey = `${animClass}-${currentIndex}-${animationKey}` だったため、
+  //   currentIndex が変わるたびに wrapper の key が変わり、
+  //   zoomBoost 未指定でも子レイアウトが毎回 remount → 全アニメ再発火するバグ。
+  // 新 (v5.18.1): zoomBoost 指定がある時だけ key を更新する。
+  //   未指定なら固定 key にして、子レイアウトの内部 state / アニメは継続。
   const currentScript = scripts[currentIndex];
   const zoomBoost = currentScript?.zoomBoost;
   const animClass = zoomBoost === 'zoom' ? 'anim-zoom-boost'
                   : zoomBoost === 'shake' ? 'anim-impact-shake'
                   : zoomBoost === 'zoomShake' ? 'anim-zoom-shake'
                   : '';
-  // animationKey + currentIndex で再生時に毎回再発火 (key 変更で remount)
-  const animKey = `${animClass}-${currentIndex}-${props.animationKey || 0}`;
+  // zoomBoost がある script に来た時だけ key 更新 → アニメ発火
+  // 無指定なら 'stable' (固定値) で remount を防止
+  const animKey = animClass
+    ? `${animClass}-${currentIndex}-${props.animationKey || 0}`
+    : 'stable';
 
   return (
     <div

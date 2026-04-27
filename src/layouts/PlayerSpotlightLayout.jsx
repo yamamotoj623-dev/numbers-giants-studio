@@ -136,7 +136,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
   return (
     <>
-      <div key={`zoom-${animationKey}-${player.id || 'p'}-${mode}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[34%] px-3">
+      <div key={`zoom-${animationKey}-${player.id || 'p'}-${mode}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-8 pb-[44%] px-3">
 
         {/* スポットライト感の背景 */}
         <div className="absolute inset-0 pointer-events-none" style={{
@@ -166,7 +166,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
         {/* ★v5.15.5★ mode 別本体 */}
         {mode === 'quote' && (
-          <div className="z-20 flex-1 flex flex-col items-center justify-center px-2">
+          <div className="z-20 flex-1 flex flex-col items-center justify-start pt-4 px-2">
             {/* 引用記号 装飾 */}
             <div className="text-[80px] leading-none opacity-20 -mb-4 select-none" style={{ color: themeClass.primary }}>
               "
@@ -187,7 +187,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
         )}
 
         {mode === 'single_metric' && player.primaryStat && (
-          <div className="z-20 flex-1 flex flex-col items-center justify-center">
+          <div className="z-20 flex-1 flex flex-col items-center justify-start pt-6">
             <div className={`text-[16px] font-jp-heavy tracking-widest mb-2 ${themeClass.text}`}>
               {player.primaryStat.label}
             </div>
@@ -207,7 +207,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
         )}
 
         {mode === 'stats_grid' && (
-          <div className="z-20 flex-1 flex flex-col justify-center">
+          <div className="z-20 flex-1 flex flex-col justify-start pt-2">
             <div className={`grid gap-2 ${displayStats.length >= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
               {/* primaryStat も等価で grid 内に取り込む */}
               {player.primaryStat && (
