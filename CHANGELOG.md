@@ -9,7 +9,156 @@
 
 ---
 
-## [5.18.2] - 2026-04-27 - ★緊急★ TTSプロンプト混入バグ修正 + 初期id TTS不発火連鎖解消
+## [5.18.3] - 2026-04-27 - ★緊急★ TTSキャッシュキー不一致バグ修正 (誤判定で「未生成」+ 二重生成)
+
+### 動機: ユーザー報告の致命的バグ
+
+> ✅ 生成完了 (但し7件「未生成」と判定):
+> id:4, id:7, id:12, id:17, id:24, id:26, id:28
+> ※実際は全部生成済みのはず
+
+### 根本原因: scripts の **グループ化と結合方式** が3箇所でバラバラ
+
+調査の結果、TTS キャッシュキーが**3箇所で別々のロジック**で生成されていた:
+
+| 場所 | 結合方法 | 結果 |
+|---|---|---|
+| usePlaybackEngine.js (再生時) | 句点 `'。'` で連結 (`s+'。'`) | グループ単位 + 句点 |
+| ttsAdapter.pregenerate / findMissing | **個別 script** で `applyYomigana(s.speech)` | 単独 script のキー |
+| audioExporter.js | スペース `' '` で連結 | グループ単位 + スペース |
+
+結果として:
+1. **pregenerate** が個別 script キーで TTS API を叩いて保存
+2. **アプリ再生時** にグループ + 句点キーで探すが **存在しない** → 再度 API を叩く (二重生成)
+3. **audioExporter** がスペース + グループキーで探すが **これも別キー** → 「未生成」誤判定
+4. **findMissing** も個別キーでチェック → アプリの再生時に生成されたグループキーは無視
+
+つまり、ユーザーが見ている「7件未生成」は **実際は再生時に生成され IndexedDB にあるが、別キーで保存されているため 検出できない** 状態だった。
+
+### 解決: 共通グループ化ヘルパーで全箇所を統一
+
+#### A. 新規ファイル `src/lib/scriptGrouping.js`
+
+```js
+export function groupBySpeaker(scripts) {
+  // 同一 speaker 連続でグループ化
+  // joinedSpeech は句点連結 (アプリ再生時と完全一致)
+  return groups.map(g => ({
+    startIdx, size, scripts, speaker,
+    joinedSpeech: scripts.map(s => {
+      const t = s.speech || s.text || '';
+      return /[。！？.!?]$/.test(t) ? t : t + '。';
+    }).join(''),  // ← 句点連結
+  }));
+}
+```
+
+#### B. ttsAdapter.pregenerate を **グループ単位** に変更
+
+```js
+// 旧: 個別 script で TTS API 叩く → 別キャッシュキーで保存
+for (const s of scripts) {
+  const text = applyYomigana(s.speech);
+  await this._getOrGenerate(text, s.speaker);  // 個別キー
+}
+
+// 新: グループ単位で TTS API 叩く → 再生時と同じキーで保存
+const groups = groupBySpeaker(scripts);
+for (const g of groups) {
+  const text = applyYomigana(g.joinedSpeech);
+  await this._getOrGenerate(text, g.speaker);  // グループキー (再生時と一致)
+}
+```
+
+#### C. ttsAdapter.findMissing もグループ単位
+
+```js
+// 旧: script ごとにチェック → 個別キーで「無い」と判定 (実は別キーで存在)
+// 新: グループごとにチェック → 再生時と同じキーで検出
+```
+
+未生成グループに含まれる全 script を id 単位の出力に展開して、UI 側は変更不要。
+
+#### D. ttsAdapter.pregenerateOnly (個別再生成) もグループ単位
+
+「id:4 だけ再生成」と指示されても、id:4 を含むグループ全体を再生成する。
+これで再生時と同じキーで上書き保存される。
+
+#### E. audioExporter もグループ化を共通ヘルパーに
+
+```js
+// 旧: スペース連結
+const joinedText = groupScripts.map(s => s.speech || s.text || '').join(' ');
+
+// 新: 共通ヘルパー使用 (句点連結、ttsAdapter と完全同期)
+const groups = groupBySpeaker(scripts);
+const joinedText = group.joinedSpeech;
+```
+
+#### F. usePlaybackEngine の prefetch もスペース → 句点連結に修正
+
+```js
+// 旧 (スペース連結 — 実は使われないキャッシュキーを生成していた)
+const nextJoined = nextGroupScripts.map(s => s.speech).join(' ');
+
+// 新 (句点連結 — 再生時の joinedSpeech と完全一致)
+const nextJoined = nextGroupScripts.map(s => {
+  const t = s.speech || s.text || '';
+  return /[。!?.!?]$/.test(t) ? t : t + '。';
+}).join('');
+```
+
+### 期待される効果
+
+| 改善前 (v5.18.2) | 改善後 (v5.18.3) |
+|---|---|
+| ❌ 「7件未生成」と誤判定 (実は生成済み) | ✅ 正確な未生成判定 |
+| ❌ pregenerate と再生で**二重生成** (API コスト 2倍) | ✅ 一度の API コールで両方ヒット |
+| ❌ 不足分再生成しても再生時に再度API叩かれる | ✅ 1回の API コールで完結 |
+| ❌ audioExporter が「未生成」誤検出して**該当部分が無音** | ✅ 全 TTS が WAV に正しく入る |
+
+### ★必須★ デプロイ後の手順
+
+#### 1. ★ 既存キャッシュを必ずクリア ★
+
+旧版で2つのキー戦略 (個別 vs グループ) で保存された **「個別キー側」のキャッシュは無駄なので削除**:
+
+- TTSPanel → 「キャッシュクリア」ボタン
+- 全 IndexedDB のエントリが削除される
+
+#### 2. 全 scripts を再生成
+
+クリア後、「全 scripts」セクションから再生成:
+- 今度は **グループ単位で API コール** されるので、API リクエスト数が **30回程度 → 10-15回**に減る
+- コスト約半分
+
+#### 3. 動作確認
+
+1. 動画再生 → 切れ目なく音声が流れるか
+2. 音声書き出し → デバッグログで `TTS グループ数: N` と `TTS 取得済み: N件 / 未生成: 0件` を確認
+3. もし「未生成」が出たら、その**グループ全体**を再生成
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/scriptGrouping.js` | ★新規★ groupBySpeaker / findGroupForScript ヘルパー |
+| `src/lib/ttsAdapter.js` | findMissing / pregenerate / pregenerateOnly をグループ単位に |
+| `src/lib/audioExporter.js` | groupBySpeaker を使用 (旧自前ロジック削除) |
+| `src/hooks/usePlaybackEngine.js` | prefetch のキャッシュキーを句点連結に修正 |
+| `package.json` / `config.js` | 5.18.2 → 5.18.3 |
+
+### 残課題 (次回以降)
+
+引き続き ②③④⑤⑥⑦ は次リリース予定:
+- ② 台本/編集の保存機能
+- ③ シェイクでチャートアニメも再発火
+- ④ 台本上で選手フォーカス設定
+- ⑤ 選手スポット/対決カードのレイアウト被り
+- ⑥ ランキングで球団名併記
+- ⑦ じわじわズーム + 背景動き
+
+
 
 ### 動機: ユーザー報告の致命的バグ
 

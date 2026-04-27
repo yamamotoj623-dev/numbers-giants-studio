@@ -145,7 +145,11 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
         if (scripts[i].speaker === nextGroupHead.speaker) nextGroupScripts.push(scripts[i]);
         else break;
       }
-      const nextJoined = nextGroupScripts.map(s => s.speech || s.text || '').join(' ');
+      // ★v5.18.3★ 句点連結に統一 (再生時の joinedSpeech と完全一致するキャッシュキーに)
+      const nextJoined = nextGroupScripts.map(s => {
+        const t = s.speech || s.text || '';
+        return /[。!?.!?]$/.test(t) ? t : t + '。';
+      }).join('');
       adapter.prefetch(nextJoined, nextGroupHead.speaker || 'A').catch(() => {});
     }
 

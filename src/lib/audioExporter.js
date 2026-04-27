@@ -13,6 +13,7 @@ import { applyYomigana } from './yomigana';
 import { getBgmBlob } from './bgmStorage';
 import { listSes, getSeBlob } from './seStorage';
 import { PitchShifter } from 'soundtouchjs';
+import { groupBySpeaker } from './scriptGrouping';
 
 /**
  * ★v5.15.4★ 合成音 SE のプリセット定義 (mixer.js と同期)
@@ -197,29 +198,18 @@ export async function exportProjectAudio({
   log(`applySpeechRate=${applySpeechRate}, targetTempo=${targetTempo} (SoundTouchJS pitch-preserving)`);
 
   // === Phase 1: TTS 音声を全部 decode してから duration を計算する ===
-  // 同一 speaker のグループ化 (usePlaybackEngine と同じロジック)
+  // ★v5.18.3★ 共通ヘルパー groupBySpeaker でグループ化 (usePlaybackEngine, ttsAdapter と完全同期)
+  //   旧版はスペース連結だったため、句点連結のキャッシュキーと不一致 → 全部「未生成」誤判定バグ
   onProgress('TTS グループ化中...', 5);
-  const groups = [];
-  let i = 0;
-  while (i < scripts.length) {
-    const head = scripts[i];
-    if (!head) { i++; continue; }
-    const groupScripts = [head];
-    for (let j = i + 1; j < scripts.length; j++) {
-      if (scripts[j].speaker === head.speaker) {
-        groupScripts.push(scripts[j]);
-      } else { break; }
-    }
-    const joinedText = groupScripts.map(s => s.speech || s.text || '').join(' ');
-    groups.push({
-      startIdx: i,
-      groupScripts,
-      joinedText,
-      speaker: head.speaker || 'A',
-      ses: groupScripts.map(s => s.se || null),
-    });
-    i += groupScripts.length;
-  }
+  const speakerGroups = groupBySpeaker(scripts);
+  // audioExporter で必要な形式に変換
+  const groups = speakerGroups.map(g => ({
+    startIdx: g.startIdx,
+    groupScripts: g.scripts,
+    joinedText: g.joinedSpeech,  // ★句点連結 (アプリ再生時と完全一致)★
+    speaker: g.speaker,
+    ses: g.scripts.map(s => s.se || null),
+  }));
   log(`TTS グループ数: ${groups.length}`);
 
   // === Phase 2: 全TTS の blob 取得 + decode ===

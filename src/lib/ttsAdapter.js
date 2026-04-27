@@ -17,6 +17,7 @@
 import { GAS_CONFIG } from './config';
 import { getCachedAudio, saveCachedAudio } from './audioCache';
 import { applyYomigana } from './yomigana';
+import { groupBySpeaker } from './scriptGrouping';
 
 // ============================================================================
 // PCM → WAV 変換（Gemini TTS が PCM 16bit 24kHz を返してくるため）
@@ -598,7 +599,12 @@ export class GeminiAdapter {
   }
 
   /**
-   * scripts を一括事前生成 (★v5.11.8 で並列化、v5.11.9 でフォールバック追跡★)
+   * ★v5.18.3 修正★ scripts を**グループ単位**で一括事前生成
+   *
+   * 旧 (v5.18.2): 個別 script 単位で TTS API を叩いていたため、
+   *   アプリ再生時のグループキャッシュキーと不一致 → 二重生成 + 「未生成」誤判定
+   * 新: groupBySpeaker でグループ化し、joinedSpeech で 1 API コール
+   *   アプリ再生時と完全に同じキャッシュキーで保存される
    *
    * @param {Array} scripts - 生成対象の script 配列
    * @param {Function} onProgress - 進捗コールバック
@@ -607,41 +613,41 @@ export class GeminiAdapter {
   async pregenerate(scripts, onProgress, options = {}) {
     const concurrency = options.concurrency ?? 2;
     let generated = 0, cached = 0, errors = 0, costUsd = 0, completed = 0;
-    let fallbackCount = 0;  // ★v5.11.9: 2.5 Flash でフォールバックされた件数★
+    let fallbackCount = 0;
     const failedIds = [];
-    const fallbackIds = [];  // どの id が fallback されたか
+    const fallbackIds = [];
 
-    // 1件処理 (並列ワーカーから呼ばれる)
-    const processOne = async (s) => {
-      const rawText = s.speech || s.text;
-      const text = applyYomigana(rawText);
-      const speaker = s.speaker || 'A';
+    // ★グループ単位に変換★
+    const groups = groupBySpeaker(scripts);
+    const totalGroups = groups.length;
+
+    // 1グループ処理 (並列ワーカー)
+    const processGroup = async (g) => {
+      const text = applyYomigana(g.joinedSpeech);
       if (!text) {
         completed++;
         return;
       }
       try {
-        const result = await this._getOrGenerate(text, speaker);
+        const result = await this._getOrGenerate(text, g.speaker);
         if (result.wasCached) cached++;
         else { generated++; costUsd += result.costUsd; }
 
-        // ★フォールバック発生をカウント★
         if (result.usedFallback) {
           fallbackCount++;
-          fallbackIds.push(s.id);
+          // グループに属する全 id を fallback リストに追加
+          for (const s of g.scripts) fallbackIds.push(s.id);
         }
-
-        // ★v5.14.1★ decode キャッシュは廃止 (HTMLAudioElement で再生するため不要)
-        // blob は audioCache (IndexedDB) に既に保存されている (上記 _getOrGenerate or saveCachedAudio で)
       } catch (err) {
-        console.error('pregenerate failed for script', s.id, err);
+        console.error('pregenerate failed for group startIdx=' + g.startIdx, err);
         errors++;
-        failedIds.push(s.id);
+        // グループに属する全 id を failedIds に追加
+        for (const s of g.scripts) failedIds.push(s.id);
       } finally {
         completed++;
         onProgress?.({
           current: completed,
-          total: scripts.length,
+          total: totalGroups,
           generated, cached, errors, costUsd,
           failedIds: [...failedIds],
           fallbackCount,
@@ -650,98 +656,121 @@ export class GeminiAdapter {
       }
     };
 
-    // ★並列化★: チャンクに分けて Promise.all で同時処理
-    // v5.11.9: デフォルト concurrency を 4→2 に下げて RPM 10/分 を超えない設計
-    for (let i = 0; i < scripts.length; i += concurrency) {
-      const chunk = scripts.slice(i, i + concurrency);
-      await Promise.all(chunk.map(processOne));
+    // グループ単位で並列実行
+    for (let i = 0; i < groups.length; i += concurrency) {
+      const chunk = groups.slice(i, i + concurrency);
+      await Promise.all(chunk.map(processGroup));
     }
 
     return { generated, cached, errors, costUsd, failedIds, fallbackCount, fallbackIds };
   }
 
   /**
-   * ★v5.11.6 新規 / v5.11.8 で並列化: scripts のうち、まだキャッシュに無いものだけを返す★
-   * UI で「不足チェック」「不足のみ再生成」のために使う。
+   * ★v5.18.3 修正★ scripts のうち、まだキャッシュに無いグループを **グループ単位** で返す
    *
-   * @returns {Promise<Array<{id, speaker, text, reason}>>} 不足している script のリスト (id 順にソート)
+   * 旧 (v5.18.2): 個別 script ごとにキャッシュチェック → アプリ再生時のグループキー
+   *   と一致せず、「実は生成済みなのに未生成」と誤判定するバグがあった。
+   *
+   * 新: groupBySpeaker で結合した joinedSpeech をキャッシュキーにしてチェック。
+   *   アプリ再生時と完全に同じキー戦略になる。
+   *
+   * @returns {Promise<Array<{id, speaker, text, reason}>>}
+   *   グループに属する各 script を id 単位で返す (UI 表示は id 単位なので)。
+   *   グループのキャッシュが無い場合、そのグループの全 script が「未生成」扱い。
    */
   async findMissing(scripts) {
-    // ★全件並列でキャッシュチェック★ (IndexedDB 読み込みは並列に強い)
-    const checks = scripts.map(async (s) => {
-      const rawText = s.speech || s.text;
-      const text = applyYomigana(rawText);
-      const speaker = s.speaker || 'A';
-      if (!text) {
-        return { id: s.id, speaker, text: '', reason: 'テキストが空' };
+    const groups = groupBySpeaker(scripts);
+
+    // 各グループ単位でキャッシュチェック (並列)
+    const checks = groups.map(async (g) => {
+      const fixedText = applyYomigana(g.joinedSpeech);
+      if (!fixedText) {
+        return { groupCached: false, group: g, reason: 'グループのテキストが空' };
       }
       try {
-        const cached = await getCachedAudio(speaker, text);
-        if (!cached) {
-          return { id: s.id, speaker, text, reason: 'キャッシュ未生成' };
-        }
-        return null;  // キャッシュあり = 不足ではない
+        const cached = await getCachedAudio(g.speaker, fixedText);
+        return { groupCached: !!cached, group: g, reason: cached ? null : 'キャッシュ未生成' };
       } catch (err) {
-        return { id: s.id, speaker, text, reason: 'キャッシュ確認エラー: ' + err.message };
+        return { groupCached: false, group: g, reason: 'キャッシュ確認エラー: ' + err.message };
       }
     });
 
     const results = await Promise.all(checks);
-    return results.filter(r => r !== null).sort((a, b) => a.id - b.id);
+
+    // 未生成グループの全 script を平坦化して返す (UI 互換のため id 単位の出力)
+    const missing = [];
+    for (const r of results) {
+      if (r.groupCached) continue;
+      for (const s of r.group.scripts) {
+        const rawText = s.speech || s.text || '';
+        missing.push({
+          id: s.id,
+          speaker: r.group.speaker,
+          text: rawText,
+          reason: r.reason,
+        });
+      }
+    }
+    return missing.sort((a, b) => a.id - b.id);
   }
 
   /**
-   * ★v5.11.6 新規 / v5.11.8 で並列化: 指定された script だけを再生成★
-   * findMissing で取得したリストを渡せば、不足分だけ生成できる。
+   * ★v5.18.3 修正★ 指定された script id を含むグループだけを再生成
+   *
+   * 旧 (v5.18.2): 個別 script で再生成 → 別キャッシュキーに保存され
+   *   アプリ再生時にキャッシュヒットしないバグがあった。
+   * 新: targetIds を含むグループを特定して、グループ単位で再生成。
    *
    * @param {Array} scripts 全 scripts (id ベースで参照)
    * @param {Array<number>} targetIds 再生成したい script の id 配列
    * @param {Function} onProgress 進捗コールバック
-   * @param {Object} options { concurrency: 並列数 (デフォルト 4) }
+   * @param {Object} options { concurrency: 並列数 (デフォルト 2) }
    * @returns {Promise<{generated, errors, costUsd, failedIds}>}
    */
   async pregenerateOnly(scripts, targetIds, onProgress, options = {}) {
     const concurrency = options.concurrency ?? 2;
-    const targets = scripts.filter(s => targetIds.includes(s.id));
+    const targetIdSet = new Set(targetIds);
+
+    // targetIds を含むグループを抽出 (重複なし)
+    const allGroups = groupBySpeaker(scripts);
+    const targetGroups = allGroups.filter(g =>
+      g.scripts.some(s => targetIdSet.has(s.id))
+    );
+
     let generated = 0, errors = 0, costUsd = 0, completed = 0;
     const failedIds = [];
 
-    const processOne = async (s) => {
-      const rawText = s.speech || s.text;
-      const text = applyYomigana(rawText);
-      const speaker = s.speaker || 'A';
+    const processGroup = async (g) => {
+      const text = applyYomigana(g.joinedSpeech);
       if (!text) {
         errors++;
-        failedIds.push(s.id);
+        for (const s of g.scripts) failedIds.push(s.id);
         completed++;
-        onProgress?.({ current: completed, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+        onProgress?.({ current: completed, total: targetGroups.length, generated, errors, costUsd, failedIds: [...failedIds] });
         return;
       }
       try {
         // キャッシュは無視して強制的に生成する
-        const data = await this._fetchFromGAS(text, speaker);
+        const data = await this._fetchFromGAS(text, g.speaker);
         const pcmBytes = base64ToBytes(data.audioBase64);
         const wavBlob = pcmToWav(pcmBytes, data.sampleRate || 24000);
-        await saveCachedAudio(speaker, text, wavBlob);
+        await saveCachedAudio(g.speaker, text, wavBlob);
         generated++;
         costUsd += data.estimatedCostUsd || 0;
-
-        // ★v5.14.1★ decode キャッシュは廃止 (HTMLAudioElement で再生するため不要)
-        // blob は saveCachedAudio で IndexedDB に既に保存されている
       } catch (err) {
-        console.error('pregenerateOnly failed for script', s.id, err);
+        console.error('pregenerateOnly failed for group startIdx=' + g.startIdx, err);
         errors++;
-        failedIds.push(s.id);
+        for (const s of g.scripts) failedIds.push(s.id);
       } finally {
         completed++;
-        onProgress?.({ current: completed, total: targets.length, generated, errors, costUsd, failedIds: [...failedIds] });
+        onProgress?.({ current: completed, total: targetGroups.length, generated, errors, costUsd, failedIds: [...failedIds] });
       }
     };
 
-    // ★並列化★
-    for (let i = 0; i < targets.length; i += concurrency) {
-      const chunk = targets.slice(i, i + concurrency);
-      await Promise.all(chunk.map(processOne));
+    // ★並列化★ グループ単位で
+    for (let i = 0; i < targetGroups.length; i += concurrency) {
+      const chunk = targetGroups.slice(i, i + concurrency);
+      await Promise.all(chunk.map(processGroup));
     }
 
     return { generated, errors, costUsd, failedIds };
