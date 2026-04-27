@@ -15,6 +15,10 @@ export const defaultBatterData = {
   presentationMode: 'dialogue',
   theme: 'orange',
   period: '2026.04.14時点',
+  // ★v5.18.0★ Gemini提言: シームレスループ
+  // smartLoop: true で末尾→冒頭にシームレス遷移 (OutroPanel スキップ)
+  // 視聴維持率向上のため。詳細結果見せたい場合は false に。
+  smartLoop: true,
   audio: { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.0, seVolume: 0.6 },
   // アウトロの問いかけ(シンプル・具体的に)
   outroCta: {

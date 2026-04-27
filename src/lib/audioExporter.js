@@ -424,6 +424,39 @@ export async function exportProjectAudio({
       // scripts を順次たどって SE を配置 (★v5.15.4★ カスタムなければ合成音 fallback)
       let syntheticCount = 0;
       const seVolume = mixerLevels.se * mixerLevels.master;
+
+      // ★v5.18.0★ 冒頭フック (id:0) で hook_impact を自動配置 (Gemini提言: 打撃音/ミット音)
+      // 最初の script に明示的な se が指定されていなければ自動的に hook_impact を入れる
+      const firstScript = scripts[0];
+      if (firstScript && !firstScript.se) {
+        const hookSeId = 'hook_impact';
+        const hookBlob = presetToBlob.get(hookSeId);
+        const startSec = ttsTimings[0]?.startSec || 0;
+        if (hookBlob) {
+          try {
+            const arrayBuffer = await hookBlob.arrayBuffer();
+            const seBuffer = await offlineCtx.decodeAudioData(arrayBuffer.slice(0));
+            const source = offlineCtx.createBufferSource();
+            source.buffer = seBuffer;
+            const gain = offlineCtx.createGain();
+            gain.gain.value = seVolume;
+            source.connect(gain);
+            gain.connect(offlineCtx.destination);
+            source.start(startSec);
+            seAddedCount++;
+            log(`✅ 冒頭 hook_impact 自動配置 (カスタム)`);
+          } catch (e) {
+            scheduleSyntheticSe(offlineCtx, hookSeId, startSec, seVolume);
+            syntheticCount++;
+            log(`✅ 冒頭 hook_impact 自動配置 (合成音 fallback)`);
+          }
+        } else if (SYNTHETIC_SE_PRESETS[hookSeId]) {
+          scheduleSyntheticSe(offlineCtx, hookSeId, startSec, seVolume);
+          syntheticCount++;
+          log(`✅ 冒頭 hook_impact 自動配置 (合成音)`);
+        }
+      }
+
       for (const t of ttsTimings) {
         let scriptCursor = t.startSec;
         const groupTotalChars = t.joinedText.length || 1;

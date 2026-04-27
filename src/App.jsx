@@ -367,6 +367,21 @@ const App = () => {
                   </button>
                 ))}
               </div>
+
+              {/* ★v5.18.0★ smartLoop トグル (Gemini提言: 無限ループ) */}
+              <button
+                onClick={() => setProjectData(prev => ({ ...prev, smartLoop: !prev.smartLoop }))}
+                className={`text-[10px] font-bold px-2 py-1 rounded-full transition flex items-center gap-1 border ${
+                  projectData.smartLoop
+                    ? 'bg-emerald-500 text-white border-emerald-600'
+                    : 'bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-100'
+                }`}
+                title={projectData.smartLoop
+                  ? '無限ループON: 末尾→冒頭にシームレス遷移 (アウトロ画面なし)'
+                  : '無限ループOFF: 末尾でアウトロ画面表示して停止'}
+              >
+                {projectData.smartLoop ? '🔁 ループON' : '⏹ ループOFF'}
+              </button>
             </div>
 
             <div className="text-[10px] text-zinc-500 font-bold flex items-center gap-1.5">

@@ -211,6 +211,23 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                   </div>
                 </div>
 
+                {/* ★v5.18.0★ zoomBoost (キーフレームアニメ — Gemini提言: 重要発言時のズーム/シェイク) */}
+                <div>
+                  <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                    💥 キーフレームアニメ (重要発言時の演出)
+                  </label>
+                  <select
+                    value={script.zoomBoost || ''}
+                    onChange={(e) => handleChange(script.id, 'zoomBoost', e.target.value || undefined)}
+                    className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                  >
+                    <option value="">なし</option>
+                    <option value="zoom">🔍 ズーム (グッと寄る)</option>
+                    <option value="shake">💥 シェイク (衝撃発言)</option>
+                    <option value="zoomShake">⚡ ズーム+シェイク (覚醒系・最強)</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">🎨 レイアウト切替 (このシーンから)</label>
                   <select

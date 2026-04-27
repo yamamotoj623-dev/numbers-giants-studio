@@ -287,13 +287,13 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       {entry.sub && <div className="text-[10px] font-bold text-zinc-500 truncate leading-tight">{entry.sub}</div>}
                     </div>
 
-                    {/* 値 + バー */}
+                    {/* 値 + バー (★v5.17.0★ font-impact 適用) */}
                     <div className="flex-shrink-0 flex flex-col items-end" style={{ width: 80 }}>
-                      <div className={`text-[16px] font-mono font-black leading-none ${
+                      <div className={`text-[18px] font-impact leading-none ${
                         isFocused
                           ? (mood === 'best' ? 'text-yellow-300' : mood === 'worst' ? 'text-red-300' : themeClass.text)
                           : (isMain ? themeClass.text : (isTop3 ? 'text-white' : 'text-zinc-400'))
-                      }`}>
+                      }`} style={isFocused || isMain ? { textShadow: `0 0 10px ${themeClass.glow}80` } : {}}>
                         {entry.value}{activeMetric.unit || ''}
                       </div>
                       <div className="w-full h-1 bg-zinc-800 rounded-full mt-1 overflow-hidden">

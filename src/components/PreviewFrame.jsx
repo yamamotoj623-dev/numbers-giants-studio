@@ -14,11 +14,13 @@ import { LayoutRouter } from '../layouts/LayoutRouter.jsx';
 import { renderFormattedText } from '../lib/textRender.jsx';
 import { Silhouette } from './Silhouettes.jsx';
 
-function getPhase(currentScript, currentIndex, scripts) {
+function getPhase(currentScript, currentIndex, scripts, projectData) {
   if (!currentScript) return 'normal';
   if (currentScript.isCatchy) return 'hook';
   const total = scripts?.length || 0;
-  if (total && currentIndex >= total - 2) return 'outro';
+  // ★v5.18.0★ smartLoop=true ならアウトロをスキップ (Gemini提言: 無限ループ)
+  // 末尾→冒頭にシームレス遷移するため、最後の2つもhighlight/normalのまま
+  if (!projectData?.smartLoop && total && currentIndex >= total - 2) return 'outro';
   if (currentScript.highlight) return 'highlight';
   return 'normal';
 }
@@ -63,7 +65,7 @@ export function PreviewFrame({
   showDurationBadge = true,
 }) {
   const scripts = projectData?.scripts || [];
-  const phase = getPhase(currentScript, currentIndex, scripts);
+  const phase = getPhase(currentScript, currentIndex, scripts, projectData);
   const hookAnim = getHookAnim(projectData);
   const textSize = resolveTextSize(currentScript);
   const estDuration = useMemo(() => estimateDuration(scripts), [scripts]);
@@ -131,6 +133,9 @@ export function PreviewFrame({
       {/* ================= フェーズA: フック ================= */}
       {phase === 'hook' && (
         <div className={phaseClassMap.hook} data-p="hook" key={`hook-${animationKey}-${currentIndex}`}>
+          {/* ★v5.18.0★ Gemini提言: 冒頭0.5秒フラッシュ — 視聴者の指を止めるため
+              key を毎ループ更新して再生のたびに発火 */}
+          <div className="hook-flash-overlay" key={`flash-${animationKey}-${currentIndex}`} />
           <div className="hook-silhouette">
             <Silhouette
               silhouetteType={projectData?.silhouetteType}

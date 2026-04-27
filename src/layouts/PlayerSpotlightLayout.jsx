@@ -188,26 +188,19 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
         {mode === 'single_metric' && player.primaryStat && (
           <div className="z-20 flex-1 flex flex-col items-center justify-center">
-            <div className={`text-[16px] font-black tracking-widest mb-2 ${themeClass.text}`}>
+            <div className={`text-[16px] font-jp-heavy tracking-widest mb-2 ${themeClass.text}`}>
               {player.primaryStat.label}
             </div>
             <div
-              className={`font-mono font-black tracking-tighter leading-none ${
-                isNeg ? 'text-red-400' : themeClass.text
-              }`}
-              style={{
-                fontSize: '120px',
-                textShadow: isNeg
-                  ? '0 0 40px rgba(248,113,113,0.8), 0 4px 8px rgba(0,0,0,0.9)'
-                  : `0 0 40px ${themeClass.glow}, 0 4px 8px rgba(0,0,0,0.9)`,
-              }}
+              className={`font-impact leading-none ${isNeg ? 'neon-number-red' : 'neon-number'}`}
+              style={{ fontSize: '140px' }}
             >
               {player.primaryStat.value}
             </div>
             {compareValue && (
               <div className="mt-4 text-center">
                 <span className="text-[12px] text-zinc-500 mr-2">{compareValue.label}:</span>
-                <span className="text-[20px] font-mono font-bold text-zinc-300">{compareValue.value}</span>
+                <span className="text-[20px] font-impact text-zinc-300">{compareValue.value}</span>
               </div>
             )}
           </div>
@@ -294,14 +287,10 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                     <span className="text-[12px] font-black text-zinc-300 tracking-widest mb-1">
                       {player.primaryStat.label}
                     </span>
-                    {/* ★巨大数値★ */}
-                    <span className={`text-[60px] font-mono font-black tracking-tighter leading-none ${
-                      isNeg ? 'text-red-400' : themeClass.text
-                    }`} style={{
-                      textShadow: isNeg
-                        ? '0 0 24px rgba(248,113,113,0.7), 0 2px 4px rgba(0,0,0,0.8)'
-                        : `0 0 24px ${themeClass.glow}, 0 2px 4px rgba(0,0,0,0.8)`
-                    }}>
+                    {/* ★巨大数値★ (★v5.17.0★ font-impact + neon-number 適用) */}
+                    <span className={`text-[68px] font-impact leading-none ${
+                      isNeg ? 'neon-number-red' : 'neon-number'
+                    }`}>
                       {player.primaryStat.value}
                     </span>
                   </div>
@@ -312,7 +301,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                       <span className="text-[10px] font-bold text-zinc-500 tracking-wider mb-0.5">
                         {compareValue.label}
                       </span>
-                      <span className="text-[24px] font-mono font-bold text-zinc-300">
+                      <span className="text-[26px] font-impact text-zinc-300">
                         {compareValue.value}
                       </span>
                     </div>

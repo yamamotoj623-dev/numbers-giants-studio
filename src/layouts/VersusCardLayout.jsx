@@ -162,31 +162,31 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
                 {/* ★純粋な数字比較★: main 数値 / 矢印 / sub 数値 */}
                 <div className="grid grid-cols-[1fr_30px_1fr] items-center gap-2">
-                  {/* main 数値 (大きく) */}
+                  {/* main 数値 (★v5.17.0★ font-impact + 発光強化) */}
                   <div className="text-right">
-                    <span className={`font-mono font-black leading-none tracking-tighter transition-all ${
-                      focused ? 'text-[30px]' : 'text-[26px]'
+                    <span className={`font-impact leading-none transition-all ${
+                      focused ? 'text-[34px]' : 'text-[28px]'
                     } ${
-                      mainWin ? themeClass.text : 'text-zinc-500'
-                    }`} style={mainWin ? { textShadow: `0 0 12px ${themeClass.glow}` } : {}}>
+                      mainWin ? (focused ? 'neon-number' : themeClass.text) : 'text-zinc-500'
+                    }`} style={mainWin && !focused ? { textShadow: `0 0 14px ${themeClass.glow}, 0 0 28px ${themeClass.glow}80` } : {}}>
                       {mainDisplay}
                     </span>
                   </div>
 
                   {/* 中央矢印 (勝者を指す) */}
-                  <div className="text-[14px] font-black text-center">
-                    {mainWin && <span className={themeClass.text}>◀</span>}
-                    {subWin && <span className="text-sky-400">▶</span>}
+                  <div className="text-[16px] font-black text-center">
+                    {mainWin && <span className={themeClass.text} style={{ textShadow: `0 0 8px ${themeClass.glow}` }}>◀</span>}
+                    {subWin && <span className="text-sky-400" style={{ textShadow: '0 0 8px rgba(56,189,248,0.7)' }}>▶</span>}
                     {!mainWin && !subWin && <span className="text-zinc-600">=</span>}
                   </div>
 
-                  {/* sub 数値 (大きく) */}
+                  {/* sub 数値 (★v5.17.0★ font-impact + 発光強化) */}
                   <div className="text-left">
-                    <span className={`font-mono font-black leading-none tracking-tighter transition-all ${
-                      focused ? 'text-[30px]' : 'text-[26px]'
+                    <span className={`font-impact leading-none transition-all ${
+                      focused ? 'text-[34px]' : 'text-[28px]'
                     } ${
-                      subWin ? 'text-sky-400' : 'text-zinc-500'
-                    }`} style={subWin ? { textShadow: '0 0 12px rgba(56,189,248,0.6)' } : {}}>
+                      subWin ? 'text-sky-300' : 'text-zinc-500'
+                    }`} style={subWin ? { textShadow: '0 0 14px rgba(56,189,248,0.85), 0 0 28px rgba(56,189,248,0.4)' } : {}}>
                       {subDisplay}
                     </span>
                   </div>

@@ -93,8 +93,26 @@ export function LayoutRouter(props) {
 
   const Layout = LAYOUT_COMPONENTS[activeLayout] || RadarCompareLayout;
 
+  // ★v5.18.0★ キーフレームアニメ (Gemini提言: 重要発言時のズーム/シェイク)
+  // currentScript.zoomBoost で指定:
+  //   'zoom'    - グッと寄る (定石)
+  //   'shake'   - 揺れる (衝撃発言)
+  //   'zoomShake' - ズーム+揺れ (最強、覚醒系)
+  //   undefined - 何もしない
+  const currentScript = scripts[currentIndex];
+  const zoomBoost = currentScript?.zoomBoost;
+  const animClass = zoomBoost === 'zoom' ? 'anim-zoom-boost'
+                  : zoomBoost === 'shake' ? 'anim-impact-shake'
+                  : zoomBoost === 'zoomShake' ? 'anim-zoom-shake'
+                  : '';
+  // animationKey + currentIndex で再生時に毎回再発火 (key 変更で remount)
+  const animKey = `${animClass}-${currentIndex}-${props.animationKey || 0}`;
+
   return (
-    <div className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'}`}>
+    <div
+      className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'} ${animClass}`}
+      key={animKey}
+    >
       {/* ★Error Boundary でラップ★
           レイアウトコンポーネントが throw してもアプリ全体が真っ白にならないように。
           activeLayout を key にすることで、レイアウト切替時にバウンダリ状態をリセット */}

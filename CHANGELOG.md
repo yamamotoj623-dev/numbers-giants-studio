@@ -9,7 +9,362 @@
 
 ---
 
-## [5.16.0] - 2026-04-27 - GAS APIキーローテーション + Gemini提言の整理
+## [5.18.0] - 2026-04-27 - Gemini提言1の残り3項目: キーフレームアニメ + 冒頭フラッシュ + 無限ループ
+
+### 動機: Gemini戦略提言の残課題
+
+> ② 静のUIに動の編集を加える: 重要発言時に画面ガクッとズーム/シェイク
+> ③ 冒頭0.5秒の違和感の視覚化: 打撃音/ミット音 + 画面フラッシュ
+> ④ エンディング画面の完全撤廃と「無限ループ」
+
+これら3つを一気に実装。これで Gemini 提言1 (動画化改善) はほぼ全カバー。
+
+### 実装内容
+
+#### A. キーフレームアニメ (script.zoomBoost)
+
+`script.zoomBoost` フィールド追加 (任意):
+- `'zoom'` — グッと寄る (定石、scale 1→1.06→1)
+- `'shake'` — 揺れる (衝撃発言、translate ±3px)
+- `'zoomShake'` — ズーム+揺れ (覚醒系、最強)
+- `undefined` — なし
+
+GlobalStyles.jsx に keyframes 追加:
+```css
+@keyframes zoomBoost { 0% { scale 1 } 20% { scale 1.06 } 100% { scale 1 } }
+@keyframes impactShake { /* 8ステップで ±3px translate, ±0.4deg rotate */ }
+@keyframes zoomShake { /* zoom + shake 複合、最強 */ }
+```
+
+LayoutRouter.jsx で `currentScript.zoomBoost` を読んで CSS class を当てる:
+```jsx
+const animClass = zoomBoost === 'zoom' ? 'anim-zoom-boost'
+                : zoomBoost === 'shake' ? 'anim-impact-shake'
+                : zoomBoost === 'zoomShake' ? 'anim-zoom-shake' : '';
+const animKey = `${animClass}-${currentIndex}-${animationKey}`;
+
+return (
+  <div className={`layout-fade-wrap ${animClass}`} key={animKey}>
+    ...
+  </div>
+);
+```
+
+`key` を毎回更新することで React の remount が発生し、CSS animation が再発火。
+
+ScriptEditorPanel.jsx に **「💥 キーフレームアニメ」ドロップダウン** 追加:
+- なし
+- 🔍 ズーム (グッと寄る)
+- 💥 シェイク (衝撃発言)
+- ⚡ ズーム+シェイク (覚醒系・最強)
+
+#### B. 冒頭0.5秒フラッシュ + SE 自動再生
+
+GlobalStyles.jsx に flash overlay の CSS:
+```css
+@keyframes hookFlash {
+  0% { opacity: 0 }
+  8% { opacity: 0.9 }    /* 一瞬強く光る */
+  20% { opacity: 0.4 }
+  35% { opacity: 0.6 }   /* 二段階で残像 */
+  100% { opacity: 0 }
+}
+.hook-flash-overlay {
+  background: radial-gradient(circle at 50% 50%, #ffffff 0%, rgba(255,255,255,0.6) 30%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: hookFlash 0.55s ease-out forwards;
+}
+```
+
+PreviewFrame.jsx の hook フェーズに `<div className="hook-flash-overlay">` を追加。
+key を `flash-${animationKey}-${currentIndex}` で毎ループ更新 → 再生のたびに発火。
+
+usePlaybackEngine.js で id:0 の script に SE 指定がなければ自動的に `hook_impact` を再生:
+```js
+if (currentIndex === 0 && mixer && isSEEnabled && !script.se) {
+  mixer.playSe('hook_impact');
+}
+```
+
+audioExporter.js でも同じく、scripts[0] に se がなければ書き出し時に hook_impact を冒頭に自動配置。
+
+#### C. 無限ループ (smartLoop)
+
+`projectData.smartLoop` フラグ追加 (デフォルト `true`):
+- `true` (推奨) — 末尾→冒頭にシームレス遷移、アウトロ画面を表示しない
+- `false` — 従来通り末尾でアウトロ画面表示して停止
+
+##### getPhase で outro phase をスキップ
+
+PreviewFrame.jsx:
+```js
+function getPhase(currentScript, currentIndex, scripts, projectData) {
+  if (currentScript.isCatchy) return 'hook';
+  // ★smartLoop=true なら outro phase に入らない
+  if (!projectData?.smartLoop && total && currentIndex >= total - 2) return 'outro';
+  if (currentScript.highlight) return 'highlight';
+  return 'normal';
+}
+```
+
+これで「今日の分析まとめ」「チャンネル登録お願い」の静止画が表示されなくなる。
+
+##### 末尾到達時に冒頭にループ
+
+usePlaybackEngine.js の `playNext` と `advanceToNextGroup` を修正:
+```js
+if (next >= scripts.length) {
+  if (projectData?.smartLoop) {
+    // ★ループバック★
+    currentGroupRef.current = { startIdx: -1, endIdx: -1 };
+    setAnimationKey(Date.now());  // hook flash 再発火用
+    return 0;  // 冒頭に戻る
+  }
+  // smartLoop=false: 従来通り停止
+  setIsPlaying(false);
+  ...
+}
+```
+
+`animationKey` を更新することで `key` が変わり、hook フェーズの flash overlay も再発火する。
+視聴者は「あれ、もう2週目に入ってた」と気づかないシームレスループ。
+
+#### D. UI トグル
+
+App.jsx の冒頭アニメ選択の隣に **「🔁 ループON / ⏹ ループOFF」** トグルボタン追加。
+
+```jsx
+<button
+  onClick={() => setProjectData(prev => ({ ...prev, smartLoop: !prev.smartLoop }))}
+  className={projectData.smartLoop ? 'bg-emerald-500 text-white' : 'bg-white text-zinc-500'}
+>
+  {projectData.smartLoop ? '🔁 ループON' : '⏹ ループOFF'}
+</button>
+```
+
+#### E. defaultBatter / defaultPitcher のデフォルト値
+
+両方とも `smartLoop: true` でデフォルト ON。新規プロジェクトは無限ループされる仕様。
+ループしたくない場合だけ手動で OFF にする方針。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/components/GlobalStyles.jsx` | zoomBoost/impactShake/zoomShake/hookFlash の keyframes |
+| `src/components/PreviewFrame.jsx` | getPhase に projectData / hook-flash-overlay 追加 |
+| `src/components/ScriptEditorPanel.jsx` | zoomBoost ドロップダウン |
+| `src/layouts/LayoutRouter.jsx` | zoomBoost class 適用 + key で再発火 |
+| `src/hooks/usePlaybackEngine.js` | hook_impact 自動再生 / smartLoop でループバック |
+| `src/lib/audioExporter.js` | 書き出し時にも冒頭 hook_impact 自動配置 |
+| `src/App.jsx` | smartLoop トグルボタン |
+| `src/data/defaultBatter.js`, `defaultPitcher.js` | smartLoop: true |
+| `package.json` / `config.js` | 5.17.0 → 5.18.0 |
+
+### 期待される効果
+
+| 改善前 | 改善後 |
+|---|---|
+| 静止UIで文字だけ進む | 重要発言時にズーム/シェイク (script.zoomBoost) |
+| 冒頭は静かに開始 | 0.55秒フラッシュ + 打撃音/ミット音 SE で「指を止める」 |
+| 末尾「まとめ」静止画でループ破壊 | 末尾→冒頭にシームレスループ (smartLoop=true) |
+
+### Gemini提言まとめ — 最終状態
+
+| 提言1 (戦略) | 状態 |
+|---|---|
+| 一点突破型UI | ✅ v5.15.5 (single_metric モード) |
+| キーフレームアニメ | ✅ v5.18.0 (zoomBoost) |
+| 冒頭フラッシュ + 効果音 | ✅ v5.18.0 |
+| 末尾削除 + 無限ループ | ✅ v5.18.0 (smartLoop) |
+
+| 追加提言 (UI質) | 状態 |
+|---|---|
+| ① ネオン化 (発光感) | ✅ v5.17.0 |
+| ② 極太フォント | ✅ v5.17.0 |
+| ③ 背景フレア + ノイズ | ✅ v5.17.0 |
+| ④ インサート映像 | ⏳ 素材ライブラリ設計から (将来) |
+| ⑤ CTA前倒し | ⏳ smartLoop と相性悪いので別設計 (将来) |
+
+| 提言2 (技術) | 状態 |
+|---|---|
+| APIキーローテーション | ✅ v5.16.0 |
+
+### 運用ガイド: zoomBoost をどう使うか
+
+**「ここぞ!」という1動画につき2-3回**だけ使うのが効果的。乱用するとうるさい。
+
+- `zoom`: 「OPS .950超え」のようにポジティブな衝撃データ
+- `shake`: 「実はこの選手、防御率11.20」のようにネガティブな驚き
+- `zoomShake`: 「覚醒の理由は…」のオチ直前、最大の盛り上げ箇所
+
+
+
+### 動機: Gemini追加提言を反映
+
+> ① コントラストと「発光感」の極端な強化 (ネオンオレンジ、純白、蛍光イエロー)
+> ② フォントウェイトを暴力的にアップ (超極太ゴシック)
+> ③ 背景の「抜け感」と微細な動き (球場フレア、ノイズアニメ)
+
+ダークモードの世界観 (野球データ分析の専門性) は維持しつつ、ショート動画の激流の中で
+埋もれない「サイバーパンク × ネオンサイン」の方向性に振り切る。
+
+### 改修内容
+
+#### A. ① カラーパレットの刷新 — ネオン化
+
+```css
+:root {
+  /* 旧: --p: #f97316 / --p-glow: rgba(249,115,22,0.6) */
+  /* 新: より明るく彩度高く */
+  --p: #ff8c1a;
+  --p-glow: rgba(255,140,26,0.85);
+  --p-glow-soft: rgba(255,140,26,0.4);
+  --p-bright: #ffaa3d;            /* ハイライト変体 */
+
+  --neon-yellow: #FFE94B;          /* 蛍光イエロー (旧 #FFD700 より明るい) */
+  --neon-yellow-glow: rgba(255,233,75,0.85);
+  --pure-white: #FFFFFF;           /* 主要数値用 */
+  --stadium-flare: rgba(255,200,100,0.06);
+}
+```
+
+主要数値専用 4 クラス追加:
+- `.neon-number` (オレンジ発光、純白文字)
+- `.neon-number-rose`
+- `.neon-number-yellow`
+- `.neon-number-red`
+
+例:
+```css
+.neon-number {
+  color: var(--pure-white);
+  text-shadow:
+    0 0 12px var(--p-glow),       /* 中心の強い発光 */
+    0 0 24px var(--p-glow-soft),  /* 二重ハロー */
+    0 0 4px rgba(255,255,255,0.6); /* 中心の白光 */
+}
+```
+
+#### B. ② 極太フォントの導入 — Google Fonts
+
+`index.html` で読み込み:
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=M+PLUS+1p:wght@800;900&display=swap" rel="stylesheet" />
+```
+
+ユーティリティクラス:
+- `.font-impact` (Anton, 超極太コンデンスド英数字、letter-spacing -0.02em)
+- `.font-headline` (Bebas Neue, 極太、letter-spacing 0.02em)
+- `.font-jp-heavy` (M PLUS 1p weight 900, 日本語の最重量)
+
+適用箇所:
+- PlayerSpotlightLayout: primaryStat (default + single_metric の両方)
+- VersusCardLayout: 数値 (mainDisplay / subDisplay)
+- HighlightCard (.hl-val-main .num / .hl-val-sub .num): GlobalStyles.jsx で Anton 直指定
+- RankingLayout: 順位の数値
+
+例:
+```jsx
+<span className="font-impact text-[140px] neon-number">
+  {player.primaryStat.value}
+</span>
+```
+
+#### C. ③ 背景の抜け感 + 微細ノイズ
+
+`.phone::before` で球場フレア:
+```css
+.phone::before {
+  background:
+    radial-gradient(ellipse 70% 50% at 80% 10%, var(--stadium-flare) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 95%, rgba(99,102,241,0.04) 0%, transparent 60%);
+  animation: stadiumFlare 8s ease-in-out infinite;
+}
+@keyframes stadiumFlare {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+```
+
+`.phone::after` で微細ノイズ:
+```css
+.phone::after {
+  opacity: 0.025;       /* ほぼ目立たない、わずかな質感 */
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0, ...),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.5) 0, ...);
+  animation: noiseShift 0.5s steps(4) infinite;
+}
+```
+
+これで完全な静止画感が消え、画面全体に常に微細な「動き」が生まれる。
+
+#### D. em-y / em-n / em-o / em-r も発光強化
+
+テロップ内のキーワード強調を全部ネオン化:
+- `.em-y`: `#FFD700` → `var(--neon-yellow)` + 二重発光 (12px / 24px)
+- `.em-n`: 同上 + monospace 維持
+- `.em-o`: `#FF8C00` → `var(--p-bright)` + 発光
+- `.em-r`: `#FF4500` → `#FF6B47` + 発光
+
+#### E. 対決カードの矢印にも発光
+
+`◀` `▶` `=` の矢印に textShadow 追加 — 勝者方向への視線誘導が強化される。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `index.html` | Google Fonts (Anton / Bebas Neue / M PLUS 1p) preconnect + import |
+| `src/components/GlobalStyles.jsx` | カラー変数刷新 / 球場フレア / ノイズアニメ / em-* 発光 / hl-val Anton / neon-number クラス群 |
+| `src/layouts/PlayerSpotlightLayout.jsx` | primaryStat (default + single_metric) を font-impact + neon に |
+| `src/layouts/VersusCardLayout.jsx` | 数値を font-impact + 発光強化 / 矢印にも textShadow |
+| `src/layouts/RankingLayout.jsx` | 値を font-impact + textShadow |
+| `package.json` / `config.js` | 5.16.0 → 5.17.0 |
+
+### 期待される効果
+
+| 改善前 (v5.16) | 改善後 (v5.17) |
+|---|---|
+| 上品なオレンジ #f97316 | サイバーパンクなネオンオレンジ #ff8c1a + 二重発光 |
+| #FFD700 (普通の金色) | 蛍光イエロー #FFE94B + 発光 |
+| 白文字 (普通) | 主要数値は純白 + 三重 text-shadow |
+| 数値: monospace 黒 (細め) | Anton (超極太コンデンスド) で押し出し |
+| 完全静止背景 (スライド感) | 球場フレア 8秒周期 + 微細ノイズで動きあり |
+| em-y は装飾少なめ | em-y/em-n/em-o/em-r 全部にネオン発光 |
+
+ショート動画の激流の中で埋もれない、「数字が目に飛び込んでくる」UIに進化。
+
+### 提言1 + 追加提言 まとめ
+
+| 項目 | 状態 |
+|---|---|
+| 一点突破型UI | ✅ v5.15.5 (single_metric モード) |
+| ① ネオン化 | ✅ v5.17.0 |
+| ② 極太フォント | ✅ v5.17.0 |
+| ③ 背景フレア + ノイズ | ✅ v5.17.0 |
+| キーフレームアニメ (重要発言時ズーム/シェイク) | ⏳ v5.18 候補 |
+| 冒頭フラッシュ + 効果音 | ⏳ v5.18 候補 |
+| 末尾削除 + 無限ループ | ⏳ v5.18 候補 |
+| ④ インサート映像 | ⏳ 素材ライブラリ設計から (将来) |
+| ⑤ CTA前倒し | ⏳ 無限ループとセットで実装 |
+
+### Gemini への共有用メモ
+
+ダークモード方針は維持。サイバーパンク × ネオンサイン × 極太タイポグラフィの3要素で
+「動く資料」から「目を引く動画」に進化させた。
+具体的指示は実装で 100% 反映済み:
+- ネオンオレンジ ✅
+- 純白主要数値 ✅
+- 蛍光イエロー (em-y) ✅
+- 暴力的フォント (Anton, M PLUS 1p 900) ✅
+- 背景球場フレア ✅
+- ノイズアニメ ✅
+
+
 
 ### 動機: Geminiから2つの提言
 

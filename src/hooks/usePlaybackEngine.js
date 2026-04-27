@@ -37,12 +37,21 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     setCurrentIndex(prev => {
       const next = prev + 1;
       if (next < scripts.length) return next;
+      // ★v5.18.0★ Gemini提言: smartLoop=true なら冒頭にシームレス遷移 (無限ループ)
+      // 視聴維持率向上のため、末尾→冒頭への自然な繋ぎ
+      if (projectData?.smartLoop) {
+        // ループ前にグループトラッキングをリセット (id:0 が再度トリガーされるように)
+        currentGroupRef.current = { startIdx: -1, endIdx: -1 };
+        setAnimationKey(Date.now());  // hook flash 再発火用
+        return 0;
+      }
+      // smartLoop=false: 従来通り末尾で停止
       setIsPlaying(false);
       mixerRef.current?.stopDucking();
       mixerRef.current?.stopBgm();
       return prev;
     });
-  }, [scripts.length]);
+  }, [scripts.length, projectData?.smartLoop]);
 
   // 同一speaker連続の scripts を「グループ」にまとめる
   // グループ内の最初のscriptの useEffect で、全部の speech を連結して1回 speak
@@ -77,6 +86,12 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     const adapter = adapterRef.current;
     const mixer = mixerRef.current;
     if (!adapter) return;
+
+    // ★v5.18.0★ 冒頭フック (id:1) で hook_impact を自動再生 (Gemini提言: 打撃音/ミット音)
+    // script.se が明示指定されていなければ自動的に hook_impact を流す
+    if (currentIndex === 0 && mixer && isSEEnabled && !script.se) {
+      mixer.playSe('hook_impact');
+    }
 
     if (script.se && mixer && isSEEnabled) {
       mixer.playSe(script.se);
@@ -164,6 +179,12 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       mixer?.stopDucking();
       setCurrentIndex(cur => {
         const nextAfterGroup = groupStartIdx + groupSize;
+        // ★v5.18.0★ 末尾到達時 + smartLoop なら冒頭にループ
+        if (nextAfterGroup >= scripts.length && projectData?.smartLoop) {
+          currentGroupRef.current = { startIdx: -1, endIdx: -1 };
+          setAnimationKey(Date.now());
+          return 0;
+        }
         if (cur < nextAfterGroup) return nextAfterGroup;
         return cur;
       });

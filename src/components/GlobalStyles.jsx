@@ -6,7 +6,30 @@
 import React from 'react';
 
 const CSS_TEXT = `
-  :root { --p: #f97316; --p-glow: rgba(249,115,22,0.6); --indigo: #4f46e5; --sky: #0ea5e9; --rose: #fb7185; --rose-glow: rgba(251,113,133,0.6); --like: #ef4444; }
+  :root {
+    /* ★v5.17.0★ ネオン/サイバーパンク化: より明るく発光感のある値に */
+    /* 旧: --p: #f97316 (普通のオレンジ) */
+    /* 新: --p: #ff8c1a (より明るく彩度高め)、--p-glow も強化 */
+    --p: #ff8c1a;
+    --p-glow: rgba(255,140,26,0.85);
+    --p-glow-soft: rgba(255,140,26,0.4);
+    --p-bright: #ffaa3d;          /* ハイライト用さらに明るい変体 */
+
+    --indigo: #6366f1;             /* やや明るく */
+    --sky: #38bdf8;                 /* 同上 */
+    --rose: #fb7185;
+    --rose-glow: rgba(251,113,133,0.85);
+    --rose-bright: #ffa1ad;
+
+    --like: #ef4444;
+    /* ★新★ 蛍光イエロー (キーワード強調用) */
+    --neon-yellow: #FFE94B;
+    --neon-yellow-glow: rgba(255,233,75,0.85);
+    /* ★新★ 純白 (主要数値用) */
+    --pure-white: #FFFFFF;
+    /* ★新★ 球場フレア用 */
+    --stadium-flare: rgba(255,200,100,0.06);
+  }
   * { box-sizing: border-box; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; }
   body { background: #f4f4f5; font-family: -apple-system, "Segoe UI", "Noto Sans JP", sans-serif; padding: 20px 10px 40px; }
 
@@ -31,11 +54,50 @@ const CSS_TEXT = `
 
   .phone-wrapper { max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 
-  .phone { width: 360px; max-width: 92vw; aspect-ratio: 9/16; background: #0d0d0f; border-radius: 32px; border: 6px solid #18181b; box-shadow: 0 15px 40px rgba(0,0,0,0.18); overflow: hidden; position: relative; transition: border-radius 0.3s, border 0.3s; }
+  .phone { width: 360px; max-width: 92vw; aspect-ratio: 9/16; background: #0a0a0c; border-radius: 32px; border: 6px solid #18181b; box-shadow: 0 15px 40px rgba(0,0,0,0.18); overflow: hidden; position: relative; transition: border-radius 0.3s, border 0.3s; }
   .phone.square { border-radius: 0; border: 1px solid #e4e4e7; }
   /* 録画モード: 編集用UIを全て非表示 */
   .phone.record-mode .duration-badge { display: none; }
   .phone.record-mode .safe-zone-guide { display: none !important; }
+
+  /* ★v5.17.0★ 球場フレア (Gemini提言③: 背景の抜け感) — 右上から差し込む光 */
+  .phone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 50% at 80% 10%, var(--stadium-flare) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 20% 95%, rgba(99,102,241,0.04) 0%, transparent 60%);
+    animation: stadiumFlare 8s ease-in-out infinite;
+  }
+  @keyframes stadiumFlare {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+
+  /* ★v5.17.0★ 微細なノイズアニメ (Gemini提言③) — 動きを錯覚させる */
+  .phone::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 3px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.5) 0, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 3px);
+    animation: noiseShift 0.5s steps(4) infinite;
+  }
+  @keyframes noiseShift {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-1px, 1px); }
+    50% { transform: translate(1px, -1px); }
+    75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(0, 0); }
+  }
+  /* 録画モードではフレア・ノイズも消す (素材として邪魔になり得るが、お好みで - 一旦は付けたまま) */
 
   .safe-zone-guide { position: absolute; left: 0; right: 0; pointer-events: none; z-index: 100; display: none; }
   .safe-zone-guide.top { top: 0; height: 14%; background: repeating-linear-gradient(45deg, rgba(255,0,0,0.1), rgba(255,0,0,0.1) 10px, transparent 10px, transparent 20px); border-bottom: 1px dashed rgba(255,0,0,0.5); }
@@ -45,6 +107,59 @@ const CSS_TEXT = `
   .ph-date { position: absolute; top: 14px; right: 14px; color: var(--p); opacity: 0.85; font-size: 9px; font-weight: 700; z-index: 25; display: flex; align-items: center; gap: 3px; letter-spacing: 0.5px; }
   .ph-date::before { content: '●'; font-size: 7px; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+  /* ★v5.18.0★ Gemini提言: キーフレームアニメ (重要発言時のズーム/シェイク) */
+  /* zoomBoost: 一瞬グッと寄る (0.6秒) */
+  @keyframes zoomBoost {
+    0% { transform: scale(1); }
+    20% { transform: scale(1.06); }
+    35% { transform: scale(1.04); }
+    55% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  .anim-zoom-boost { animation: zoomBoost 0.6s ease-out; }
+
+  /* impactShake: 衝撃発言 (0.4秒) */
+  @keyframes impactShake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    10% { transform: translate(-3px, -1px) rotate(-0.4deg); }
+    20% { transform: translate(3px, 1px) rotate(0.4deg); }
+    30% { transform: translate(-2px, 1px) rotate(-0.3deg); }
+    40% { transform: translate(2px, -1px) rotate(0.3deg); }
+    50% { transform: translate(-1px, 0) rotate(-0.2deg); }
+    60% { transform: translate(1px, 0) rotate(0.2deg); }
+    80% { transform: translate(0, 0); }
+  }
+  .anim-impact-shake { animation: impactShake 0.4s ease-out; }
+
+  /* zoomShake: 衝撃+ズーム (0.5秒、最強) */
+  @keyframes zoomShake {
+    0% { transform: scale(1) translate(0, 0); }
+    15% { transform: scale(1.08) translate(-2px, -1px); }
+    30% { transform: scale(1.06) translate(2px, 1px); }
+    50% { transform: scale(1.07) translate(-1px, 0); }
+    70% { transform: scale(1.05) translate(1px, 0); }
+    100% { transform: scale(1) translate(0, 0); }
+  }
+  .anim-zoom-shake { animation: zoomShake 0.5s ease-out; }
+
+  /* ★v5.18.0★ 冒頭フラッシュ (打撃音/ミット音と同時に画面が一瞬白く光る) */
+  @keyframes hookFlash {
+    0% { opacity: 0; }
+    8% { opacity: 0.9; }
+    20% { opacity: 0.4; }
+    35% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+  .hook-flash-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 50%, #ffffff 0%, rgba(255,255,255,0.6) 30%, transparent 70%);
+    mix-blend-mode: screen;
+    animation: hookFlash 0.55s ease-out forwards;
+  }
 
   /* 動画時間バッジ(右上、日付と重ならないように上部左に配置) */
   .duration-badge { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: rgba(24,24,27,0.85); border: 1px solid rgba(79,70,229,0.5); color: #a5b4fc; font-size: 9px; font-weight: 900; padding: 3px 8px; border-radius: 4px; z-index: 45; display: flex; align-items: center; gap: 4px; letter-spacing: 0.5px; }
@@ -220,7 +335,7 @@ const CSS_TEXT = `
   .telop-hook { font-size: 46px; font-weight: 900; text-align: center; line-height: 1.05; letter-spacing: -1.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 10px 30px rgba(0,0,0,1); }
   /* 4行モード: フォント縮小 */
   .telop-hook.lines-4 { font-size: 38px; line-height: 1.02; }
-  .telop-hook .em-y { color: #FFD700; font-size: 1.3em; letter-spacing: -2.5px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 30px rgba(255,215,0,0.6); }
+  .telop-hook .em-y { color: var(--neon-yellow); font-size: 1.3em; letter-spacing: -2.5px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 18px var(--neon-yellow-glow), 0 0 36px rgba(255,233,75,0.5); }
 
   .telop-hook .line { display: block; opacity: 0; margin: 2px 0; }
 
@@ -406,10 +521,10 @@ const CSS_TEXT = `
   .telop-normal.size-l { font-size: 25px; }
   .telop-normal.size-m { font-size: 21px; }
   .telop-normal.size-s { font-size: 18px; }
-  .telop-normal .em-y { color: #FFD700; font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 15px rgba(255,215,0,0.5); }
-  .telop-normal .em-o { color: #FF8C00; font-size: 1.15em; }
-  .telop-normal .em-r { color: #FF4500; font-size: 1.15em; }
-  .telop-normal .em-n { color: #FFD700; font-family: monospace; font-size: 1.2em; letter-spacing: -0.5px; }
+  .telop-normal .em-y { color: var(--neon-yellow); font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 12px var(--neon-yellow-glow), 0 0 24px rgba(255,233,75,0.5); }
+  .telop-normal .em-o { color: var(--p-bright); font-size: 1.15em; text-shadow: 0 0 10px var(--p-glow); }
+  .telop-normal .em-r { color: #FF6B47; font-size: 1.15em; text-shadow: 0 0 10px rgba(255,107,71,0.7); }
+  .telop-normal .em-n { color: var(--neon-yellow); font-family: monospace; font-size: 1.2em; letter-spacing: -0.5px; text-shadow: 0 0 8px var(--neon-yellow-glow); }
 
   /* テロップを音声開始と同期して即表示(0.3s) */
   .phase.active .telop-wrap-normal .telop-bg { animation: telopSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) 0.3s backwards; }
@@ -451,17 +566,17 @@ const CSS_TEXT = `
   /* 数値を大きく・目立つ中央配置 (ハイライト最重要) */
   .hl-values { display: flex; justify-content: center; align-items: baseline; gap: 14px; margin-bottom: 7px; padding: 7px 0; border-top: 1px solid rgba(63,63,70,0.5); border-bottom: 1px solid rgba(63,63,70,0.5); }
   .hl-val-main, .hl-val-sub { display: flex; flex-direction: column; align-items: center; }
-  .hl-val-main .num { font-family: monospace; font-size: 38px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
-  .hl-val-sub .num { font-family: monospace; font-size: 26px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+  .hl-val-main .num { font-family: 'Anton', 'Bebas Neue', 'Impact', monospace; font-size: 42px; font-weight: 400; letter-spacing: -1px; line-height: 1; }
+  .hl-val-sub .num { font-family: 'Anton', 'Bebas Neue', 'Impact', monospace; font-size: 30px; font-weight: 400; letter-spacing: -0.5px; line-height: 1; }
   .hl-val-main .tag { font-size: 11px; font-weight: 700; margin-top: 4px; }
   .hl-val-sub .tag { font-size: 11px; font-weight: 700; margin-top: 4px; }
 
   .hl-val-main.loser .num { color: #fca5a5; text-shadow: 0 0 12px rgba(248,113,113,0.4); }
   .hl-val-main.loser .tag { color: #fca5a5; }
-  .hl-val-main.winner .num { color: var(--p); text-shadow: 0 0 20px var(--p-glow); }
-  .hl-val-main.winner .tag { color: var(--p); }
-  .hl-val-sub.winner .num { color: var(--p); text-shadow: 0 0 15px var(--p-glow); }
-  .hl-val-sub.winner .tag { color: var(--p); }
+  .hl-val-main.winner .num { color: var(--p-bright); text-shadow: 0 0 12px var(--p-glow), 0 0 28px var(--p-glow-soft), 0 0 6px rgba(255,255,255,0.5); }
+  .hl-val-main.winner .tag { color: var(--p-bright); }
+  .hl-val-sub.winner .num { color: var(--p-bright); text-shadow: 0 0 10px var(--p-glow), 0 0 20px var(--p-glow-soft); }
+  .hl-val-sub.winner .tag { color: var(--p-bright); }
   .hl-val-sub.loser .num { color: #fca5a5; text-shadow: 0 0 8px rgba(248,113,113,0.3); opacity: 0.85; }
   .hl-val-sub.loser .tag { color: #fca5a5; opacity: 0.85; }
   .hl-vs { font-size: 14px; font-weight: 900; color: #52525b; font-style: italic; }
@@ -742,6 +857,59 @@ const CSS_TEXT = `
     justify-content: center;
     align-items: center;
     width: 100%;
+  }
+
+  /* ★v5.17.0★ Gemini提言②: 暴力的にフォントを太く
+     - .font-impact: 数値専用 (Anton, 超極太コンデンスド英数字)
+     - .font-headline: ヘッドライン (Bebas Neue, 細長い極太)
+     - .font-jp-heavy: 日本語の最重量 (M PLUS 1p weight 900)
+
+     注: 既存の font-family: monospace は維持。
+     ショート動画として最大インパクトを狙う箇所だけ font-impact を選択的適用。 */
+  .font-impact {
+    font-family: 'Anton', 'Bebas Neue', 'Impact', 'Helvetica Neue', sans-serif;
+    font-weight: 400;       /* Anton は 400 が最大 (デザイン的に十分極太) */
+    letter-spacing: -0.02em;
+    font-stretch: condensed;
+  }
+  .font-headline {
+    font-family: 'Bebas Neue', 'Anton', 'Impact', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+  .font-jp-heavy {
+    font-family: 'M PLUS 1p', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+
+  /* ★v5.17.0★ ネオン主要数値クラス (player_spotlight の primary-stat 等で使う) */
+  .neon-number {
+    color: var(--pure-white);
+    text-shadow:
+      0 0 12px var(--p-glow),
+      0 0 24px var(--p-glow-soft),
+      0 0 4px rgba(255,255,255,0.6);
+  }
+  .neon-number-rose {
+    color: var(--pure-white);
+    text-shadow:
+      0 0 12px var(--rose-glow),
+      0 0 24px rgba(251,113,133,0.4),
+      0 0 4px rgba(255,255,255,0.6);
+  }
+  .neon-number-yellow {
+    color: var(--neon-yellow);
+    text-shadow:
+      0 0 12px var(--neon-yellow-glow),
+      0 0 24px rgba(255,233,75,0.4);
+  }
+  .neon-number-red {
+    color: #ff8a8a;
+    text-shadow:
+      0 0 12px rgba(248,113,113,0.85),
+      0 0 24px rgba(248,113,113,0.4),
+      0 0 4px rgba(255,255,255,0.5);
   }
 `;
 
