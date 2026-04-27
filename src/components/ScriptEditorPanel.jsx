@@ -30,7 +30,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
   const handleChange = (id, field, value) => {
     const updated = {
       ...projectData,
-      scripts: projectData.scripts.map(s => s.id === id ? { ...s, [field]: value } : s),
+      scripts: (Array.isArray(projectData.scripts) ? projectData.scripts : []).map(s => s.id === id ? { ...s, [field]: value } : s),
     };
     onChange(updated);
   };
@@ -124,7 +124,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
         <Plus size={14}/> シーン追加
       </button>
 
-      {projectData.scripts.map((script, idx) => {
+      {(Array.isArray(projectData.scripts) ? projectData.scripts : []).map((script, idx) => {
         const isCurrent = currentIndex === idx;
         const isExpanded = expandedIds.has(script.id);
         const speakerColor = script.speaker === 'B' ? 'bg-sky-50 border-sky-200' : 'bg-orange-50 border-orange-200';
@@ -281,7 +281,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                     className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
                   >
                     <option value="">なし (通常表示)</option>
-                    {comparisons.map(c => (
+                    {(Array.isArray(comparisons) ? comparisons : []).map(c => (
                       <option key={c.id} value={c.id}>{c.label} {c.kana ? `(${c.kana})` : ''}</option>
                     ))}
                   </select>

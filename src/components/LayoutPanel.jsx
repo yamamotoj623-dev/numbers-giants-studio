@@ -200,10 +200,13 @@ export function LayoutPanel({ projectData, onChange }) {
 }
 
 function TimelineDataEditor({ projectData, onChange }) {
-  const timeline = projectData.layoutData?.timeline || {
-    unit: 'month',
-    metric: 'OPS',
-    points: [
+  // ★v5.18.8★ 部分的に layoutData.timeline が存在するが points が undefined のケースで .map が爆発するバグを修正
+  // points も含めて完全な fallback を保証
+  const tlRaw = projectData.layoutData?.timeline || {};
+  const timeline = {
+    unit: tlRaw.unit || 'month',
+    metric: tlRaw.metric || 'OPS',
+    points: Array.isArray(tlRaw.points) ? tlRaw.points : [
       { label: '4月', main: 0.724, sub: 0.598 },
       { label: '5月', main: 0.810, sub: 0.621 },
     ],
@@ -217,13 +220,13 @@ function TimelineDataEditor({ projectData, onChange }) {
   };
 
   const updatePoint = (index, field, value) => {
-    const points = [...timeline.points];
+    const points = [...(timeline.points || [])];
     points[index] = { ...points[index], [field]: field === 'label' ? value : parseFloat(value) || 0 };
     update({ ...timeline, points });
   };
 
-  const addPoint = () => update({ ...timeline, points: [...timeline.points, { label: '', main: 0, sub: 0 }] });
-  const removePoint = (i) => update({ ...timeline, points: timeline.points.filter((_, idx) => idx !== i) });
+  const addPoint = () => update({ ...timeline, points: [...(timeline.points || []), { label: '', main: 0, sub: 0 }] });
+  const removePoint = (i) => update({ ...timeline, points: (timeline.points || []).filter((_, idx) => idx !== i) });
 
   return (
     <div className="bg-white p-3 rounded-lg border border-zinc-200">
@@ -251,7 +254,7 @@ function TimelineDataEditor({ projectData, onChange }) {
         </label>
       </div>
       <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
-        {timeline.points.map((p, i) => (
+        {(Array.isArray(timeline.points) ? timeline.points : []).map((p, i) => (
           <div key={i} className="flex gap-1.5 items-center">
             <input type="text" value={p.label} onChange={(e) => updatePoint(i, 'label', e.target.value)} className="w-12 text-[11px] border border-zinc-200 rounded px-1.5 py-1" placeholder="月" />
             <input type="number" step="0.001" value={p.main} onChange={(e) => updatePoint(i, 'main', e.target.value)} className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1" />
@@ -314,7 +317,7 @@ function VersusDataEditor({ projectData, onChange }) {
 
       <div className="text-[11px] font-bold text-zinc-600 mb-1">指標別比較</div>
       <div className="space-y-1.5 max-h-72 overflow-y-auto custom-scrollbar pr-1">
-        {(versus.categoryScores || []).map((cat, i) => (
+        {(Array.isArray(versus.categoryScores) ? versus.categoryScores : []).map((cat, i) => (
           <div key={i} className="border border-zinc-200 bg-zinc-50 rounded p-1.5 space-y-1">
             <div className="flex items-center gap-1">
               <input
@@ -534,7 +537,7 @@ function SpotlightDataEditor({ projectData, onChange }) {
 
       {/* 選手リスト */}
       <div className="space-y-3 max-h-[480px] overflow-y-auto custom-scrollbar pr-1">
-        {(spotlight.players || []).map((p, pi) => (
+        {(Array.isArray(spotlight.players) ? spotlight.players : []).map((p, pi) => (
           <div key={pi} className="border border-zinc-200 bg-zinc-50 rounded-lg p-2 space-y-2">
             {/* ヘッダー: id + label + 削除 */}
             <div className="flex items-center gap-1.5">
@@ -623,7 +626,8 @@ function SpotlightDataEditor({ projectData, onChange }) {
             <div className="space-y-1">
               <div className="text-[10px] font-bold text-zinc-600">サブ指標 (周囲の補助情報、Geminiが柔軟にカスタム可)</div>
               <div className="space-y-1">
-                {(p.stats || []).map((stat, si) => (
+                {/* ★v5.18.8★ stats が配列でない (オブジェクト等) 場合に .map でクラッシュするバグ防御 */}
+                {(Array.isArray(p.stats) ? p.stats : []).map((stat, si) => (
                   <div key={si} className="flex gap-1.5 items-center">
                     <input
                       type="text"

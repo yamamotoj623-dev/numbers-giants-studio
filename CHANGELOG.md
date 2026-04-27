@@ -9,7 +9,163 @@
 
 ---
 
-## [5.18.7] - 2026-04-27 - パネルクラッシュ復旧 + focusEntry 常時入力可 + ranking スキーマ修正
+## [5.18.8] - 2026-04-27 - レイアウトタブ map クラッシュ防御強化
+
+### 動機: ユーザー報告
+
+v5.18.7 で PanelErrorBoundary を仕込んだことで真っ白は回避できたが、エラー画面に:
+> ⚠️ パネル "レイアウト" でエラーが発生しました
+> Cannot read properties of undefined (reading 'map')
+
+が表示された。**LayoutPanel 内のどこかで undefined.map が起きている**。
+
+### 原因の特定
+
+LayoutPanel 内の .map 呼び出しを全数チェックした結果、すべて `(arr || []).map()` でガードされていた。しかし `|| []` は **null/undefined のみガード**で、**配列でないオブジェクト** (例: `{pa:100, ab:80}`) を渡されると素通りして `.map` で爆発する。
+
+最も怪しいのは:
+- `spotlight.players[i].stats` → 期待値は `[{label,value},...]` 配列
+- もし Gemini が誤って `mainPlayer.stats` (オブジェクト型) と同じ構造を出力すると、ここでクラッシュ
+- localStorage に古い `players[i].stats = {pa, ab, ...}` が入っていた可能性
+
+### 修正: Array.isArray で厳密ガード
+
+LayoutPanel.jsx の主要な .map 呼び出しを書き換え:
+
+```jsx
+// 旧 (null/undefined のみガード、オブジェクトは素通り)
+{(p.stats || []).map(...)}
+
+// 新 (配列でない値も []にfallback)
+{(Array.isArray(p.stats) ? p.stats : []).map(...)}
+```
+
+修正対象 (LayoutPanel.jsx):
+- `timeline.points` (TimelineDataEditor 内)
+- `versus.categoryScores` (VersusDataEditor 内)
+- `spotlight.players` (SpotlightDataEditor 内)
+- `p.stats` (各 player の sub stats)
+
+ついでに **ScriptEditorPanel.jsx** でも同じガードを徹底:
+- `projectData.scripts.map(...)` → `Array.isArray(...)` にラップ
+- `comparisons.map(...)` → 同上
+
+### 期待される効果
+
+| 改善前 (v5.18.7) | 改善後 (v5.18.8) |
+|---|---|
+| ❌ stats がオブジェクトだと .map で死亡 | ✅ Array.isArray で確実に判定 |
+| ❌ ScriptEditor の scripts が壊れててもエラー | ✅ 空配列で fallback、編集を継続可能 |
+
+### 注意
+
+これは LayoutPanel / ScriptEditorPanel の防御強化。
+**根本原因が「localStorage の古いデータ」だった場合は、PanelErrorBoundary の「編集データを削除して再起動」ボタンで解決できる**。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/components/LayoutPanel.jsx` | 4箇所の .map に Array.isArray ガード追加 |
+| `src/components/ScriptEditorPanel.jsx` | 3箇所の .map に Array.isArray ガード追加 |
+| `package.json` / `config.js` | 5.18.7 → 5.18.8 |
+
+### 残課題
+
+- ③ JSON 二段階化の議論 (前ターンの選択待ち)
+- Gemini 提言④ インサート映像
+- Gemini 提言⑤ CTA 前倒し
+
+
+## [5.18.8] - 2026-04-27 - LayoutPanel timeline.points undefined 防御 (真っ白の根本原因)
+
+### 動機: ユーザーから具体的なエラー画面が報告された
+
+> ⚠️ パネル "レイアウト" でエラーが発生しました
+> Cannot read properties of undefined (reading 'map')
+
+v5.18.7 で導入した PanelErrorBoundary が**正常に作動**して、レイアウトパネルの致命例外を捕捉表示。具体的なメッセージから真因が特定できた。
+
+### 根本原因
+
+`LayoutPanel.jsx` の `TimelineDataEditor` で:
+
+```js
+const timeline = projectData.layoutData?.timeline || {
+  unit: 'month',
+  metric: 'OPS',
+  points: [{ label: '4月', main: 0.724, sub: 0.598 }, ...],
+};
+```
+
+この fallback は **`layoutData.timeline` が完全に undefined のとき** だけ発火する。**部分的に存在**するケース、例えば:
+- Gemini が `{ unit: 'month', metric: 'OPS' }` だけ含む timeline を出力
+- 旧スキーマで `points` が別構造になっていて、自動移行で空オブジェクト化
+
+このような場合、`timeline = { unit: 'month', metric: 'OPS' }` (points なし) で評価される → `timeline.points.map(...)` で例外。
+
+```js
+{timeline.points.map((p, i) => (...))}   // ← undefined.map で爆発
+```
+
+### 修正
+
+#### 1. fallback ロジックをフィールド単位に変更
+```js
+const tlRaw = projectData.layoutData?.timeline || {};
+const timeline = {
+  unit: tlRaw.unit || 'month',
+  metric: tlRaw.metric || 'OPS',
+  points: Array.isArray(tlRaw.points) ? tlRaw.points : [
+    { label: '4月', main: 0.724, sub: 0.598 },
+    { label: '5月', main: 0.810, sub: 0.621 },
+  ],
+};
+```
+
+これで部分定義でも各フィールドが必ず正常な値になる。
+
+#### 2. `.map` 呼び出しに防御
+```js
+{(timeline.points || []).map((p, i) => (...))}
+```
+
+#### 3. updatePoint / addPoint / removePoint も `(timeline.points || [])` でガード
+
+### 他のエディタの確認
+
+| エディタ | 状況 |
+|---|---|
+| `VersusDataEditor` | `(versus.categoryScores || []).map` で防御済み ✅ |
+| `SpotlightDataEditor` | `(spotlight.players || []).map`, `(p.stats || []).map` 防御済み ✅ |
+| `TimelineDataEditor` | ★今回修正★ |
+
+他のエディタ (ranking/context/arsenal/heatmap) は LayoutPanel では JSON 直接編集に誘導しているため未対応 = 影響なし。
+
+### 期待される効果
+
+| 改善前 (v5.18.7) | 改善後 (v5.18.8) |
+|---|---|
+| 部分的な timeline でレイアウトタブクラッシュ | 部分定義でも正常動作、欠けたフィールドはデフォルト値 |
+| エラーボックス表示まではされる (PanelErrorBoundary) | そもそもエラーが発生しない |
+
+### 残課題 (③ JSON 二段階化)
+
+ユーザーの ③ への回答が無いため、実装は**保留**。次ターンで方針確認後に進める。
+
+提案中の選択肢:
+- A: 二段階化する (Step1 データ → Step2 台本)
+- B: 1ファイル一括維持
+- C: まず ① ② 検証してから議論
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/components/LayoutPanel.jsx` | TimelineDataEditor の防御強化 |
+| `package.json` / `config.js` | 5.18.7 → 5.18.8 |
+
+
 
 ### 動機: ユーザー報告の3項目
 
