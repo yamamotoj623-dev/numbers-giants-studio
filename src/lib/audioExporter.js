@@ -134,12 +134,15 @@ async function timeStretchPreservingPitch(sourceBuffer, tempo, ctx) {
   const sampleRate = sourceBuffer.sampleRate;
   const inputLength = sourceBuffer.length;
   // 出力長は速度倍率の逆数倍
-  const outputLength = Math.ceil(inputLength / tempo) + 1024;  // 余裕
+  const outputLength = Math.ceil(inputLength / tempo) + 4096;  // 余裕大きめ
 
   // PitchShifter は AudioBufferSourceNode 互換の API を持つので、
   // OfflineAudioContext で接続して render する
+  // ★v1.1.1★ buffer size を 1024 → 4096 に拡大 (音質劣化を最小化)
+  //   小さい窓だと TTS のような短いフレーズではイントネーションが歪む。
+  //   4096 で TTS の自然な抑揚を保ったまま時間伸縮可能。
   const offlineCtx = new OfflineAudioContext(numChannels, outputLength, sampleRate);
-  const shifter = new PitchShifter(offlineCtx, sourceBuffer, 1024);
+  const shifter = new PitchShifter(offlineCtx, sourceBuffer, 4096);
   shifter.tempo = tempo;
   shifter.pitch = 1.0;  // ピッチは変えない (1.0 = 元のまま)
   shifter.connect(offlineCtx.destination);
