@@ -9,7 +9,154 @@
 
 ---
 
-## [5.15.5] - 2026-04-26 - UX 8項目修正 (バグ2件 + UI改善6件)
+## [5.16.0] - 2026-04-27 - GAS APIキーローテーション + Gemini提言の整理
+
+### 動機: Geminiから2つの提言
+
+> ### 提言1 (戦略): ショート動画として「動画」になっていない
+> - 一点突破型UI (今話してる数字だけ巨大)
+> - キーフレームアニメ (重要発言時のズーム/シェイク)
+> - 冒頭0.5秒のフラッシュ + 打撃音/ミット音
+> - エンディング画面撤廃 + 無限ループ
+>
+> ### 提言2 (技術): TTS 1日100回上限を APIキーローテーションで突破
+
+提言1は v5.15.5 で `single_metric` モードを既に実装済みで方向性は同じ。
+残りの 3項目 (キーフレームアニメ、冒頭フラッシュ、無限ループ) は次のバージョンで段階対応。
+
+提言2は即効性が高く、品質が高い 3.1 Flash TTS preview を実質無制限で使えるため、
+本リリースで実装。
+
+### 実装内容: GAS APIキーローテーション
+
+#### A. Code.gs の CONFIG に getApiKeys() 関数を追加
+
+```js
+function getApiKeys() {
+  var props = PropertiesService.getScriptProperties();
+  var keys = [];
+  // 複数キー (新方式): GEMINI_API_KEYS にカンマ区切り
+  var multiKeysRaw = props.getProperty('GEMINI_API_KEYS');
+  if (multiKeysRaw) {
+    multiKeysRaw.split(',').forEach(function(k) {
+      var trimmed = k.trim();
+      if (trimmed && keys.indexOf(trimmed) === -1) keys.push(trimmed);
+    });
+  }
+  // 単一キー (旧方式、後方互換): GEMINI_API_KEY
+  var singleKey = props.getProperty('GEMINI_API_KEY');
+  if (singleKey) {
+    var trimmed = singleKey.trim();
+    if (trimmed && keys.indexOf(trimmed) === -1) keys.push(trimmed);
+  }
+  return keys;
+}
+```
+
+スクリプトプロパティ:
+- `GEMINI_API_KEY` (既存): 後方互換のため引き続きサポート
+- **`GEMINI_API_KEYS` (★新★)**: カンマ区切りで複数キー指定
+  - 例: `"AIza...keyB,AIza...keyC,AIza...keyD"`
+  - 両方設定すれば全キーを使う (重複は自動排除)
+
+#### B. handleTTS のリトライループを階層化
+
+「モデル」 > 「APIキー」 > 「リトライ」 の3層ループ:
+
+```
+for each model in [3.1, 2.5]:
+  for each apiKey in apiKeys:
+    for attempt in 0..TTS_RETRY_COUNT:
+      response = call(model, apiKey)
+      if 200: return success
+      if 429: break (next key)         ← v1.1.0 の新挙動
+      if 4xx: break (next key試行は意味薄いがやる)
+      if 5xx: continue (retry same key)
+  if all keys exhausted: continue (next model)
+```
+
+挙動の優先順:
+- **3.1 でキーA quota → 3.1 でキーB → 3.1 でキーC** (まず 3.1 を全キー試す)
+- 全キー quota → **2.5 でキーA → 2.5 でキーB → 2.5 でキーC** (2.5 にfallback)
+- これで品質を優先しつつ実質無制限化
+
+理論最大: **100 × N キー × 2 モデル = 100×N×2 回/日**
+- 1キー: 200回/日
+- 3キー: 600回/日 (推奨)
+- 5キー: 1000回/日
+
+#### C. レスポンスに `usedKeyIndex` / `keysAvailable` を追加
+
+クライアント側でどのキーが使われたか把握できるように:
+```json
+{
+  "audioBase64": "...",
+  "modelUsed": "gemini-3.1-flash-tts-preview",
+  "usedFallback": false,
+  "usedKeyIndex": 1,           // ★新★ 0始まり
+  "keysAvailable": 3            // ★新★ 設定キー総数
+}
+```
+
+ttsAdapter.js でも propagate するようにした。
+
+#### D. 新しい checkApiKeys() ヘルパー
+
+GAS エディタで実行できるデバッグ関数:
+```
+利用可能な API キー数: 3
+  [0] AIzaSyABCD...wxyz
+  [1] AIzaSyEFGH...mnop
+  [2] AIzaSyIJKL...qrst
+✅ 100×3×2 = 600 回/日 まで TTS 生成可能
+```
+
+### 設定手順 (デプロイ後)
+
+1. **Google AI Studio (https://aistudio.google.com/) で追加キー作成**
+   - 左メニュー「API キー」を開く
+   - 「Create API key」→ **「Create API key in new project」** を選択
+     (★必ず新しいプロジェクトで作る — 同プロジェクトの追加キーは quota を共有する)
+   - 同じ手順で 3-5 個のキーを発行
+
+2. **GAS のスクリプトプロパティに追加**
+   - GAS エディタ → 左メニュー「プロジェクトの設定」→「スクリプト プロパティ」
+   - `GEMINI_API_KEYS` (新規追加) に `keyB,keyC,keyD` をカンマ区切りで貼り付け
+   - `GEMINI_API_KEY` (既存) はそのまま (1番目のキーとして引き続き使われる)
+
+3. **GAS エディタで `checkApiKeys()` を実行 → コンソールでキー数確認**
+
+4. **デプロイ更新**
+   - 「デプロイ」→「デプロイを管理」→ 編集 (鉛筆アイコン) → バージョン: 「新しいバージョン」 → 「デプロイ」
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `gas-proxy/Code.gs` | getApiKeys / handleTTS 階層化リトライ / checkApiKeys ヘルパー (v1.0.0 → v1.1.0) |
+| `app-v5/src/lib/ttsAdapter.js` | usedKeyIndex / keysAvailable を propagate |
+| `package.json` / `config.js` | 5.15.5 → 5.16.0 |
+
+### 期待される効果
+
+| 設定キー数 | 1日の TTS 生成上限 (理論値) |
+|---|---|
+| 1キー (現状) | 100 × 1 × 2 = 200 回 |
+| 3キー (推奨) | 100 × 3 × 2 = 600 回 |
+| 5キー (大規模運用) | 100 × 5 × 2 = 1000 回 |
+
+これで本番チャンネル運用 (毎日3-5本投稿) でも quota を気にせず作業可能。
+
+### 提言1 (動画化改善) の今後の対応予定 (v5.17 以降)
+
+| 提言 | 状態 |
+|---|---|
+| 一点突破型UI | ✅ v5.15.5 `single_metric` モードで実装済 |
+| キーフレームアニメ (ズーム/シェイク) | ⏳ v5.17 候補 |
+| 冒頭0.5秒フラッシュ + 効果音 | ⏳ v5.17 候補 |
+| 末尾「まとめ」削除 + 無限ループ | ⏳ v5.17 候補 |
+
+
 
 ### 動機: ユーザー報告の8項目
 

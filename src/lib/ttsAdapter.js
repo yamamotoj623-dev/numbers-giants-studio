@@ -415,6 +415,9 @@ export class GeminiAdapter {
       // ★v5.11.9: フォールバック情報を伝達★
       usedFallback: !!data.usedFallback,
       modelUsed: data.modelUsed || 'gemini-3.1-flash-tts-preview',
+      // ★v5.16.0★ APIキーローテーション情報を伝達
+      usedKeyIndex: typeof data.usedKeyIndex === 'number' ? data.usedKeyIndex : 0,
+      keysAvailable: data.keysAvailable || 1,
     };
   }
 
