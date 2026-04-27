@@ -9,6 +9,252 @@
 
 ---
 
+## [5.18.13] - 2026-04-27 - Phase 2: 1動画内で複数 quote / 複数 metric を使い分け
+
+### 動機
+
+v5.18.12 で JSON 分割編集 + 二段階生成プロンプトを導入した時に Phase 2 として残していた:
+- `player.quotes[]` + `script.focusQuoteIndex` (同じ player の複数発言を使い分け)
+- `script.focusMetric` (ranking で動画中に metric を切替)
+- ScriptEditorPanel に上記2項目のセレクタ追加
+
+これを実装し、ユーザーの「ランキング動画で **3選手の発言ピックを 3 回分けたい**」要求を完全に満たす。
+
+### 実装内容
+
+#### 1. PlayerSpotlightLayout が `player.quotes[]` 対応
+
+```js
+// 解決順序:
+//   1. focusQuoteIndex 指定 + player.quotes[idx] 存在 → それを使う
+//   2. player.quotes[] が配列で 1件以上 → quotes[0] を使う (デフォルト先頭)
+//   3. 旧来の player.quote / quoteSource を使う (互換)
+//   4. 全部無い → '(発言が登録されていません)'
+const focusQuoteIndex = currentScript?.focusQuoteIndex;
+const quotesArr = Array.isArray(player.quotes) ? player.quotes : [];
+const resolvedQuote = (() => {
+  if (typeof focusQuoteIndex === 'number' && quotesArr[focusQuoteIndex]) {
+    return quotesArr[focusQuoteIndex];
+  }
+  if (quotesArr.length > 0) return quotesArr[0];
+  if (player.quote) return { text: player.quote, source: player.quoteSource };
+  return null;
+})();
+```
+
+quote モードのレンダリング部分も書き換え。複数 quote 時は右上に `2/3` のようなインジケータ表示 (デバッグ補助)。
+
+#### 2. ScriptEditorPanel に focusQuoteIndex セレクタ
+
+focusEntry が指定されていて、その player に quotes 配列がある時だけ表示:
+
+```jsx
+{(() => {
+  const players = projectData.layoutData?.spotlight?.players || [];
+  const currentPlayer = players.find(p => p.id === script.focusEntry || p.name === script.focusEntry);
+  const quotes = Array.isArray(currentPlayer?.quotes) ? currentPlayer.quotes : [];
+  if (quotes.length === 0) return null;
+  return (
+    <select value={script.focusQuoteIndex ?? ''}>
+      <option value="">継承 (デフォルト先頭)</option>
+      {quotes.map((q, i) => (
+        <option key={i} value={i}>{i + 1}: {q.text.slice(0, 40)}…</option>
+      ))}
+    </select>
+  );
+})()}
+```
+
+#### 3. RankingLayout が `script.focusMetric` 対応
+
+旧来の `currentScript.highlight` (comparisons.id と兼用) より優先される **専用フィールド `focusMetric`** を導入:
+
+```js
+// 解決優先順位:
+//   1. currentScript.focusMetric (新フィールド、ranking 専用)
+//   2. currentScript.highlight (互換: comparisons.id とも兼用)
+//   3. metrics[0] (デフォルト先頭)
+const focusedMetricId = currentScript?.focusMetric || currentScript?.highlight;
+const activeMetric = (focusedMetricId && metrics.find(m => m.id === focusedMetricId))
+  || metrics[0];
+```
+
+#### 4. ScriptEditorPanel に focusMetric セレクタ
+
+`ranking.metrics` が 2 個以上ある時だけ表示:
+```jsx
+{metrics.length > 1 && (
+  <select value={script.focusMetric || ''}>
+    <option value="">継承 (デフォルト先頭)</option>
+    {metrics.map(m => <option key={m.id} value={m.id}>{m.label || m.id}</option>)}
+  </select>
+)}
+```
+
+#### 5. Gemini プロンプト & Knowledge Files 同期
+
+| ファイル | 追加内容 |
+|---|---|
+| `gemini-custom-prompt.md` | `players[].quotes[]` のスキーマ説明、`script.focusQuoteIndex` / `script.focusMetric` |
+| `grok-agent-master.md` | データ生成時の **quotes 2-4個リサーチ指示** + 一次ソース推奨 |
+| `grok-2-critic.md` | レビュー観点に「複数 quote 用意できてるか」「focusMetric で metric 切替できてるか」追加 |
+
+### ★ユーザーが実現できるようになる動画パターン★
+
+**ランキング動画 (例: OPS ベスト 5 解説)**
+```
+シーン 1: ranking, focusMetric=ops, focusEntry=null            (5人並び表示)
+シーン 2: ranking, focusMetric=ops, focusEntry=okamoto          (岡本に注目マーク)
+シーン 3: spotlight, focusEntry=okamoto, focusQuoteIndex=0     (岡本の発言1)
+シーン 4: ranking, focusMetric=ops, focusEntry=sano             (佐野に注目マーク)
+シーン 5: spotlight, focusEntry=sano, focusQuoteIndex=0         (佐野の発言1)
+シーン 6: ranking, focusMetric=iso, focusEntry=okamoto          (★metric切替★ ISO ランキングへ)
+シーン 7: spotlight, focusEntry=okamoto, focusQuoteIndex=1     (★同じ岡本★ 別の発言)
+```
+
+これで「3 選手 × 各複数 quote × 複数 metric」という1動画内のリッチなデータ表現が可能に。
+
+### 後方互換性
+
+- 旧 `player.quote` / `player.quoteSource` (単数) はそのまま動作
+- `script.focusMetric` 未指定時は `script.highlight` でも metric 切替 (旧仕様維持)
+- `quotes[]` 未定義の player は `quote` 単数 fallback で動作
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/layouts/PlayerSpotlightLayout.jsx` | quotes[] + focusQuoteIndex 解決、quote モードのレンダリング更新 |
+| `src/layouts/RankingLayout.jsx` | focusMetric 優先解決 |
+| `src/components/ScriptEditorPanel.jsx` | focusQuoteIndex / focusMetric セレクタ追加 |
+| `docs/gemini-custom-prompt.md` | スキーマ更新 |
+| `docs/grok-agent-master.md` | データ生成指示更新 |
+| `docs/grok-2-critic.md` | レビュー観点追加 |
+| `package.json` / `config.js` | 5.18.12 → 5.18.13 |
+
+### 残課題
+
+- ③ 細かい編集UI強化 (グラフのラベル等)
+- Gemini 提言④ インサート映像
+- Gemini 提言⑤ CTA 前倒し
+
+
+## [5.18.12] - 2026-04-27 - JSON分割編集モード (データ / 台本 / 全体) + 二段階生成プロンプト
+
+### 動機: ユーザー要求
+
+> 同じ動画の中で大量のデータJSONを使用したい。
+> たとえばランキング形式の動画であれば選手フォーカスは3選手使いたい、
+> 同じ選手フォーカスでも発言ピックを3回分けたい場合もある。
+> Geminiに生成してもらった時にデータJSONが充実してないからレイアウトの切り替えとかできない。
+> まずは大まかなストーリーを理解したデータJSONを Grok にリサーチさせて、
+> その脚本JSONを Gemini に生成させるって感じかな。
+
+→ JsonPanel に「データ」「台本」を**別々に編集できるモード**を追加し、それぞれに**最適化された AI プロンプト**を出せるようにする。
+
+### Phase 1 (今ターン) 実装内容
+
+#### 1. 新規ヘルパー `src/lib/projectSplit.js`
+
+projectData の split / merge ロジック:
+```js
+splitProjectData(projectData)
+  → { data: { メタ + layoutData + comparisons + ... }, script: { scripts: [] } }
+
+mergeProjectData(data, script)
+  → projectData (1ファイル形式)
+
+normalizeProjectInput(jsonObj)
+  → 1ファイル形式 / { data, script } 形式 / データのみ / 台本のみ を自動判別して projectData 化
+```
+
+#### 2. JsonPanel に「全体 / データ / 台本」モード切替
+
+```
+[全体]   [📊 データ]   [🎬 台本]
+```
+
+各モードの動作:
+- **全体**: 旧来通りの 1ファイル編集
+- **📊 データ**: メタ + layoutData + comparisons + radarStats のみ表示・編集
+  → 反映時は既存の scripts を保持してデータ部分だけ差し替え
+- **🎬 台本**: scripts のみ表示・編集
+  → 反映時はメタ+データを保持して scripts だけ差し替え
+
+#### 3. モード別 AI プロンプト
+
+「🤖 AIプロンプトを作成&コピー」ボタンが、モードに応じて違うプロンプトを生成:
+
+- **全体モード**: 旧来通り (Gemini に丸ごと出させる)
+- **データモード** (★Grok 推奨★):
+  - リサーチ重視のプロンプト
+  - 1動画内で複数の player をフォーカスできるよう **3-5人分**入れる指示
+  - 1人 player に **複数 quote**を持たせる指示 (`quotes` 配列)
+  - ranking metric は **5-10人分**入れる指示
+  - comparisons は **5-10種類**用意する指示
+  - **scripts は含めない**よう明記
+- **台本モード** (★Gemini 推奨★):
+  - 既存データJSONの player.id / comparison.id を**そのまま参照**するよう指示
+  - 動画ストーリーと話者配置に集中
+  - **scripts 以外は出力しない**よう明記
+  - 新フィールド `script.focusQuoteIndex` で同じ player の別 quote を選択
+
+### ★ユーザーの新ワークフロー★
+
+1. **データJSON生成 (Grok)**:
+   - JsonPanel で「📊 データ」モード選択
+   - 「🤖 AIプロンプト...」ボタン → Grokに貼り付け
+   - リサーチ結果のJSONをコピー → 「貼り付けて反映」
+   - データJSON が動画の「素材倉庫」として整う
+
+2. **台本JSON生成 (Gemini)**:
+   - JsonPanel で「🎬 台本」モード選択
+   - 「🤖 AIプロンプト...」ボタン → Geminiに貼り付け
+   - 既存のデータを参照したシーン構成と台本JSONをコピー → 「貼り付けて反映」
+   - データはそのまま、scripts だけ更新される
+
+3. **微調整 (アプリ側)**:
+   - 台本タブで focusEntry / focusQuoteIndex / highlight を手動で切替
+   - 1シーンずつ違う player / quote / 指標を選択可能
+
+### 期待される効果
+
+| 改善前 | 改善後 |
+|---|---|
+| ❌ 毎回 Gemini に1ファイル全部出させる (出力量大) | ✅ データと台本を別々に出させる |
+| ❌ 1動画内で同じ player を1回しか使えない | ✅ player.quotes 配列 + focusQuoteIndex で何度でも使い分け |
+| ❌ 台本だけ書き直したい時にデータ全部再生成 | ✅ scripts だけ差し替え、データ保持 |
+| ❌ 単一AI (Gemini) に頼り切り | ✅ Grok=データ / Gemini=台本 で分業 |
+
+### 後方互換性
+
+- 旧 1ファイル形式 (mainPlayer + scripts 同居) は**そのまま動作** (whole モード)
+- 既存の保存スロットも 1ファイル形式で保存される
+- normalizeProjectInput が { data, script } / 1ファイル形式 両方を自動判別
+
+### Phase 2 以降の予定 (次ターン)
+
+- ⚠️ player.quotes 配列に対応した PlayerSpotlightLayout の実装 (focusQuoteIndex でピック)
+- ⚠️ ScriptEditorPanel に focusQuoteIndex セレクタ追加
+- ⚠️ ranking で複数 metric を切替えられる UI
+- ③ レイアウト/グラフ等の細かい手動編集UI
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/projectSplit.js` | ★新規★ split / merge / normalize |
+| `src/components/JsonPanel.jsx` | モード切替UI、tryApply 改修、buildDataJsonPrompt / buildScriptJsonPrompt |
+| `package.json` / `config.js` | 5.18.11 → 5.18.12 |
+
+### 残課題
+
+- **Phase 2**: focusQuoteIndex の実装 (player.quotes を PlayerSpotlightLayout が解釈)
+- ③ 細かい編集UI強化
+- Gemini 提言④ インサート映像
+- Gemini 提言⑤ CTA 前倒し
+
+
 ## [5.18.11] - 2026-04-27 - PWA アイコン PNG 化 (ホーム画面追加でオリジナルアイコン反映)
 
 ### 動機: ユーザー報告

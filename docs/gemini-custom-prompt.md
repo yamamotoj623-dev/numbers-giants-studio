@@ -79,8 +79,9 @@
 - ranking:          layoutData: { ranking: { mood?:"best"|"worst"|"neutral", showCutoff?, metrics:[{id, label, kana?, unit?, entries:[{rank, name, value, sub?, team?, isMainPlayer?, isTeam?}]}] } }
   ★team★ (★v5.18.4新★): 球団略称 "G/D/T/S/E/F/B/H/M/L" 等。**球団横断ランキング** で必須。自軍動画 (G が並ぶだけ) では省略推奨
 - versus_card:      layoutData: { versus: { mood?, categoryScores:[{label, kana, rawMain, rawSub, lowerBetter?}] } }
-- player_spotlight: layoutData: { spotlight: { mode?, showPlayerName?, players:[{id, label, primaryStat:{label,value,compareValue?}, stats:[{label,value}], comment, quote?, quoteSource?}] } }
-  ★mode 4種★: "default"(標準=主指標+サブ) / "single_metric"(1指標を超巨大、衝撃データ向け) / "stats_grid"(基本成績網羅) / "quote"(発言ピック=quote/quoteSource使用、人間性エピソード向け)
+- player_spotlight: layoutData: { spotlight: { mode?, showPlayerName?, players:[{id, label, primaryStat:{label,value,compareValue?}, stats:[{label,value}], comment, quote?, quoteSource?, quotes?}] } }
+  ★mode 4種★: "default"(標準=主指標+サブ) / "single_metric"(1指標を超巨大、衝撃データ向け) / "stats_grid"(基本成績網羅) / "quote"(発言ピック=quote/quoteSource または quotes[]使用、人間性エピソード向け)
+  ★quotes[] (★v5.18.13新★)★: 1人 player に対する複数発言を配列で保持 [{text, source}, ...]。台本の script.focusQuoteIndex でシーンごとに切替。1動画内で同じ選手の別発言を 2-3 回ピックする時に使用。旧 quote/quoteSource (単数) も後方互換で利用可。
 - pitch_arsenal:    layoutData: { arsenal: { mode, pitches:[...], comparePitches?, vsBatter? } }
 - team_context:     layoutData: { context: { mode, lineup?, rotation?, comparison? } }
 - batter_heatmap:   layoutData: { heatmap: { mode, zones?, vsRight?, vsLeft? } }
@@ -96,8 +97,10 @@
   speech: "TTS用読み仮名(漢字を必ずひらがなに、数字も読み仮名)",
   isCatchy: true (id:1のみ),
   layoutType: "...",  ← 切替時のみ
-  highlight: "comparisonsのid",  ← 該当指標の話してる時
-  focusEntry: "spotlight時のid",
+  highlight: "comparisonsのid",  ← 該当指標の話してる時 (ranking でも metric.id を兼ねる旧来仕様)
+  focusEntry: "spotlight時のid (player.id) または ranking時のentry.name",
+  focusQuoteIndex: 0,  ← ★v5.18.13新★ 同じ player の中で別の quote を選ぶ時のインデックス (player.quotes[idx])
+  focusMetric: "ranking.metrics[].id",  ← ★v5.18.13新★ ranking で動画中に metric を切替える時の専用フィールド (highlight より優先)
   textSize: "xl|l|m|s",  ← フェーズB-D で使用
   zoomBoost: "zoom|shake|zoomShake",  ← ★v5.18新★ 重要発言の演出。1動画 2-3 箇所まで(乱用NG)
   se: "hook_impact|highlight_ping|stat_reveal|shock_hit|success_chime|warning_alert|transition_swoosh|outro_fade|null"

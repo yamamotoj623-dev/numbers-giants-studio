@@ -324,6 +324,62 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                     />
                   )}
                 </div>
+
+                {/* ★v5.18.13★ focusQuoteIndex: 同じ player の中で複数 quote を切替 */}
+                {(() => {
+                  // 現在の focusEntry 選手の quotes を取得
+                  const players = projectData.layoutData?.spotlight?.players || [];
+                  const currentPlayer = players.find(p => p.id === script.focusEntry || p.name === script.focusEntry);
+                  const quotes = Array.isArray(currentPlayer?.quotes) ? currentPlayer.quotes : [];
+                  if (quotes.length === 0) return null;
+                  return (
+                    <div>
+                      <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                        💬 発言ピック ({currentPlayer.name || script.focusEntry} の quotes)
+                      </label>
+                      <select
+                        value={script.focusQuoteIndex ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          handleChange(script.id, 'focusQuoteIndex', v === '' ? undefined : parseInt(v, 10));
+                        }}
+                        className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                      >
+                        <option value="">継承 (デフォルト先頭)</option>
+                        {quotes.map((q, i) => (
+                          <option key={i} value={i}>
+                            {i + 1}: {(q.text || '').slice(0, 40)}{(q.text || '').length > 40 ? '…' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })()}
+
+                {/* ★v5.18.13★ focusMetric: ranking 系で動画中に metric を切り替える時 */}
+                {(() => {
+                  const metrics = projectData.layoutData?.ranking?.metrics || [];
+                  if (metrics.length <= 1) return null;  // 1個以下なら切替不要
+                  return (
+                    <div>
+                      <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                        📊 フォーカス指標 (ranking で表示する metric)
+                      </label>
+                      <select
+                        value={script.focusMetric || ''}
+                        onChange={(e) => handleChange(script.id, 'focusMetric', e.target.value || undefined)}
+                        className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                      >
+                        <option value="">継承 (デフォルト先頭)</option>
+                        {metrics.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.label || m.id}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

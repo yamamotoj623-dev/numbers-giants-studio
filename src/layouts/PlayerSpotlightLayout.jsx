@@ -24,8 +24,13 @@
  *       number?: "25",
  *       primaryStat: { label, value, isNegative, compareValue? },  // default / single_metric
  *       stats: [{ label, value }, ...],                             // default / stats_grid
- *       quote?: "...",                                              // quote モード用 (発言)
- *       quoteSource?: "監督インタビュー (4/15)",                     // quote の出典
+ *       quote?: "...",                                              // (旧) 単発発言。後方互換。
+ *       quoteSource?: "監督インタビュー (4/15)",                     // (旧) quote の出典
+ *       quotes?: [                                                   // ★v5.18.13新★ 複数発言ピック
+ *         { text: "もっと長打を打ちたい", source: "2026/4 取材" },    //   currentScript.focusQuoteIndex でシーンごとに切替
+ *         { text: "守備位置はどこでも", source: "2026/3 春季練習" },
+ *         ...
+ *       ],
  *       comment?: "..."
  *     }
  *   ]
@@ -105,6 +110,26 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
     || data.players?.[0]
     || {};
 
+  // ★v5.18.13★ quote 解決: player.quotes[] + currentScript.focusQuoteIndex に対応
+  // 後方互換: 旧 player.quote / quoteSource (単数) も維持
+  //
+  // 解決順序:
+  //   1. focusQuoteIndex 指定 + player.quotes[idx] 存在 → それを使う
+  //   2. player.quotes[] が配列で 1件以上 → quotes[0] を使う (デフォルト先頭)
+  //   3. 旧来の player.quote / quoteSource を使う (互換)
+  //   4. 全部無い → '(発言が登録されていません)'
+  const focusQuoteIndex = currentScript?.focusQuoteIndex;
+  const quotesArr = Array.isArray(player.quotes) ? player.quotes : [];
+  const resolvedQuote = (() => {
+    if (typeof focusQuoteIndex === 'number' && quotesArr[focusQuoteIndex]) {
+      return quotesArr[focusQuoteIndex];
+    }
+    if (quotesArr.length > 0) return quotesArr[0];
+    // 旧フィールド互換
+    if (player.quote) return { text: player.quote, source: player.quoteSource };
+    return null;
+  })();
+
   const isNeg = player.primaryStat?.isNegative;
   const compareValue = player.primaryStat?.compareValue;
 
@@ -173,14 +198,20 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
             </div>
             <div className="text-[20px] font-black text-white text-center leading-snug px-3 py-2"
                  style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
-              {player.quote || player.comment || '(発言が登録されていません)'}
+              {resolvedQuote?.text || '(発言が登録されていません)'}
             </div>
             <div className="text-[60px] leading-none opacity-20 self-end -mt-4 mr-4 select-none" style={{ color: themeClass.primary }}>
               "
             </div>
-            {player.quoteSource && (
+            {resolvedQuote?.source && (
               <div className={`mt-4 text-[10px] font-bold tracking-wider ${themeClass.text} opacity-80`}>
-                — {player.quoteSource}
+                — {resolvedQuote.source}
+              </div>
+            )}
+            {/* ★v5.18.13★ 複数 quote 存在時、現在のインデックスを薄く表示 (デバッグ補助) */}
+            {quotesArr.length > 1 && (
+              <div className="absolute top-2 right-2 text-[8px] text-white/40 font-mono">
+                {(typeof focusQuoteIndex === 'number' ? focusQuoteIndex : 0) + 1}/{quotesArr.length}
               </div>
             )}
           </div>

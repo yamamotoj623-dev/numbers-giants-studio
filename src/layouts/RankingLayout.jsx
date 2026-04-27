@@ -144,8 +144,11 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
     );
   }
 
-  // currentScript.highlight が metric.id と一致するなら、そのmetric を選択
-  const focusedMetricId = currentScript?.highlight;
+  // ★v5.18.13★ metric の解決優先順位:
+  //   1. currentScript.focusMetric (新フィールド、ranking 専用)
+  //   2. currentScript.highlight (互換: comparisons.id とも兼用)
+  //   3. metrics[0] (デフォルト先頭)
+  const focusedMetricId = currentScript?.focusMetric || currentScript?.highlight;
   const activeMetric = (focusedMetricId && metrics.find(m => m.id === focusedMetricId))
     || metrics[0];
 
