@@ -44,6 +44,34 @@ const App = () => {
     return () => clearTimeout(timer);
   }, [projectData]);
 
+  // ★v5.18.10★ 起動時に合成音 SE プリセットを WAV 化して HTMLAudioElement プールに登録
+  // → 画面録画でデフォルト SE も拾えるようになる (Firefox 画面録画ワークフロー対応)
+  // 一度きりの実行 (depending: [])
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      try {
+        const { getMixer } = await import('./lib/mixer');
+        const mixer = getMixer();
+        // idle 時に実行 (アプリ起動を遅らせない)
+        const run = async () => {
+          if (cancelled) return;
+          const result = await mixer.preregisterSyntheticSes();
+          console.log('[App] synthetic SE preregister:', result);
+        };
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(run, { timeout: 3000 });
+        } else {
+          setTimeout(run, 500);
+        }
+      } catch (err) {
+        console.error('[App] preregisterSyntheticSes init failed:', err);
+      }
+    };
+    init();
+    return () => { cancelled = true; };
+  }, []);
+
   const [ttsEngine, setTtsEngine] = useState('web_speech');
   const [speechRate, setSpeechRate] = useState(1.6);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);

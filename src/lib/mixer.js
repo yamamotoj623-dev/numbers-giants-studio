@@ -22,6 +22,67 @@
  */
 
 import { DEFAULT_MIXER_LEVELS } from './config';
+import { audioBufferToWav } from './audioExporter';
+
+/**
+ * 合成音 SE プリセット (class 外に export — audioExporter / pregenerateSyntheticSeWavs から参照)
+ * ★v5.18.10★ 旧版は playSe 内に持っていたが、起動時に WAV 化するため module-level に昇格。
+ */
+export const SYNTHETIC_SE_PRESETS = {
+  hook_impact:     { freqs: [80, 40],   type: 'sawtooth', attack: 0.01, release: 0.25, gain: 0.5 },
+  highlight_ping:  { freqs: [880, 1320],type: 'sine',     attack: 0.005, release: 0.18, gain: 0.3 },
+  stat_reveal:     { freqs: [523, 784], type: 'triangle', attack: 0.01, release: 0.22, gain: 0.35 },
+  shock_hit:       { freqs: [200, 100], type: 'square',   attack: 0.005, release: 0.3, gain: 0.4 },
+  success_chime:   { freqs: [659, 988, 1319], type: 'sine', attack: 0.01, release: 0.4, gain: 0.3 },
+  warning_alert:   { freqs: [440, 415], type: 'square',   attack: 0.01, release: 0.2, gain: 0.3 },
+  transition_swoosh: { freqs: [1500, 200], type: 'sawtooth', attack: 0.02, release: 0.25, gain: 0.25 },
+  click_tap:       { freqs: [2000],     type: 'square',   attack: 0.001, release: 0.04, gain: 0.2 },
+  radar_ping:      { freqs: [1200],     type: 'sine',     attack: 0.005, release: 0.15, gain: 0.25 },
+  outro_fade:      { freqs: [440, 330, 220], type: 'sine', attack: 0.02, release: 0.6, gain: 0.3 },
+};
+
+/**
+ * ★v5.18.10★ 合成音 SE プリセットを OfflineAudioContext で WAV blob 化
+ *
+ * 【目的】 デフォルト SE を画面録画で拾えるようにする。
+ *   旧: AudioContext で実時間合成 → 画面録画キャプチャに乗らない (Firefox/Chrome 共通の制約)
+ *   新: 起動時に全プリセットを WAV blob 化して registerCustomSe で HTMLAudioElement 登録
+ *       → playSe は HTMLAudioElement プールから鳴らすので画面録画で拾える
+ *
+ * @param {string} presetId - 'hook_impact' 等
+ * @returns {Promise<Blob>} WAV blob
+ */
+export async function synthesizeSePresetToWavBlob(presetId) {
+  const preset = SYNTHETIC_SE_PRESETS[presetId];
+  if (!preset) throw new Error(`unknown synthetic SE preset: ${presetId}`);
+
+  const sampleRate = 44100;
+  // 全 freqs が連続で鳴り終わるまでの長さ + バッファ
+  const totalSec = preset.attack + preset.release + 0.1 + (preset.freqs.length - 1) * 0.04;
+  const totalSamples = Math.ceil(totalSec * sampleRate);
+
+  const offlineCtx = new OfflineAudioContext(1, totalSamples, sampleRate);
+  const gain = offlineCtx.createGain();
+  gain.connect(offlineCtx.destination);
+
+  const now = 0;
+  const finalGain = preset.gain;  // _effectiveSeVolume は再生時に HTMLAudioElement.volume で適用
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(finalGain, now + preset.attack);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + preset.attack + preset.release);
+
+  preset.freqs.forEach((freq, idx) => {
+    const osc = offlineCtx.createOscillator();
+    osc.type = preset.type;
+    osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+    osc.connect(gain);
+    osc.start(now + idx * 0.04);
+    osc.stop(now + preset.attack + preset.release + 0.05 + idx * 0.04);
+  });
+
+  const renderedBuffer = await offlineCtx.startRendering();
+  return audioBufferToWav(renderedBuffer);
+}
 
 export class MixerEngine {
   constructor() {
@@ -196,6 +257,42 @@ export class MixerEngine {
   // ========== SE ==========
 
   /**
+  /**
+   * ★v5.18.10★ 全合成音SEプリセットを起動時に WAV 化して registerCustomSe で登録
+   *
+   * 【目的】 デフォルト SE (合成音) を画面録画で拾えるようにする。
+   *   旧 (v5.18.9): カスタムSE未登録の場合 AudioContext で実時間合成 → 画面録画で取れない
+   *   新: 起動時に全プリセットを WAV blob 化 → HTMLAudioElement プール登録 → 画面録画で取れる
+   *
+   * カスタム SE が既に登録されているプリセット ID は上書きしない (ユーザーアップロードを優先)。
+   *
+   * @returns {Promise<{registered, skipped, errors}>}
+   */
+  async preregisterSyntheticSes() {
+    let registered = 0, skipped = 0, errors = 0;
+
+    // 並列で全プリセットを WAV 化 → registerCustomSe
+    const tasks = Object.keys(SYNTHETIC_SE_PRESETS).map(async (presetId) => {
+      // 既にカスタム SE が登録されている場合はスキップ (アップロード優先)
+      if (this._seAudioEls.has(presetId)) {
+        skipped++;
+        return;
+      }
+      try {
+        const blob = await synthesizeSePresetToWavBlob(presetId);
+        await this.registerCustomSe(presetId, blob);
+        registered++;
+      } catch (err) {
+        console.error(`[mixer] preregister synthetic SE "${presetId}" failed:`, err);
+        errors++;
+      }
+    });
+
+    await Promise.all(tasks);
+    return { registered, skipped, errors };
+  }
+
+  /**
    * カスタムSEファイルを登録 (HTMLAudioElement + blob URL で保持)
    *
    * ★v5.18.9★ プール化: 起動時に N 個の <video> 要素を DOM に常駐させ、
@@ -277,6 +374,9 @@ export class MixerEngine {
    *
    * ★v5.18.9★ プール化: cloneNode + appendChild + remove の DOM mutation を排除。
    * メインスレッド負荷ほぼゼロ → 画面録画時のテロップ進行遅延を解消。
+   *
+   * ★v5.18.10★ 通常運用では preregisterSyntheticSes() で全プリセットが
+   * HTMLAudioElement 化されているので、合成音 fallback は preregister 失敗時の保険のみ。
    */
   playSe(seId) {
     const entry = this._seAudioEls.get(seId);
@@ -298,32 +398,19 @@ export class MixerEngine {
       return;
     }
 
-    // 合成音フォールバック (AudioContext - 録画で取れない可能性あり)
+    // ★v5.18.10★ 通常は preregisterSyntheticSes() で HTMLAudioElement 化済み。
+    // ここに来るのは preregister 失敗時のみ → AudioContext 合成 (画面録画では拾えないが、無音よりマシ)
+    console.warn(`[mixer] SE "${seId}" not found in pool, falling back to AudioContext synth (will not be captured by screen recording)`);
     this._ensureSynthContext();
     const ctx = this._synthCtx;
     const now = ctx.currentTime;
-
-    const presets = {
-      hook_impact:     { freqs: [80, 40],   type: 'sawtooth', attack: 0.01, release: 0.25, gain: 0.5 },
-      highlight_ping:  { freqs: [880, 1320],type: 'sine',     attack: 0.005, release: 0.18, gain: 0.3 },
-      stat_reveal:     { freqs: [523, 784], type: 'triangle', attack: 0.01, release: 0.22, gain: 0.35 },
-      shock_hit:       { freqs: [200, 100], type: 'square',   attack: 0.005, release: 0.3, gain: 0.4 },
-      success_chime:   { freqs: [659, 988, 1319], type: 'sine', attack: 0.01, release: 0.4, gain: 0.3 },
-      warning_alert:   { freqs: [440, 415], type: 'square',   attack: 0.01, release: 0.2, gain: 0.3 },
-      transition_swoosh: { freqs: [1500, 200], type: 'sawtooth', attack: 0.02, release: 0.25, gain: 0.25 },
-      click_tap:       { freqs: [2000],     type: 'square',   attack: 0.001, release: 0.04, gain: 0.2 },
-      radar_ping:      { freqs: [1200],     type: 'sine',     attack: 0.005, release: 0.15, gain: 0.25 },
-      outro_fade:      { freqs: [440, 330, 220], type: 'sine', attack: 0.02, release: 0.6, gain: 0.3 },
-    };
-
-    const preset = presets[seId] || presets.click_tap;
+    const preset = SYNTHETIC_SE_PRESETS[seId] || SYNTHETIC_SE_PRESETS.click_tap;
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
     const finalGain = preset.gain * this._effectiveSeVolume();
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(finalGain, now + preset.attack);
     gain.gain.exponentialRampToValueAtTime(0.001, now + preset.attack + preset.release);
-
     preset.freqs.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       osc.type = preset.type;

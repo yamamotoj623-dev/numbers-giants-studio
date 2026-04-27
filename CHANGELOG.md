@@ -9,6 +9,128 @@
 
 ---
 
+## [5.18.10] - 2026-04-27 - 合成音 SE → WAV 化 (画面録画でデフォルト SE も拾える)
+
+### 動機: ユーザー報告
+
+> Firefox で画面録画したら TTS BGM が取れた。
+> SE もアップロードしたものは取れるがデフォルト (合成音) が取れない。
+
+→ ユーザーは Firefox 画面録画ワークフローでほぼ問題解決。**残るのはデフォルト SE 録音問題のみ**。
+動画エクスポート機能を作る必要がない。
+
+### 真の原因
+
+`mixer.playSe()` のフロー:
+
+| パターン | 実装 | 画面録画 |
+|---|---|---|
+| カスタム SE (アップロード済み) | HTMLAudioElement (`<video>`) で再生 | ✅ 取れる |
+| デフォルト SE (`hook_impact` 等) | AudioContext で**実時間合成** | ❌ 取れない |
+
+これは Web Audio API の制約: AudioContext の出力は OS 音声ミキサーには行くがブラウザのキャプチャには乗りにくい (Firefox/Chrome 共通)。
+
+### 解決: 起動時に全プリセットを WAV 化して HTMLAudioElement プール登録
+
+#### 仕組み
+
+1. **起動時 (idle 時)** に 10 種類の合成音プリセットを `OfflineAudioContext` でレンダリング
+2. 各 AudioBuffer を `audioBufferToWav()` で WAV blob 化
+3. `registerCustomSe(presetId, blob)` で HTMLAudioElement プールに登録
+4. これ以降 `playSe('hook_impact')` 等は**プールの `<video>` 要素で再生**
+5. 画面録画キャプチャに乗る ✅
+
+#### 実装詳細
+
+新規 export (`mixer.js`):
+- `SYNTHETIC_SE_PRESETS` (定数) — 10 種類のプリセット定義 (旧 playSe 内のローカル定数を昇格)
+- `synthesizeSePresetToWavBlob(presetId)` — OfflineAudioContext で WAV blob 化
+- `MixerEngine.preregisterSyntheticSes()` — 全プリセットを並列で WAV 化 + プール登録
+
+```js
+// mixer.js
+export const SYNTHETIC_SE_PRESETS = {
+  hook_impact: { freqs: [80, 40], type: 'sawtooth', ... },
+  ...10 種類
+};
+
+export async function synthesizeSePresetToWavBlob(presetId) {
+  const preset = SYNTHETIC_SE_PRESETS[presetId];
+  const offlineCtx = new OfflineAudioContext(1, totalSamples, 44100);
+  // ... oscillator + gain envelope を組み立て
+  const renderedBuffer = await offlineCtx.startRendering();
+  return audioBufferToWav(renderedBuffer);
+}
+
+class MixerEngine {
+  async preregisterSyntheticSes() {
+    const tasks = Object.keys(SYNTHETIC_SE_PRESETS).map(async (id) => {
+      if (this._seAudioEls.has(id)) return;  // カスタムSE優先
+      const blob = await synthesizeSePresetToWavBlob(id);
+      await this.registerCustomSe(id, blob);
+    });
+    await Promise.all(tasks);
+  }
+}
+```
+
+App.jsx の起動時に **idle で実行**:
+```jsx
+useEffect(() => {
+  const init = async () => {
+    const mixer = getMixer();
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(() => mixer.preregisterSyntheticSes(), { timeout: 3000 });
+    } else {
+      setTimeout(() => mixer.preregisterSyntheticSes(), 500);
+    }
+  };
+  init();
+}, []);
+```
+
+これでアプリ起動を遅らせず、ブラウザがアイドルになった時に WAV 化処理を実行。
+
+#### 副次的な変更
+
+`playSe` の合成音 fallback を最終手段化:
+- 通常は preregister でプール化済み → AudioContext fallback ブランチには入らない
+- preregister 失敗時のみ AudioContext 合成 (画面録画では拾われないがエラーよりマシ)
+- そのときコンソールに warn 出力
+
+`audioExporter.js` の `audioBufferToWav` を **export 化** (mixer から参照するため)
+
+### 期待される効果
+
+| 改善前 (v5.18.9) | 改善後 (v5.18.10) |
+|---|---|
+| ❌ デフォルト SE が画面録画で拾われない | ✅ 全 SE (デフォルト + カスタム) が拾える |
+| ❌ 動画エクスポート機能が必要 | ✅ 既存の Firefox 画面録画ワークフローで完結 |
+
+### ★ユーザーの新ワークフロー (v5.18.10 以降)★
+
+1. **Firefox で画面録画** (タブ音声ON)
+2. アプリで動画再生 → TTS + BGM + SE (デフォルト含む) **すべて録音される**
+3. CapCut で軽微な編集 (要らないかも)
+4. YouTube Shorts 投稿
+
+WAV 別書き出しは**もう不要** (画面録画の音声と全く同じ内容になる)。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/mixer.js` | SYNTHETIC_SE_PRESETS export / synthesizeSePresetToWavBlob 追加 / preregisterSyntheticSes 追加 / playSe の fallback 整理 |
+| `src/lib/audioExporter.js` | audioBufferToWav を export 化 |
+| `src/App.jsx` | 起動時 idle で preregisterSyntheticSes 呼び出し |
+| `package.json` / `config.js` | 5.18.9 → 5.18.10 |
+
+### 残課題
+
+- Gemini 提言④ インサート映像
+- Gemini 提言⑤ CTA 前倒し
+
+
 ## [5.18.9] - 2026-04-27 - SE 再生をプール化 — 画面録画のテロップ遅延を解消
 
 ### 動機: ユーザー報告

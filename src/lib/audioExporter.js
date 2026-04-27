@@ -60,7 +60,10 @@ function scheduleSyntheticSe(offlineCtx, seId, startSec, seVolume) {
 /**
  * AudioBuffer を WAV blob に変換 (16bit PCM)
  */
-function audioBufferToWav(audioBuffer) {
+/**
+ * AudioBuffer を WAV blob に変換 (★v5.18.10★ export して mixer でも使えるように)
+ */
+export function audioBufferToWav(audioBuffer) {
   const numChannels = audioBuffer.numberOfChannels;
   const sampleRate = audioBuffer.sampleRate;
   const length = audioBuffer.length;
