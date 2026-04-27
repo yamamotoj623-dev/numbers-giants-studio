@@ -287,24 +287,43 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                   </select>
                 </div>
 
-                {/* ★v5.18.4★ focusEntry: 選手スポット/ランキングで「どの選手を主役にするか」 */}
-                {focusEntryCandidates.length > 0 && (
-                  <div>
-                    <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
-                      🎯 フォーカス選手 (選手スポット / ランキング用)
-                    </label>
-                    <select
+                {/* ★v5.18.4★ focusEntry: 選手スポット/ランキングで「どの選手を主役にするか」
+                    ★v5.18.7★ 候補が無くても手入力で指定できるように常時表示 + 候補は datalist で補助 */}
+                <div>
+                  <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                    🎯 フォーカス選手 (選手スポット / ランキング用)
+                    {focusEntryCandidates.length === 0 && (
+                      <span className="ml-1 font-normal text-amber-600">
+                        (候補なし: layoutData 未設定 — 直接 id/名前入力)
+                      </span>
+                    )}
+                  </label>
+                  {focusEntryCandidates.length > 0 ? (
+                    <>
+                      <input
+                        type="text"
+                        list={`focus-entries-${script.id}`}
+                        value={script.focusEntry || ''}
+                        onChange={(e) => handleChange(script.id, 'focusEntry', e.target.value || undefined)}
+                        placeholder="継承 (前のシーンと同じ)"
+                        className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                      />
+                      <datalist id={`focus-entries-${script.id}`}>
+                        {focusEntryCandidates.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </datalist>
+                    </>
+                  ) : (
+                    <input
+                      type="text"
                       value={script.focusEntry || ''}
                       onChange={(e) => handleChange(script.id, 'focusEntry', e.target.value || undefined)}
+                      placeholder="player.id または entry.name を直接入力"
                       className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
-                    >
-                      <option value="">継承 (前のシーンと同じ)</option>
-                      {focusEntryCandidates.map(c => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                    />
+                  )}
+                </div>
               </div>
             )}
           </div>

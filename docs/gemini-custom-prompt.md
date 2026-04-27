@@ -76,7 +76,8 @@
 主要レイアウト:
 - radar_compare:    layoutData: { radar: { stats:[{label, main, sub}] } }
 - timeline:         layoutData: { timeline: { unit, metric, points:[{label, value, isPeak?, isBottom?, highlight?}] } }
-- ranking:          layoutData: { ranking: { metric, mode, items:[{rank, name, value, isMainPlayer?}] } }
+- ranking:          layoutData: { ranking: { mood?:"best"|"worst"|"neutral", showCutoff?, metrics:[{id, label, kana?, unit?, entries:[{rank, name, value, sub?, team?, isMainPlayer?, isTeam?}]}] } }
+  ★team★ (★v5.18.4新★): 球団略称 "G/D/T/S/E/F/B/H/M/L" 等。**球団横断ランキング** で必須。自軍動画 (G が並ぶだけ) では省略推奨
 - versus_card:      layoutData: { versus: { mood?, categoryScores:[{label, kana, rawMain, rawSub, lowerBetter?}] } }
 - player_spotlight: layoutData: { spotlight: { mode?, showPlayerName?, players:[{id, label, primaryStat:{label,value,compareValue?}, stats:[{label,value}], comment, quote?, quoteSource?}] } }
   ★mode 4種★: "default"(標準=主指標+サブ) / "single_metric"(1指標を超巨大、衝撃データ向け) / "stats_grid"(基本成績網羅) / "quote"(発言ピック=quote/quoteSource使用、人間性エピソード向け)

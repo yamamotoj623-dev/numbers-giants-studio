@@ -13,6 +13,7 @@ import { BGMPanel } from './components/BGMPanel.jsx';
 import { JsonPanel } from './components/JsonPanel.jsx';
 import { ScriptEditorPanel } from './components/ScriptEditorPanel.jsx';
 import { LayoutPanel } from './components/LayoutPanel.jsx';
+import { PanelErrorBoundary } from './components/PanelErrorBoundary.jsx';
 import { autoSaveEditing, loadEditing, saveToSlot, loadFromSlot, listSlots, deleteSlot } from './lib/projectStorage';
 
 const TABS = [
@@ -224,39 +225,51 @@ const App = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto bg-zinc-50 relative custom-scrollbar">
+                {/* ★v5.18.7★ 各パネルを ErrorBoundary でラップ
+                    パネル内で例外が出てもアプリ全体が真っ白にならないようにする */}
                 {activeTab === 'json' && (
-                  <JsonPanel
-                    projectData={projectData}
-                    onApply={(p) => { setProjectData(p); reset(); }}
-                    onLoadTemplate={loadTemplate}
-                  />
+                  <PanelErrorBoundary panelName="JSON">
+                    <JsonPanel
+                      projectData={projectData}
+                      onApply={(p) => { setProjectData(p); reset(); }}
+                      onLoadTemplate={loadTemplate}
+                    />
+                  </PanelErrorBoundary>
                 )}
                 {activeTab === 'script' && (
-                  <ScriptEditorPanel
-                    projectData={projectData}
-                    currentIndex={currentIndex}
-                    onChange={setProjectData}
-                  />
+                  <PanelErrorBoundary panelName="台本">
+                    <ScriptEditorPanel
+                      projectData={projectData}
+                      currentIndex={currentIndex}
+                      onChange={setProjectData}
+                    />
+                  </PanelErrorBoundary>
                 )}
                 {activeTab === 'layout' && (
-                  <LayoutPanel projectData={projectData} onChange={setProjectData}/>
+                  <PanelErrorBoundary panelName="レイアウト">
+                    <LayoutPanel projectData={projectData} onChange={setProjectData}/>
+                  </PanelErrorBoundary>
                 )}
                 {activeTab === 'tts' && (
                   <div className="p-4">
-                    <TTSPanel
-                      engine={ttsEngine}
-                      setEngine={setTtsEngine}
-                      speechRate={speechRate}
-                      setSpeechRate={setSpeechRate}
-                      isVoiceEnabled={isVoiceEnabled}
-                      setIsVoiceEnabled={setIsVoiceEnabled}
-                      projectData={projectData}
-                    />
+                    <PanelErrorBoundary panelName="音声">
+                      <TTSPanel
+                        engine={ttsEngine}
+                        setEngine={setTtsEngine}
+                        speechRate={speechRate}
+                        setSpeechRate={setSpeechRate}
+                        isVoiceEnabled={isVoiceEnabled}
+                        setIsVoiceEnabled={setIsVoiceEnabled}
+                        projectData={projectData}
+                      />
+                    </PanelErrorBoundary>
                   </div>
                 )}
                 {activeTab === 'audio' && (
                   <div className="p-4">
-                    <BGMPanel />
+                    <PanelErrorBoundary panelName="BGM/SE">
+                      <BGMPanel />
+                    </PanelErrorBoundary>
                   </div>
                 )}
               </div>

@@ -9,7 +9,160 @@
 
 ---
 
-## [5.18.6] - 2026-04-27 - zoomBoost 抑制対象を全要素に拡大 (ハイライト/テロップ/stats-table)
+## [5.18.7] - 2026-04-27 - パネルクラッシュ復旧 + focusEntry 常時入力可 + ranking スキーマ修正
+
+### 動機: ユーザー報告の3項目
+
+> ① UIでレイアウトに飛ぼうとするとアプリが真っ白になる
+> ② 台本か選手フォーカスの細かい設定できなくない?
+> ③ jsonをgeminiに出力させるの、データと台本で分けた方がいいかな?
+
+### ① 真っ白問題: パネル全般を ErrorBoundary で保護
+
+#### 原因の推定
+
+LayoutPanel など編集系タブパネルには ErrorBoundary が無く、内部で例外が出るとアプリ全体が真っ白に。原因として最も可能性が高いのは:
+- v5.18.4 で追加した自動保存機能で、**古いスキーマの localStorage データを復元**
+- 新コードの SpotlightDataEditor / VersusDataEditor 等が新スキーマを期待
+- 型不一致で参照時に例外 → 画面真っ白
+
+#### 修正
+
+新規ファイル `src/components/PanelErrorBoundary.jsx`:
+```jsx
+export class PanelErrorBoundary extends React.Component {
+  static getDerivedStateFromError(error) {...}
+  componentDidCatch(error, info) {
+    console.error(`[PanelErrorBoundary] パネル "${panelName}" で例外発生`, ...);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div>
+          <div>⚠️ パネル "{panelName}" でエラーが発生しました</div>
+          <pre>{errorStack}</pre>
+          <button onClick={reset}>🔄 再試行</button>
+          <button onClick={clearStorage}>🗑 編集データを削除して再起動</button>
+        </div>
+      );
+    }
+    return children;
+  }
+}
+```
+
+App.jsx でタブごとにラップ:
+```jsx
+{activeTab === 'layout' && (
+  <PanelErrorBoundary panelName="レイアウト">
+    <LayoutPanel projectData={projectData} onChange={setProjectData}/>
+  </PanelErrorBoundary>
+)}
+```
+
+これで:
+- パネルが落ちてもアプリ全体は生きる
+- エラー内容と stack trace を画面に表示
+- 「再試行」or 「編集データを削除して再起動」のボタンで復旧可能
+
+### ② focusEntry 入力欄を常時表示
+
+#### 原因
+
+旧版では `focusEntryCandidates.length > 0` の条件で focusEntry ドロップダウンを表示していたため、`projectData.layoutData.spotlight` や `layoutData.ranking` が未設定だと**ドロップダウン自体が出ない** = ユーザーから見ると「設定できない」状態。
+
+#### 修正
+
+候補がある時/無い時で UI を切り替え:
+- **候補あり**: `<datalist>` で補完付きの自由入力テキストフィールド
+- **候補なし**: 「(候補なし: layoutData 未設定 — 直接 id/名前入力)」とヒント表示 + プレーンなテキスト入力
+
+```jsx
+{focusEntryCandidates.length > 0 ? (
+  <>
+    <input list="focus-entries" ... />
+    <datalist id="focus-entries">
+      {focusEntryCandidates.map(c => <option value={c.value}>{c.label}</option>)}
+    </datalist>
+  </>
+) : (
+  <input placeholder="player.id または entry.name を直接入力" ... />
+)}
+```
+
+これで**どんな状況でも focusEntry が編集できる**。
+
+### Gemini プロンプトの ranking スキーマ修正 (★裏で見つけた重要なバグ★)
+
+`gemini-custom-prompt.md` 上の ranking スキーマが**実装と不一致**だった:
+
+```
+旧: ranking: { metric, mode, items:[...] }       ← items? (実装と違う)
+新: ranking: { mood?, showCutoff?, metrics:[{id, label, kana?, unit?, entries:[...]}] }
+```
+
+実装側は `metrics[].entries[]` 構造なのに、Gemini プロンプトは `items[]` と書いてた → Gemini が古い構造で出力 → focusEntry 候補も生成されない。
+これが ② の根本原因の一つでもあった。
+
+### ③ JSON 出力をデータと台本で分けるか?
+
+これは設計議論なので**今ターンでは実装せず、議論材料を整理**:
+
+#### 賛成派の論点
+- データ (layoutData/comparisons/radarStats) と台本 (scripts) で生成タイミングが違う
+- 台本だけ書き直したい時にデータを再生成しなくて済む
+- 1ファイルが巨大化して Gemini の出力上限に当たるのを回避
+- リサーチ → 脚本のワークフローと自然に合致
+
+#### 反対派の論点
+- scripts の `highlight: 'isop'` は `comparisons.id: 'isop'` を参照 → 独立編集だと参照ズレリスク
+- 別々の JSON をマージする工程が増える
+- 1 リクエストの方が文脈共有できて整合が取れた品質が出やすい
+
+#### 折衷案 (私の推奨): **二段階生成 (Step 1: データ → Step 2: 台本)**
+
+```
+Step 1 (Gemini): テーマ + 観察 → { mainPlayer, subPlayer, radarStats,
+                                     layoutData, comparisons }
+Step 2 (Gemini): Step 1 の JSON 全体 + コンセプト
+                → { hookAnimation, scripts, theme, period, ... }
+アプリ側: 両者を 1 つの projectData にマージ
+```
+
+利点:
+- データの正確性を先に確定 → 脚本はその上で書ける
+- Step 2 は Step 1 の comparisons.id を参照できるので整合
+- 台本だけ書き直したい時は Step 2 だけ再実行
+- 出力量が減って quota 節約
+
+ユーザーに方針確認後、次ターンで gemini プロンプト + アプリの JSON 取り込み UI を整備する想定。
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/components/PanelErrorBoundary.jsx` | ★新規★ パネル用 ErrorBoundary |
+| `src/App.jsx` | 各タブを PanelErrorBoundary でラップ |
+| `src/components/ScriptEditorPanel.jsx` | focusEntry を常時表示 + 候補なし時の手入力対応 + datalist |
+| `docs/gemini-custom-prompt.md` | ranking スキーマを実装と整合させる修正 |
+| `package.json` / `config.js` | 5.18.6 → 5.18.7 |
+
+### 期待される効果
+
+| 改善前 | 改善後 |
+|---|---|
+| ❌ レイアウトタブで真っ白 → アプリ全停止 | ✅ パネル単位でエラー表示 + 再試行・初期化ボタン |
+| ❌ focusEntry ドロップダウンが出ない条件あり | ✅ 常時編集可能、候補があれば補完付き |
+| ❌ Gemini が ranking.items[] で出力 (誤) | ✅ ranking.metrics[].entries[] で出力 (実装と一致) |
+
+### 残課題
+
+- ③ JSON 出力の二段階分割 (要ユーザー判断)
+- Gemini 提言④ インサート映像
+- Gemini 提言⑤ CTA 前倒し
+
+
 
 ### 動機: ユーザー指摘
 
