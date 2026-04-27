@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack, Volume2, VolumeX, Download, Loader2 } from 'lucide-react';
+import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack, Volume2, VolumeX, Download, Loader2, Save, FolderOpen } from 'lucide-react';
 
 import { APP_VERSION } from './lib/config';
 import { defaultBatterData } from './data/defaultBatter';
@@ -13,6 +13,7 @@ import { BGMPanel } from './components/BGMPanel.jsx';
 import { JsonPanel } from './components/JsonPanel.jsx';
 import { ScriptEditorPanel } from './components/ScriptEditorPanel.jsx';
 import { LayoutPanel } from './components/LayoutPanel.jsx';
+import { autoSaveEditing, loadEditing, saveToSlot, loadFromSlot, listSlots, deleteSlot } from './lib/projectStorage';
 
 const TABS = [
   { id: 'json',   label: 'JSON',    icon: <Code size={14}/> },
@@ -23,9 +24,24 @@ const TABS = [
 ];
 
 const App = () => {
-  const [projectData, setProjectData] = useState(defaultBatterData);
+  // ★v5.18.4★ 初期化時に localStorage から自動復元 (前回編集中だったプロジェクト)
+  const [projectData, setProjectData] = useState(() => {
+    const saved = loadEditing();
+    return saved || defaultBatterData;
+  });
   const [activeTab, setActiveTab] = useState('json');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  // ★v5.18.4★ 保存スロット管理用
+  const [showSavePanel, setShowSavePanel] = useState(false);
+  const [savedSlots, setSavedSlots] = useState(() => listSlots());
+
+  // ★v5.18.4★ projectData 変更時に localStorage へ自動保存 (debounce: 1秒)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      autoSaveEditing(projectData);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [projectData]);
 
   const [ttsEngine, setTtsEngine] = useState('web_speech');
   const [speechRate, setSpeechRate] = useState(1.6);
@@ -382,6 +398,18 @@ const App = () => {
               >
                 {projectData.smartLoop ? '🔁 ループON' : '⏹ ループOFF'}
               </button>
+
+              {/* ★v5.18.4★ 保存スロット (台本/編集の永続化) */}
+              <button
+                onClick={() => {
+                  setSavedSlots(listSlots());
+                  setShowSavePanel(true);
+                }}
+                className="text-[10px] font-bold px-2 py-1 rounded-full transition flex items-center gap-1 border bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+                title="台本/編集を保存・復元 (ブラウザ内に保管)"
+              >
+                <Save size={11}/> 保存
+              </button>
             </div>
 
             <div className="text-[10px] text-zinc-500 font-bold flex items-center gap-1.5">
@@ -392,8 +420,127 @@ const App = () => {
           </div>
         )}
       </div>
+
+      {/* ★v5.18.4★ 保存スロット モーダル */}
+      {showSavePanel && (
+        <SaveSlotModal
+          projectData={projectData}
+          slots={savedSlots}
+          onClose={() => setShowSavePanel(false)}
+          onSave={(name) => {
+            saveToSlot(name, projectData);
+            setSavedSlots(listSlots());
+          }}
+          onLoad={(name) => {
+            const data = loadFromSlot(name);
+            if (data) {
+              setProjectData(data);
+              setShowSavePanel(false);
+            }
+          }}
+          onDelete={(name) => {
+            deleteSlot(name);
+            setSavedSlots(listSlots());
+          }}
+        />
+      )}
     </div>
   );
 };
+
+// ============================================================================
+// 保存スロット モーダル (★v5.18.4★)
+// ============================================================================
+function SaveSlotModal({ projectData, slots, onClose, onSave, onLoad, onDelete }) {
+  const [newName, setNewName] = useState('');
+  const defaultName = projectData?.title || projectData?.mainPlayer?.name || '';
+
+  const formatDate = (ts) => {
+    if (!ts) return '-';
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
+          <h2 className="text-sm font-black text-indigo-900 flex items-center gap-1.5">
+            <Save size={14}/> 台本/編集の保存・復元
+          </h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-800 text-lg leading-none">✕</button>
+        </div>
+
+        <div className="px-4 py-2.5 bg-emerald-50 border-b border-emerald-100">
+          <div className="text-[10px] text-emerald-800 mb-1.5 font-bold">💾 現在の編集を保存</div>
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              value={newName}
+              placeholder={defaultName || '保存名 (例: 岡本動画)'}
+              onChange={(e) => setNewName(e.target.value)}
+              className="flex-1 text-xs px-2 py-1.5 border border-emerald-200 rounded outline-none"
+            />
+            <button
+              onClick={() => {
+                const name = newName.trim() || defaultName;
+                if (!name) return;
+                onSave(name);
+                setNewName('');
+              }}
+              className="text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded"
+            >
+              保存
+            </button>
+          </div>
+          <div className="text-[9px] text-zinc-600 mt-1">
+            ※ 編集中はリアルタイムで自動保存されているので、閉じても次回起動時に復元されます。
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-2">
+          <div className="text-[10px] font-bold text-zinc-500 mb-1">📚 保存済みプロジェクト ({slots.length})</div>
+          {slots.length === 0 ? (
+            <div className="text-[11px] text-zinc-400 py-4 text-center">まだ保存されていません</div>
+          ) : (
+            <div className="space-y-1">
+              {slots.map(slot => (
+                <div key={slot.name} className="flex items-center gap-1.5 p-2 bg-zinc-50 hover:bg-indigo-50 border border-zinc-200 rounded">
+                  <FolderOpen size={12} className="text-indigo-500 flex-shrink-0"/>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-zinc-800 truncate">{slot.name}</div>
+                    <div className="text-[9px] text-zinc-500">
+                      {slot.title} · {slot.scriptsCount}件 · {formatDate(slot.savedAt)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onLoad(slot.name)}
+                    className="text-[10px] font-bold bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded"
+                  >
+                    開く
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`「${slot.name}」を削除しますか?`)) onDelete(slot.name);
+                    }}
+                    className="text-[10px] font-bold bg-zinc-200 hover:bg-red-100 text-zinc-600 hover:text-red-600 px-2 py-1 rounded"
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default App;

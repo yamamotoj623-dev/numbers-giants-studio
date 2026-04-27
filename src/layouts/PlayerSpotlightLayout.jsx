@@ -136,7 +136,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
   return (
     <>
-      <div key={`zoom-${animationKey}-${player.id || 'p'}-${mode}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-8 pb-[44%] px-3">
+      <div key={`zoom-${animationKey}-${player.id || 'p'}-${mode}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* スポットライト感の背景 */}
         <div className="absolute inset-0 pointer-events-none" style={{

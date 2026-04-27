@@ -60,21 +60,26 @@ const CSS_TEXT = `
   .phone.record-mode .duration-badge { display: none; }
   .phone.record-mode .safe-zone-guide { display: none !important; }
 
-  /* ★v5.17.0★ 球場フレア (Gemini提言③: 背景の抜け感) — 右上から差し込む光 */
+  /* ★v5.17.0★ 球場フレア (Gemini提言③: 背景の抜け感) — 右上から差し込む光
+     ★v5.18.4★ より動きを強化: 3層フレア + ゆっくり移動でカクテル光線感 */
   .phone::before {
     content: '';
     position: absolute;
-    inset: 0;
+    inset: -10%;  /* スケール時のはみ出し対応 */
     z-index: 1;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 70% 50% at 80% 10%, var(--stadium-flare) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 20% 95%, rgba(99,102,241,0.04) 0%, transparent 60%);
-    animation: stadiumFlare 8s ease-in-out infinite;
+      radial-gradient(ellipse 60% 40% at 75% 15%, rgba(255,200,100,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 35% at 25% 25%, rgba(99,102,241,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 35% at 50% 90%, rgba(251,113,133,0.05) 0%, transparent 60%);
+    animation: stadiumFlareDrift 16s ease-in-out infinite;
   }
-  @keyframes stadiumFlare {
-    0%, 100% { opacity: 0.7; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.05); }
+  @keyframes stadiumFlareDrift {
+    0%   { opacity: 0.6; transform: translate(0, 0) scale(1); }
+    25%  { opacity: 0.9; transform: translate(2%, -1%) scale(1.05); }
+    50%  { opacity: 1.0; transform: translate(-1%, 2%) scale(1.08); }
+    75%  { opacity: 0.85; transform: translate(-2%, -1%) scale(1.04); }
+    100% { opacity: 0.6; transform: translate(0, 0) scale(1); }
   }
 
   /* ★v5.17.0★ 微細なノイズアニメ (Gemini提言③) — 動きを錯覚させる */
@@ -97,6 +102,35 @@ const CSS_TEXT = `
     75% { transform: translate(-1px, -1px); }
     100% { transform: translate(0, 0); }
   }
+
+  /* ★v5.18.4★ Ken Burns エフェクト: レイアウト全体にじわじわズーム
+     12秒周期で 1.0 → 1.04 → 1.0 のゆっくりした動き
+     視聴者の脳に「画面が動いている」と錯覚させ、退屈感を削減 */
+  @keyframes kenBurns {
+    0%   { transform: scale(1.0)  translate(0, 0); }
+    25%  { transform: scale(1.025) translate(-0.5%, -0.5%); }
+    50%  { transform: scale(1.04) translate(0.5%, 0.3%); }
+    75%  { transform: scale(1.025) translate(0.3%, -0.3%); }
+    100% { transform: scale(1.0)  translate(0, 0); }
+  }
+  /* anim-layer に kenBurns を常時適用 (zoomBoost と被らない範囲で) */
+  .anim-layer {
+    animation: kenBurns 14s ease-in-out infinite;
+    transform-origin: center center;
+    will-change: transform;
+  }
+  /* zoomBoost 系のアニメが効く時は kenBurns は一旦消す (重複防止) */
+  .anim-layer.anim-zoom-boost,
+  .anim-layer.anim-impact-shake,
+  .anim-layer.anim-zoom-shake {
+    animation-name: zoomBoost;  /* zoomBoost 用クラスで上書き */
+  }
+  .anim-layer.anim-impact-shake { animation-name: impactShake; animation-duration: 0.4s; }
+  .anim-layer.anim-zoom-shake { animation-name: zoomShake; animation-duration: 0.5s; }
+  .anim-layer.anim-zoom-boost { animation-name: zoomBoost; animation-duration: 0.6s; }
+  /* zoomBoost 終了後に kenBurns へ自然に戻すには、zoomBoost のクラスが外れた時に再度 kenBurns になる
+     現状は wrapper key 変更で remount → 自動で kenBurns 再開 */
+
   /* 録画モードではフレア・ノイズも消す (素材として邪魔になり得るが、お好みで - 一旦は付けたまま) */
 
   .safe-zone-guide { position: absolute; left: 0; right: 0; pointer-events: none; z-index: 100; display: none; }

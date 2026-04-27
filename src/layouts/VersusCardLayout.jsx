@@ -92,7 +92,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
   return (
     <>
-      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-8 pb-[46%] px-3">
+      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* ヘッダー: 両選手のラベルと VS のみ (装飾バッジ無し) */}
         <div className="z-20 mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">

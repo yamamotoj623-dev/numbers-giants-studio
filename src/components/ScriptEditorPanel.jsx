@@ -84,6 +84,37 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
 
   const comparisons = projectData.comparisons || [];
 
+  // ★v5.18.4★ focusEntry 候補を layoutData から動的取得
+  // player_spotlight: spotlight.players[].id / .name
+  // ranking: ranking.metrics[].entries[].name
+  // versus_card: versus.categoryScores[].label (これは通常 highlight の方が適切なので除外)
+  const focusEntryCandidates = (() => {
+    const set = new Map();  // key=value, val=label
+
+    // player_spotlight
+    const spotlight = projectData.layoutData?.spotlight;
+    if (spotlight?.players) {
+      for (const p of spotlight.players) {
+        if (p.id) set.set(p.id, `[選手] ${p.name || p.id}${p.label ? ` — ${p.label}` : ''}`);
+      }
+    }
+
+    // ranking
+    const ranking = projectData.layoutData?.ranking;
+    if (ranking?.metrics) {
+      for (const m of ranking.metrics) {
+        if (!m.entries) continue;
+        for (const e of m.entries) {
+          if (e.name && !set.has(e.name)) {
+            set.set(e.name, `[Rank] ${e.name}${e.team ? ` (${e.team})` : ''}`);
+          }
+        }
+      }
+    }
+
+    return Array.from(set.entries()).map(([value, label]) => ({ value, label }));
+  })();
+
   return (
     <div ref={containerRef} className="p-3 space-y-2">
       <button
@@ -255,6 +286,25 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                     ))}
                   </select>
                 </div>
+
+                {/* ★v5.18.4★ focusEntry: 選手スポット/ランキングで「どの選手を主役にするか」 */}
+                {focusEntryCandidates.length > 0 && (
+                  <div>
+                    <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                      🎯 フォーカス選手 (選手スポット / ランキング用)
+                    </label>
+                    <select
+                      value={script.focusEntry || ''}
+                      onChange={(e) => handleChange(script.id, 'focusEntry', e.target.value || undefined)}
+                      className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                    >
+                      <option value="">継承 (前のシーンと同じ)</option>
+                      {focusEntryCandidates.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
           </div>

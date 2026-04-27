@@ -17,6 +17,9 @@
  *         {
  *           rank: 1,
  *           name: "泉口",
+ *           team: "G",              // ★v5.18.4新★ 球団略称 (G/D/T/S/E/F/B/H/M/L 等)
+ *                                    // 球団横断ランキング (リーグ全体等) で表示推奨
+ *                                    // 自軍動画では省略可 (G が並ぶだけなのでノイズ)
  *           value: "1.013",
  *           sub: "12試合",         // 補足情報 (省略可)
  *           isMainPlayer?: bool,    // 注目選手 (動画全体で複数可、★currentScript.focusEntry が優先)
@@ -277,6 +280,14 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       }`}>
                         {entry.isTeam && <span className="text-[10px] mr-1 opacity-70">[ チーム ]</span>}
                         {entry.name}
+                        {/* ★v5.18.4★ 球団略称 (G/D/T/S/E/F 等) — 球団横断ランキングで識別 */}
+                        {entry.team && !entry.isTeam && (
+                          <span className={`ml-1 text-[11px] font-bold ${
+                            entry.team === 'G' ? 'text-orange-300' : 'text-zinc-400'
+                          }`}>
+                            ({entry.team})
+                          </span>
+                        )}
                         {isFocused && (
                           <span className={`ml-1.5 text-[10px] ${moodStyle.accentText || themeClass.text}`}
                                 style={{ animation: 'pulse 1.2s ease-in-out infinite' }}>

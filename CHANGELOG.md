@@ -9,7 +9,157 @@
 
 ---
 
-## [5.18.3] - 2026-04-27 - ★緊急★ TTSキャッシュキー不一致バグ修正 (誤判定で「未生成」+ 二重生成)
+## [5.18.4] - 2026-04-27 - 残タスク6項目対応 (保存機能 / シェイクバグ / フォーカス選択 / 球団名 / Ken Burns / 余白調整)
+
+### 動機
+
+v5.18.3 で TTS キャッシュ問題が解決したので、前回保留の残タスクを一気に対応:
+
+> ② 台本/編集の保存機能
+> ③ シェイクでチャートアニメも再発火
+> ④ 台本上で選手フォーカス設定
+> ⑤ 選手スポット/対決カードの被り (もう少し下)
+> ⑥ ランキングで球団名併記
+> ⑦ じわじわズーム + 背景動き
+
+### 実装内容
+
+#### ② 台本/編集の保存機能 (新規)
+
+新規ファイル `src/lib/projectStorage.js`:
+- **編集中スロットの自動保存** (debounce 1秒、変更があれば常に書き込み)
+- **起動時の自動復元** (前回編集中だったプロジェクトを読み込む)
+- **名前付きスロット** (「岡本動画」「井上動画」など複数保存可能)
+- **容量超過対策** (QuotaExceededError 時は古いスロットから自動削除)
+
+App.jsx の冒頭アクションエリアに **「💾 保存」ボタン** 追加:
+- ボタンをクリック → 保存スロットモーダル
+- 「現在の編集を保存」エリアで名前入力 → 保存
+- 「保存済みプロジェクト」一覧 → 開く / 削除
+
+これで一度閉じてもやり直しにならない。**真の保存機能**が手に入った。
+
+#### ③ シェイクでチャートアニメ再発火するバグ修正
+
+LayoutRouter を 2 層構造に変更:
+- **外側 wrapper**: 固定 (常に維持) — 子レイアウトの内部 state 維持
+- **内側 anim-layer**: zoomBoost 時だけ key 更新 → CSS animation だけ再発火
+
+```jsx
+// 旧 (v5.18.1): wrapper の key を更新 → 子レイアウトも remount
+<div className={`anim ${animClass}`} key={animKey}>
+  <Layout {...props} />
+</div>
+
+// 新 (v5.18.4): 2層構造で内側だけ key 更新
+<div className="layout-fade-wrap">
+  <div className={`anim-layer ${animClass}`} key={innerAnimKey}>
+    <Layout {...props} />   {/* この Layout は remount されない */}
+  </div>
+</div>
+```
+
+これでチャート/レーダー/数値カウントアップ等の演出は維持されたまま、シェイク・ズームだけが発火する。
+
+#### ④ 台本上で選手フォーカス設定 (focusEntry ドロップダウン)
+
+ScriptEditorPanel に **「🎯 フォーカス選手」** ドロップダウン追加:
+- player_spotlight の `players[].id`
+- ranking の `entries[].name`
+を動的に候補化して表示。`script.focusEntry` に保存される。
+
+```jsx
+<select value={script.focusEntry || ''}>
+  <option value="">継承 (前のシーンと同じ)</option>
+  <option value="okamoto">[選手] 岡本和真 — 26年(今季)</option>
+  <option value="泉口">[Rank] 泉口 (G)</option>
+  ...
+</select>
+```
+
+これで台本上から動画全体を通した「誰にフォーカスするか」の編集が可能に。
+
+#### ⑤ 選手スポット/対決カードの被り解消
+
+前回 v5.18.1 で `pt-8` に詰めすぎた。ヘッダー (top:14px + ピル ≈ 35px) を考慮して再調整:
+
+| ファイル | 旧 | 新 |
+|---|---|---|
+| VersusCardLayout | `pt-8 pb-[46%]` | `pt-14 pb-[42%]` |
+| PlayerSpotlightLayout | `pt-8 pb-[44%]` | `pt-14 pb-[42%]` |
+
+これで上のヘッダーにも下のテロップにも被らない。
+
+#### ⑥ ランキングで球団名併記
+
+スキーマに `entry.team` フィールド追加:
+```js
+ranking.metrics[].entries: [
+  { rank: 1, name: "泉口", team: "G", value: "1.013" },
+  { rank: 2, name: "佐野", team: "DB", value: ".980" },
+  { rank: 3, name: "村上", team: "S", value: ".960" },
+]
+```
+
+表示は名前の右に `(G)` `(DB)` のように小さく:
+- 巨人 (G) は **オレンジ色** で目立たせる (自軍ハイライト)
+- それ以外は **グレー**
+- `entry.isTeam: true` の場合は球団タグ自体を出さない (チームエントリには不要)
+
+球団横断ランキング (例: セ・リーグ全体の OPS) で**自軍が一目で分かる**仕掛け。
+
+#### ⑦ じわじわズーム + 背景動き強化
+
+GlobalStyles.jsx に Ken Burns エフェクト追加:
+
+```css
+@keyframes kenBurns {
+  0%   { transform: scale(1.0)  translate(0, 0); }
+  25%  { transform: scale(1.025) translate(-0.5%, -0.5%); }
+  50%  { transform: scale(1.04) translate(0.5%, 0.3%); }
+  75%  { transform: scale(1.025) translate(0.3%, -0.3%); }
+  100% { transform: scale(1.0)  translate(0, 0); }
+}
+.anim-layer { animation: kenBurns 14s ease-in-out infinite; }
+```
+
+14秒周期で 1.0 → 1.04 → 1.0 のゆっくりズーム + 微小なドリフト。
+視聴者の脳に「画面が動いている」と錯覚させ、退屈感を削減。
+
+`zoomBoost` 系のアニメ発火時は CSS の `animation-name` を上書きして競合回避。
+発火後は wrapper key 変更で自動的に Ken Burns に戻る。
+
+背景フレアも強化:
+- 旧: 2層 (オレンジ + インディゴ) で 8秒周期
+- 新: 3層 (オレンジ + インディゴ + ローズ) で 16秒周期、translate ドリフト追加
+- カクテル光線がゆっくり動く感じに
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|---|---|
+| `src/lib/projectStorage.js` | ★新規★ 自動保存・名前付きスロット |
+| `src/App.jsx` | 自動保存・復元 / SaveSlotModal / Save ボタン |
+| `src/layouts/LayoutRouter.jsx` | 2層構造で remount 防止 |
+| `src/components/GlobalStyles.jsx` | Ken Burns / 強化フレア / kenBurns 上書きルール |
+| `src/components/ScriptEditorPanel.jsx` | focusEntry ドロップダウン + 候補動的取得 |
+| `src/layouts/RankingLayout.jsx` | team フィールド表示 |
+| `src/layouts/VersusCardLayout.jsx` | pt-8 → pt-14 |
+| `src/layouts/PlayerSpotlightLayout.jsx` | pt-8 → pt-14 |
+| `package.json` / `config.js` | 5.18.3 → 5.18.4 |
+
+### 期待される効果
+
+| 改善前 | 改善後 |
+|---|---|
+| ❌ 閉じるとやり直し | ✅ 自動保存 + 名前付き複数保存 |
+| ❌ シェイクでチャートも再描画 | ✅ シェイクのみ発火、チャート維持 |
+| ❌ 台本上で選手指定不可 | ✅ ドロップダウンで全シーンに設定可 |
+| ❌ ヘッダーに被る (前回詰めすぎ) | ✅ ヘッダー/テロップ両方避ける余白 |
+| ❌ 球団横断で誰が誰か分からない | ✅ (G)/(DB)/(S) で識別、自軍は色付き |
+| ❌ 背景静止で退屈 | ✅ 14秒周期 Ken Burns + 強化フレア |
+
+
 
 ### 動機: ユーザー報告の致命的バグ
 

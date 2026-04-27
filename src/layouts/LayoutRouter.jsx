@@ -97,37 +97,41 @@ export function LayoutRouter(props) {
   //   'zoom'    - グッと寄る
   //   'shake'   - 揺れる
   //   'zoomShake' - ズーム+揺れ (最強)
-  //   undefined - 何もしない
   //
-  // ★v5.18.1 バグ修正★
-  // 旧 (v5.18.0): animKey = `${animClass}-${currentIndex}-${animationKey}` だったため、
-  //   currentIndex が変わるたびに wrapper の key が変わり、
-  //   zoomBoost 未指定でも子レイアウトが毎回 remount → 全アニメ再発火するバグ。
-  // 新 (v5.18.1): zoomBoost 指定がある時だけ key を更新する。
-  //   未指定なら固定 key にして、子レイアウトの内部 state / アニメは継続。
+  // ★v5.18.4★ シェイクでチャートも再発火するバグ修正
+  // 旧 (v5.18.1): zoomBoost 指定時に wrapper の key 更新 → 子レイアウト全体 remount
+  //   → チャートのドット出現/レーダー描画/数値カウントアップ等の演出も全部リセットされる問題
+  // 新: 2層構造に変更:
+  //   外側 wrapper: 固定 key (常に維持) + Layout を保持
+  //   内側 anim-layer: zoomBoost 時だけ key 更新 → CSS animation だけ発火
+  // CSS animation は inline-block の子に対して効くので、内側 layer のみ shake/zoom する。
+  // 子レイアウトは remount されないので、チャート等の内部 state はそのまま維持。
   const currentScript = scripts[currentIndex];
   const zoomBoost = currentScript?.zoomBoost;
   const animClass = zoomBoost === 'zoom' ? 'anim-zoom-boost'
                   : zoomBoost === 'shake' ? 'anim-impact-shake'
                   : zoomBoost === 'zoomShake' ? 'anim-zoom-shake'
                   : '';
-  // zoomBoost がある script に来た時だけ key 更新 → アニメ発火
-  // 無指定なら 'stable' (固定値) で remount を防止
-  const animKey = animClass
-    ? `${animClass}-${currentIndex}-${props.animationKey || 0}`
+  // zoomBoost がある時だけ inner key 更新 (animation 再発火用)、外側は常に固定
+  const innerAnimKey = animClass
+    ? `${animClass}-${currentIndex}`
     : 'stable';
 
   return (
-    <div
-      className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'} ${animClass}`}
-      key={animKey}
-    >
-      {/* ★Error Boundary でラップ★
-          レイアウトコンポーネントが throw してもアプリ全体が真っ白にならないように。
-          activeLayout を key にすることで、レイアウト切替時にバウンダリ状態をリセット */}
-      <LayoutErrorBoundary key={activeLayout} layoutType={activeLayout}>
-        <Layout {...props} />
-      </LayoutErrorBoundary>
+    <div className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'}`}>
+      {/* ★v5.18.4★ animation 専用の内側 wrapper - key 変更で animation だけ再発火 */}
+      <div
+        className={`anim-layer ${animClass}`}
+        key={innerAnimKey}
+        style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+      >
+        {/* ★Error Boundary でラップ★
+            レイアウトコンポーネントが throw してもアプリ全体が真っ白にならないように。
+            activeLayout を key にすることで、レイアウト切替時にバウンダリ状態をリセット */}
+        <LayoutErrorBoundary key={activeLayout} layoutType={activeLayout}>
+          <Layout {...props} />
+        </LayoutErrorBoundary>
+      </div>
     </div>
   );
 }
