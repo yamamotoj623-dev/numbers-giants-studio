@@ -268,10 +268,11 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                         onChange={(e) => onChange({ ...projectData, hookMediaPattern: e.target.value })}
                         className="ml-1 text-[10px] bg-white px-1.5 py-0.5 border border-amber-200 rounded outline-none"
                       >
-                        <option value="flash">⚡ flash (フラッシュ白飛び→揺れ持続)</option>
-                        <option value="zoom">🔍 zoom (ズームイン→Ken Burns 持続)</option>
-                        <option value="slide">➡️ slide (左からスライド→揺れ持続)</option>
-                        <option value="glitch">🔥 glitch (グリッチ→ノイズ持続)</option>
+                        <option value="flash">⚡ flash (フラッシュ→ガタガタ揺れ持続)</option>
+                        <option value="zoom">🔍 zoom (ズームイン→大胆 Ken Burns)</option>
+                        <option value="slide">➡️ slide (スライドイン→揺れ持続)</option>
+                        <option value="glitch">🔥 glitch (グリッチ→ノイズ走り続け)</option>
+                        <option value="zoom_pulse">💥 zoom_pulse (ドンドン拡縮し続け)</option>
                       </select>
                     </div>
                     {/* ★v5.19.4★ 表示時間調整 */}

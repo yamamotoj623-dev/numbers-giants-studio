@@ -69,13 +69,22 @@ export function BGMPanel() {
       // SE 起動時ロード
       try {
         const savedSes = await listSes();
-        setSeList(savedSes);
+        // ★v5.19.5★ assignedPresetId は localStorage['se-assignments'] に保存されているので
+        // それを読み込んで各 se にマージしてからリストにセット (UI表示でも使う)
+        const assignments = JSON.parse(localStorage.getItem('se-assignments') || '{}');
+        const sesWithAssign = savedSes.map(se => ({
+          ...se,
+          assignedPresetId: se.assignedPresetId || assignments[se.key] || null,
+        }));
+        setSeList(sesWithAssign);
         setSeStats(await getSeStats());
-        // 既に登録したSEをmixerに再バインド
-        for (const se of savedSes) {
+        // 既に登録したSEをmixerに再バインド (これまで assignedPresetId が undefined で登録されないバグがあった)
+        for (const se of sesWithAssign) {
+          if (!se.assignedPresetId) continue;
           const blob = await getSeBlob(se.key);
-          if (blob && se.assignedPresetId) {
+          if (blob) {
             await mixer.registerCustomSe(se.assignedPresetId, blob);
+            console.log(`[SE] 復元: ${se.assignedPresetId} ← ${se.name}`);
           }
         }
       } catch (err) {

@@ -79,6 +79,29 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
       if (!merged.aspectRatio) merged.aspectRatio = '9:16';
       if (!merged.audio) merged.audio = { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.0, seVolume: 0.6 };
       if (!merged.layoutData) merged.layoutData = {};
+
+      // ★v5.19.5★ ユーザー固有設定 (AI が出力に含めない設定) は既存値で必ず保持
+      // これらは UI で設定するもの・メディア紐付け・サウンドなど、AI が消してはいけない
+      const PRESERVE_KEYS = [
+        'hookMediaPattern',
+        'hookMediaDurationMs',
+        'hookAnimation',     // フックの揺れ方は AI には触らせない (UI で選ぶ)
+        'silhouetteType',    // シルエット種類
+        'theme',             // テーマカラー
+        'smartLoop',
+      ];
+      for (const k of PRESERVE_KEYS) {
+        // AI 出力に該当キーが無い (undefined) 場合のみ既存値を引き継ぐ
+        // AI が明示的に新しい値を出した場合はそれを尊重
+        if (merged[k] === undefined && projectData?.[k] !== undefined) {
+          merged[k] = projectData[k];
+        }
+      }
+      // audio もパーシャルマージ (AI が部分的にしか出さない場合の安全策)
+      if (projectData?.audio) {
+        merged.audio = { ...projectData.audio, ...(merged.audio || {}) };
+      }
+
       // mode='whole' の時のみ mainPlayer 必須チェック (data/script 単独時はスキップ)
       if (mode === 'whole' && !merged.mainPlayer) {
         throw new Error('全体JSONには mainPlayer が必要です');
@@ -400,6 +423,14 @@ ${JSON.stringify(existingData, null, 2).slice(0, 4000)}
 - **scripts は含めない** (台本は別工程)
 - リサーチには web 検索を活用、推測ではなく一次ソース (NPB公式 > 球団 > 大手紙) を優先
 - 数値は最新を反映 (期間: ${currentData.period || '(未指定)'})
+- ★**以下のフィールドは出力に含めないこと**★ (アプリ側でユーザーが UI から設定する):
+  - \`hookMediaPattern\` / \`hookMediaDurationMs\` (id:1 画像/動画の表示設定)
+  - \`hookAnimation\` (フックの揺れ方)
+  - \`silhouetteType\` (シルエット種類)
+  - \`theme\` (テーマカラー)
+  - \`smartLoop\` (シームレスループ設定)
+  - \`audio\` (BGM/SE 音量)
+  もし含めるとアプリ側でユーザー設定が消えてしまう。これらは既に設定済みなので**完全に出力から除外**してください。
 - 球団横断ランキングでは entries[].team を必ず入れる
 `;
 }
@@ -465,7 +496,8 @@ function buildScriptJsonPrompt(currentData, templateData) {
 \`\`\`
 
 ## 注意
-- **scripts 以外は出力しない** (データは既存のものを使う)
+- **scripts 配列だけ出力**: \`{"scripts": [...]}\` の形式
+- **データ部分 (mainPlayer / layoutData / comparisons / hookMediaPattern / hookAnimation / theme 等) は一切含めない** — それらは既に存在し、AI出力に含まれると上書きされて消える
 - 動画長は ${currentData.aspectRatio === '9:16' ? '60-90秒' : '90秒程度'} を目安
 - 話者交代を活用 (A=数原さん男性、B=もえかちゃん女性)
 - データJSON の comparisons / players に存在しない id は使わない (参照ズレ防止)

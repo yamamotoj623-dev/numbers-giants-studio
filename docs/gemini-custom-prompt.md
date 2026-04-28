@@ -47,7 +47,9 @@
   schemaVersion: "5.0.0",
   layoutType: "<最初のレイアウト>",
   pattern: "<bad_news|good_news|defense|versus|awakening|mystery|future_forecast>",
-  hookAnimation: "<pop=朗報/覚醒/未来予測 | shake=悲報/謎解き | slide=対決 | zoom=覚醒 | fade=擁護>",
+  hookAnimation: "<pop=朗報/覚醒/未来予測 | shake=悲報/謎解き | slide=対決 | zoom=覚醒 | fade=擁護>",  ★ユーザー設定保持: 既存値があれば変えない★
+  hookMediaPattern: "flash|zoom|slide|glitch|zoom_pulse",  ★ユーザー設定保持: 既存があれば触らない、なければ省略★
+  hookMediaDurationMs: "auto",                              ★ユーザー設定保持: 既存があれば触らない、なければ省略★
   aspectRatio: "9:16",
   playerType: "batter|pitcher|team",
   silhouetteType: "batter_right|batter_left|batter_stance|runner|pitcher_right|pitcher_left|pitcher_set|catcher|team_huddle|team_stadium",

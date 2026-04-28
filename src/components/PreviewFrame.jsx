@@ -273,10 +273,16 @@ export function PreviewFrame({
               ★連続同speakerバグ対策 (v5.11.1)★
               外側 wrapper の key を speaker だけにすると、A→A→A の連続でリマウントされず
               .telop-bg のアニメーション (backwards) が発火せず**テロップが切り替わらない**バグになる。
-              currentIndex を key に含めることで、id 変化のたびに外側もリマウント → アニメ毎回発火 */}
+              currentIndex を key に含めることで、id 変化のたびに外側もリマウント → アニメ毎回発火
+              ★v5.19.5★ inline style + key で確実に animation 再発火させる (CSS 競合回避) */}
           {phase === 'normal' && (
             <div className="telop-wrap-normal" key={`telop-n-${currentScript?.speaker || 'a'}-${currentIndex}`}>
-              <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
+              <div
+                key={`tg-n-${currentIndex}`}
+                className="telop-bg"
+                data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}
+                style={{ animation: 'telopBounceIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
+              >
                 <div
                   className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
                   key={`telop-n-inner-${currentIndex}`}
@@ -288,7 +294,12 @@ export function PreviewFrame({
           )}
           {phase === 'highlight' && (
             <div className="telop-wrap-hl" key={`telop-h-${currentScript?.speaker || 'a'}-${currentIndex}`}>
-              <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
+              <div
+                key={`tg-h-${currentIndex}`}
+                className="telop-bg"
+                data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}
+                style={{ animation: 'telopBounceIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
+              >
                 <div
                   className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
                   key={`telop-h-inner-${currentIndex}`}
@@ -302,7 +313,12 @@ export function PreviewFrame({
           {/* アウトロのテロップ */}
           {phase === 'outro' && currentScript?.text && (
             <div className="telop-wrap-outro" key={`telop-o-${currentScript?.speaker || 'a'}-${currentIndex}`}>
-              <div className="telop-bg" data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}>
+              <div
+                key={`tg-o-${currentIndex}`}
+                className="telop-bg"
+                data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}
+                style={{ animation: 'telopBounceIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
+              >
                 <div
                   className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
                   key={`telop-o-inner-${currentIndex}`}

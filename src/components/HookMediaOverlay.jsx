@@ -73,14 +73,15 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
     : phase === 'exiting' ? animConfig.exit
     : 'none';
 
-  // ★v5.19.4★ 表示中の持続アニメ — 画像/動画が「動き続けて」スクロールを止める
-  // パターン別に visible 中の subtle motion を加える
+  // ★v5.19.5★ 表示中の持続アニメ — 周期短く・動き大きく、画面が揺れるレベル
+  // パターン別に visible 中の strong motion を加える
   const sustainAnim = (phase === 'visible') ? ({
-    flash:  'hookMediaShakeIdle 0.8s ease-in-out infinite',
-    zoom:   'hookMediaKenBurns 8s ease-in-out infinite alternate',
-    slide:  'hookMediaShakeIdle 1.2s ease-in-out infinite',
-    glitch: 'hookMediaGlitchIdle 2s steps(8) infinite',
-  }[pattern] || 'hookMediaKenBurns 8s ease-in-out infinite alternate') : 'none';
+    flash:      'hookMediaShakeIdle 1.4s ease-in-out infinite',     // ガタガタ揺れ続ける
+    zoom:       'hookMediaKenBurns 4.5s ease-in-out infinite alternate', // 大胆 Ken Burns
+    slide:      'hookMediaShakeIdle 1.6s ease-in-out infinite',
+    glitch:     'hookMediaGlitchIdle 1.8s steps(8) infinite',
+    zoom_pulse: 'hookMediaZoomPulse 1.5s ease-in-out infinite',     // ★新★ ドンドン拡縮
+  }[pattern] || 'hookMediaShakeIdle 1.4s ease-in-out infinite') : 'none';
 
   return (
     <div

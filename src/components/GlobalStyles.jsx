@@ -222,22 +222,40 @@ const CSS_TEXT = `
     60% { clip-path: inset(50% 0 10% 50%); }
     100% { opacity: 0; clip-path: inset(0 100% 0 0); }
   }
-  /* ★v5.19.4★ 表示中の持続アニメ — 視聴者の目を捉え続ける */
+  /* ★v5.19.5★ 表示中の持続アニメ — 画面が揺れるレベルにインパクト強化
+     画像が「ぐわんぐわん」「ガタガタ」と動き続けて視聴者の目を捉える */
   @keyframes hookMediaKenBurns {
-    0% { transform: scale(1) translate(0, 0); }
-    100% { transform: scale(1.15) translate(-3%, -2%); }
+    0%   { transform: scale(1) translate(0, 0); }
+    25%  { transform: scale(1.15) translate(-2%, -3%); }
+    50%  { transform: scale(1.25) translate(2%, -1%) rotate(0.5deg); }
+    75%  { transform: scale(1.18) translate(-1%, 2%) rotate(-0.3deg); }
+    100% { transform: scale(1.3) translate(3%, -2%) rotate(0.4deg); }
   }
   @keyframes hookMediaShakeIdle {
-    0%, 100% { transform: translate(0, 0) rotate(0); }
-    25% { transform: translate(-3px, 1px) rotate(-0.3deg); }
-    50% { transform: translate(2px, -1px) rotate(0.2deg); }
-    75% { transform: translate(-1px, 2px) rotate(-0.1deg); }
+    0%, 100% { transform: translate(0, 0) rotate(0) scale(1.05); }
+    10% { transform: translate(-8px, 4px) rotate(-1deg) scale(1.06); }
+    20% { transform: translate(7px, -3px) rotate(0.8deg) scale(1.07); }
+    30% { transform: translate(-5px, -4px) rotate(-0.6deg) scale(1.05); }
+    40% { transform: translate(6px, 3px) rotate(0.5deg) scale(1.08); }
+    50% { transform: translate(-7px, 2px) rotate(-0.7deg) scale(1.06); }
+    60% { transform: translate(4px, -5px) rotate(0.4deg) scale(1.05); }
+    70% { transform: translate(-6px, 4px) rotate(-0.5deg) scale(1.07); }
+    80% { transform: translate(5px, -2px) rotate(0.3deg) scale(1.06); }
+    90% { transform: translate(-4px, 3px) rotate(-0.4deg) scale(1.05); }
   }
   @keyframes hookMediaGlitchIdle {
-    0%, 90%, 100% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
-    92% { clip-path: inset(20% 0 60% 0); transform: translate(2px, 0); }
-    94% { clip-path: inset(60% 0 20% 0); transform: translate(-2px, 0); }
-    96% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+    0%, 80%, 100% { clip-path: inset(0 0 0 0); transform: translate(0, 0) scale(1.05); filter: hue-rotate(0); }
+    82% { clip-path: inset(20% 0 60% 0); transform: translate(8px, 0) scale(1.08); filter: hue-rotate(20deg); }
+    84% { clip-path: inset(60% 0 20% 0); transform: translate(-8px, 0) scale(1.06); filter: hue-rotate(-20deg); }
+    86% { clip-path: inset(40% 0 30% 0); transform: translate(4px, 0) scale(1.07); filter: hue-rotate(10deg); }
+    88% { clip-path: inset(0 0 0 0); transform: translate(0, 0) scale(1.05); filter: hue-rotate(0); }
+  }
+  /* ★v5.19.5★ 新パターン: ズームパルス (ドンドン拡大縮小) */
+  @keyframes hookMediaZoomPulse {
+    0%, 100% { transform: scale(1.05); }
+    25% { transform: scale(1.18) rotate(0.5deg); }
+    50% { transform: scale(1.10); }
+    75% { transform: scale(1.20) rotate(-0.4deg); }
   }
     0% { opacity: 0; }
     8% { opacity: 0.9; }
@@ -758,11 +776,10 @@ const CSS_TEXT = `
   .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 8px; padding-right: 60px; }
 
   /* ★v5.18.1★ max-width を 280px に拡大 (左端使えるので幅取れる) */
-  /* ★v5.19.0★ テロップ吹き出しにバウンスイン追加 — 毎回気持ちよく出現 */
+  /* ★v5.19.5★ animation は inline style で React 側から制御 (CSS 競合回避) */
   .telop-bg {
     background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 280px;
     border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-    animation: telopBounceIn 0.35s var(--spring-bounce) both;
   }
 
   /* ★v5.18.1★ speaker-a (数原): オレンジ→青系へ (オレンジは数値強調用に取っておく) */
@@ -813,10 +830,11 @@ const CSS_TEXT = `
   .telop-normal .em-r { color: #FF6B47; font-size: 1.15em; text-shadow: 0 0 10px rgba(255,107,71,0.7); }
   .telop-normal .em-n { color: var(--neon-yellow); font-family: monospace; font-size: 1.2em; letter-spacing: -0.5px; text-shadow: 0 0 8px var(--neon-yellow-glow); }
 
-  /* ★v5.19.4★ テロップを音声開始と同期して即表示(0.3s) — telopSlideUp → telopBounceIn にアップグレード
-     旧ルールが新しい .telop-bg { animation: telopBounceIn ... } を上書きしていたため、ここで統一 */
+  /* ★v5.19.5★ テロップアニメは React 側 inline style で確実に再発火させる方式に変更
+     ここの CSS animation 設定はコメントアウト (inline style と競合させない)
   .phase.active .telop-wrap-normal .telop-bg { animation: telopBounceIn 0.5s var(--spring-bounce) 0.25s backwards !important; }
   .phase.active .telop-wrap-hl .telop-bg { animation: telopBounceIn 0.5s var(--spring-bounce) 0.25s backwards !important; }
+  */
 
   /* ================================================================ */
   /* フェーズC — 情報量削減+数値上部配置 */
