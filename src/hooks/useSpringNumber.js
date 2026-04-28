@@ -18,10 +18,13 @@ import { useState, useEffect, useRef } from 'react';
 
 export function useSpringNumber(target, options = {}) {
   const {
-    stiffness = 120,
-    damping = 14,
+    // ★v5.19.3★ 一瞬すぎ問題の修正: デフォルトをゆっくり寄りに
+    //   旧: stiffness 120, damping 14 (約 0.5s で収束)
+    //   新: stiffness 50, damping 11 (約 1.5-2s かけて収束、目で追える)
+    stiffness = 50,
+    damping = 11,
     mass = 1,
-    precision = 0.01,
+    precision = 0.005,
   } = options;
 
   const [current, setCurrent] = useState(target);

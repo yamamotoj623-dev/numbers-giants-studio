@@ -31,6 +31,8 @@ import React from 'react';
 import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
+// ★v5.19.3★ HighlightCard は VS カードでは出さない (ユーザー要望: ハイライトカード非表示で行強調のみ)
+// import は他のレイアウト都合上残すが、本コンポーネントでは使用しない
 
 // ラベル一致判定 (完全一致 or 双方向部分一致、case-insensitive)
 function statMatches(statLabel, targetLabel) {
@@ -45,10 +47,8 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
   if (phase === 'hook') return null;
   if (phase === 'outro') return <OutroPanel projectData={projectData} currentScript={currentScript} />;
 
-  const highlightComp = useHighlightComp(projectData, currentScript);
-  const isHighlight = phase === 'highlight' && highlightComp;
-
-  // ★v5.14.0★ phase に関係なく、currentScript.highlight があれば行強調を発火
+  // ★v5.19.3★ phase に関係なく、currentScript.highlight があれば行強調を発火
+  // ハイライトカード (別表示) は出さない — VS カード内の該当指標行を amber で強調するだけ
   const focusedComp = currentScript?.highlight
     ? projectData.comparisons?.find(c => c.id === currentScript.highlight)
     : null;
@@ -92,8 +92,9 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
   return (
     <>
-      {/* ★v5.19.2★ key に currentIndex を含めてスクリプト変更時にアニメ再発火 */}
-      <div key={`vs-${animationKey}-${currentScript?.highlight || ''}-${currentScript?.id || 0}`}
+      {/* ★v5.19.3★ key は focusedLabel のみ — 同一フォーカス継続時はアニメ再発火しない
+          (scriptId を入れていた v5.19.2 の挙動を撤回: 毎scriptで再アニメは過剰だった) */}
+      <div key={`vs-${animationKey}-${focusedLabel || ''}`}
            className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* ヘッダー: 両選手のラベルと VS のみ (装飾バッジ無し) */}
@@ -214,8 +215,6 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
         </div>
 
       </div>
-
-      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}
     </>
   );
 }

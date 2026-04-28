@@ -308,24 +308,29 @@ const CSS_TEXT = `
   /* ★ バーのバネ伸長 ★ */
   @keyframes barSpring {
     0% { transform: scaleX(0); transform-origin: left; }
-    60% { transform: scaleX(1.06); }
-    80% { transform: scaleX(0.97); }
+    65% { transform: scaleX(1.08); }
+    82% { transform: scaleX(0.96); }
+    92% { transform: scaleX(1.02); }
     100% { transform: scaleX(1); }
   }
   .bar-spring {
-    animation: barSpring 0.6s var(--spring-bounce) forwards;
+    /* ★v5.19.3★ 0.6s → 1.1s に延長、視認できる速さに */
+    animation: barSpring 1.1s var(--spring-bounce) forwards;
     transform: scaleX(0);
     transform-origin: left;
   }
 
   /* ★ 数値カウントアップ用の弾むパルス ★ */
+  /* ★v5.19.3★ 一瞬すぎ問題: 期間を倍に、scale 倍率も大きく */
   @keyframes numReveal {
-    0% { opacity: 0; transform: scale(0.5) translateY(8px); }
-    50% { opacity: 1; transform: scale(1.15) translateY(-2px); }
-    70% { transform: scale(0.95) translateY(1px); }
+    0% { opacity: 0; transform: scale(0.3) translateY(12px); }
+    35% { opacity: 1; transform: scale(1.4) translateY(-4px); }
+    55% { transform: scale(0.85) translateY(2px); }
+    75% { transform: scale(1.08) translateY(-1px); }
+    90% { transform: scale(0.97); }
     100% { transform: scale(1) translateY(0); }
   }
-  .num-spring { animation: numReveal 0.45s var(--spring-bounce) forwards; }
+  .num-spring { animation: numReveal 0.9s var(--spring-bounce) forwards; }
 
   /* ★ テロップ入場 強化 (バウンスイン) ★ */
   @keyframes telopBounceIn {
@@ -336,10 +341,12 @@ const CSS_TEXT = `
   }
 
   /* ★ カード/パネル出現 (弾むスケール) ★ */
+  /* ★v5.19.3★ 0.45s → 0.7s に延長 */
   @keyframes cardBounceIn {
-    0% { opacity: 0; transform: scale(0.8) translateY(15px); }
-    55% { opacity: 1; transform: scale(1.04) translateY(-2px); }
-    75% { transform: scale(0.98) translateY(1px); }
+    0% { opacity: 0; transform: scale(0.7) translateY(20px); }
+    50% { opacity: 1; transform: scale(1.06) translateY(-3px); }
+    70% { transform: scale(0.96) translateY(2px); }
+    85% { transform: scale(1.02) translateY(-1px); }
     100% { transform: scale(1) translateY(0); }
   }
 
@@ -356,14 +363,16 @@ const CSS_TEXT = `
   }
 
   /* ★ spotlight: 主指標の値が弾んで出現 ★ */
+  /* ★v5.19.3★ 一瞬すぎ問題: 0.65s → 1.2s、scale 0→1.5 で大胆に */
   @keyframes heroValuePop {
-    0% { opacity: 0; transform: scale(0) rotate(-8deg); }
-    50% { opacity: 1; transform: scale(1.2) rotate(3deg); }
-    70% { transform: scale(0.9) rotate(-1deg); }
-    85% { transform: scale(1.05) rotate(0.5deg); }
+    0% { opacity: 0; transform: scale(0) rotate(-15deg); }
+    35% { opacity: 1; transform: scale(1.5) rotate(5deg); }
+    55% { transform: scale(0.85) rotate(-3deg); }
+    72% { transform: scale(1.12) rotate(1.5deg); }
+    87% { transform: scale(0.96) rotate(-0.5deg); }
     100% { transform: scale(1) rotate(0deg); }
   }
-  .hero-value-pop { animation: heroValuePop 0.65s var(--spring-elastic) forwards; }
+  .hero-value-pop { animation: heroValuePop 1.2s var(--spring-elastic) forwards; }
 
   /* ★ レーダーポリゴンの弾む描画 ★ */
   @keyframes radarPolyBounce {
@@ -1174,6 +1183,7 @@ const CSS_TEXT = `
   }
 
   /* ★v5.19.2★ 勝者数値のシマー (光の筋が横切る) — VS カード等で利用 */
+  /* ★v5.19.3★ 2.5s → 3.8s にゆっくり、目で追える速度に */
   @keyframes shimmerSweep {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
@@ -1183,14 +1193,14 @@ const CSS_TEXT = `
       90deg,
       transparent 0%,
       rgba(255,255,255,0.3) 40%,
-      rgba(255,255,255,0.6) 50%,
+      rgba(255,255,255,0.7) 50%,
       rgba(255,255,255,0.3) 60%,
       transparent 100%
     );
     background-size: 200% 100%;
     background-clip: text;
     -webkit-background-clip: text;
-    animation: shimmerSweep 2.5s ease-in-out infinite;
+    animation: shimmerSweep 3.8s ease-in-out infinite;
   }
 
   /* ★v5.19.2★ 数値のきらりん (1回だけ光る) */

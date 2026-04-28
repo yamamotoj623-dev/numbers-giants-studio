@@ -56,7 +56,8 @@ function SpringValue({ value, unit }) {
   const hasLeadingDot = raw.startsWith('.');
 
   const springVal = useSpringNumber(isNaN(numericVal) ? 0 : numericVal, {
-    stiffness: 150, damping: 16, precision: decimals > 0 ? 0.001 : 0.5,
+    // ★v5.19.3★ 一瞬すぎ問題の修正: 60→1.013 に約 1.5 秒かけて到達 (目で追える)
+    stiffness: 55, damping: 11, precision: decimals > 0 ? 0.0005 : 0.3,
   });
 
   if (isNaN(numericVal)) return <>{raw}{unit || ''}</>;
