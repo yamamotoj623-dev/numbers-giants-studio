@@ -97,6 +97,7 @@
   speech: "TTS用読み仮名(漢字を必ずひらがなに、数字も読み仮名)",
   isCatchy: true (id:1のみ),
   layoutType: "...",  ← 切替時のみ
+  spotlightMode: "default|quote|stats_grid|single_metric",  ← ★v5.18.14新★ 選手スポット表示時のモード。シーンごとに切替可 (省略時はlayoutData.spotlight.mode を継承)
   highlight: "comparisonsのid",  ← 該当指標の話してる時 (ranking でも metric.id を兼ねる旧来仕様)
   focusEntry: "spotlight時のid (player.id) または ranking時のentry.name",
   focusQuoteIndex: 0,  ← ★v5.18.13新★ 同じ player の中で別の quote を選ぶ時のインデックス (player.quotes[idx])

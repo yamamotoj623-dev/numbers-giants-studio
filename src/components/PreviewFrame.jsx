@@ -9,10 +9,11 @@
  * - data-speaker 属性で吹き出し方向
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { LayoutRouter } from '../layouts/LayoutRouter.jsx';
 import { renderFormattedText } from '../lib/textRender.jsx';
 import { Silhouette } from './Silhouettes.jsx';
+import { HookMediaOverlay, getHookMedia } from './HookMediaOverlay.jsx';
 
 function getPhase(currentScript, currentIndex, scripts, projectData) {
   if (!currentScript) return 'normal';
@@ -70,6 +71,18 @@ export function PreviewFrame({
   const textSize = resolveTextSize(currentScript);
   const estDuration = useMemo(() => estimateDuration(scripts), [scripts]);
 
+  // ★v5.19.0★ Hook メディア (画像/動画) のロード
+  const [hookMedia, setHookMedia] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    getHookMedia().then(m => {
+      if (!cancelled && m?.blob) {
+        setHookMedia({ url: URL.createObjectURL(m.blob), type: m.type });
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   const currentEmojiA = useMemo(() => {
     for (let i = currentIndex; i >= 0; i--) {
       if (scripts[i]?.speaker === 'A' && scripts[i]?.emoji) return scripts[i].emoji;
@@ -112,6 +125,36 @@ export function PreviewFrame({
   return (
     <div className={phoneClasses} style={phoneStyle} id="phone-root" key={`phone-${animationKey}`}>
 
+      {/* ★v5.19.0★ 浮遊ボケ光パーティクル — 常にぬるっと動いて視覚退屈を防ぐ */}
+      <div className="absolute inset-0 pointer-events-none z-[3] overflow-hidden" aria-hidden="true">
+        {[
+          { x: 30, y: -80, s: 0.6, d: 12, l: 25, t: 15, sz: 6, c: 'rgba(249,115,22,0.15)' },
+          { x: -40, y: -60, s: 0.4, d: 18, l: 70, t: 40, sz: 4, c: 'rgba(56,189,248,0.12)' },
+          { x: 50, y: -100, s: 0.3, d: 15, l: 15, t: 60, sz: 8, c: 'rgba(251,113,133,0.10)' },
+          { x: -30, y: -50, s: 0.7, d: 20, l: 80, t: 25, sz: 5, c: 'rgba(99,102,241,0.12)' },
+          { x: 20, y: -70, s: 0.5, d: 14, l: 50, t: 75, sz: 7, c: 'rgba(249,115,22,0.10)' },
+          { x: -50, y: -90, s: 0.35, d: 22, l: 35, t: 50, sz: 3, c: 'rgba(56,189,248,0.08)' },
+        ].map((p, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              left: `${p.l}%`,
+              top: `${p.t}%`,
+              width: p.sz,
+              height: p.sz,
+              background: p.c,
+              boxShadow: `0 0 ${p.sz * 3}px ${p.c}`,
+              '--fx': `${p.x}px`,
+              '--fy': `${p.y}px`,
+              '--fs': String(p.s),
+              animation: `floatParticle ${p.d}s ease-in-out infinite`,
+              animationDelay: `${i * 2.3}s`,
+            }}
+          />
+        ))}
+      </div>
+
       {/* 動画時間バッジ */}
       {!isRecordingMode && showDurationBadge && (
         <div className="duration-badge">
@@ -136,6 +179,18 @@ export function PreviewFrame({
           {/* ★v5.18.0★ Gemini提言: 冒頭0.5秒フラッシュ — 視聴者の指を止めるため
               key を毎ループ更新して再生のたびに発火 */}
           <div className="hook-flash-overlay" key={`flash-${animationKey}-${currentIndex}`} />
+
+          {/* ★v5.19.0★ ユーザーアップロード画像/動画インサート (hook のみ) */}
+          {hookMedia && (
+            <HookMediaOverlay
+              mediaUrl={hookMedia.url}
+              mediaType={hookMedia.type}
+              pattern={projectData?.hookMediaPattern || 'flash'}
+              isVisible={phase === 'hook'}
+              durationMs={800}
+            />
+          )}
+
           <div className="hook-silhouette">
             <Silhouette
               silhouetteType={projectData?.silhouetteType}

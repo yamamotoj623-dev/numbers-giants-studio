@@ -434,9 +434,13 @@ function buildScriptJsonPrompt(currentData, templateData) {
 
 ## ★1動画内でデータを使い分け★
 1動画内で複数の選手にフォーカスしたり、同じ選手の複数の quote を使い分けたりするのが想定。
-- script.focusEntry で **シーンごとに別の player.id** を指定可能
-- script.focusQuoteIndex で **同じ player の中で別の quote** を指定可能 (新)
-- script.highlight で **シーンごとに別の comparison.id** を指定可能
+- script.layoutType で **シーンごとにレイアウト切替** (radar_compare → player_spotlight → ranking 等)
+- script.spotlightMode で **選手スポットの表示パターンをシーンごとに切替** (default/quote/stats_grid/single_metric)
+  ★重要★ quote モードにしたいシーンには必ず spotlightMode: "quote" を明記。省略するとグローバル設定 (通常 default) が使われる
+- script.focusEntry で **シーンごとに別の player.id** を指定 (★player.id と完全一致させること★)
+- script.focusQuoteIndex で **同じ player の中で別の quote** を指定 (player.quotes[idx])
+- script.focusMetric で **ranking の metric をシーンごとに切替** (ranking.metrics[].id)
+- script.highlight で **シーンごとに別の comparison.id** を指定
 
 ## 出力する JSON 構造
 \`\`\`json
@@ -447,9 +451,11 @@ function buildScriptJsonPrompt(currentData, templateData) {
       "speaker": "A",
       "speech": "...",
       "layoutType": "radar_compare",  // データ側の利用可能レイアウト
+      "spotlightMode": "default",     // (任意) 選手スポット表示時のモード切替: default/quote/stats_grid/single_metric
       "highlight": "isop",            // 上記の comparisons.id から
-      "focusEntry": "okamoto",        // 上記の players.id から
-      "focusQuoteIndex": 0,           // (任意) quote ピック切替
+      "focusEntry": "okamoto",        // 上記の players.id から (★player.id と完全一致させること★)
+      "focusQuoteIndex": 0,           // (任意) quote ピック切替 (player.quotes[idx])
+      "focusMetric": "ops",           // (任意) ranking 用 metric 切替 (ranking.metrics[].id)
       "zoomBoost": "shake",           // 重要発言時のみ (1動画 2-3 箇所まで)
       "se": "shock_hit"               // 任意
     },

@@ -106,9 +106,18 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   };
 
   const focusId = currentScript?.focusEntry;
-  const player = (focusId && data.players?.find(p => p.id === focusId || p.name === focusId))
-    || data.players?.[0]
-    || {};
+  const matchedPlayer = focusId ? data.players?.find(p => p.id === focusId || p.name === focusId) : null;
+  const player = matchedPlayer || data.players?.[0] || {};
+
+  // ★v5.18.14★ デバッグ支援: focusEntry が指定されているのにマッチしない場合に警告
+  if (focusId && !matchedPlayer && data.players?.length > 0) {
+    console.warn(
+      `[PlayerSpotlight] focusEntry="${focusId}" がどの player にもマッチしません。`,
+      `利用可能な id/name:`,
+      data.players.map(p => `${p.id || '(no id)'}/${p.name || '(no name)'}`).join(', '),
+      `→ players[0] にフォールバック`
+    );
+  }
 
   // ★v5.18.13★ quote 解決: player.quotes[] + currentScript.focusQuoteIndex に対応
   // 後方互換: 旧 player.quote / quoteSource (単数) も維持
@@ -157,7 +166,10 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   const isStatFocused = (statLabel) => focusedLabel && statMatches(statLabel, focusedLabel);
 
   // ★v5.15.5★ mode 解決 (default | quote | stats_grid | single_metric)
-  const mode = data.mode || 'default';
+  // ★v5.18.14★ per-script 上書き: currentScript.spotlightMode が指定されていれば
+  //   グローバルの data.mode より優先する。
+  //   これで1動画内で「シーン3=default / シーン5=quote / シーン7=single_metric」が可能。
+  const mode = currentScript?.spotlightMode || data.mode || 'default';
 
   return (
     <>
@@ -219,17 +231,18 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
         {mode === 'single_metric' && player.primaryStat && (
           <div className="z-20 flex-1 flex flex-col items-center justify-start pt-6">
-            <div className={`text-[16px] font-jp-heavy tracking-widest mb-2 ${themeClass.text}`}>
+            <div className={`text-[16px] font-jp-heavy tracking-widest mb-2 ${themeClass.text} num-spring`}>
               {player.primaryStat.label}
             </div>
+            {/* ★v5.19.0★ 衝撃数字にバネ出現 (heroValuePop) */}
             <div
-              className={`font-impact leading-none ${isNeg ? 'neon-number-red' : 'neon-number'}`}
+              className={`hero-value-pop font-impact leading-none ${isNeg ? 'neon-number-red' : 'neon-number'}`}
               style={{ fontSize: '140px' }}
             >
               {player.primaryStat.value}
             </div>
             {compareValue && (
-              <div className="mt-4 text-center">
+              <div className="mt-4 text-center num-spring" style={{ animationDelay: '0.3s' }}>
                 <span className="text-[12px] text-zinc-500 mr-2">{compareValue.label}:</span>
                 <span className="text-[20px] font-impact text-zinc-300">{compareValue.value}</span>
               </div>
@@ -245,7 +258,11 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                 <div
                   key="_primary"
                   className="bg-zinc-900/78 rounded-lg p-3 backdrop-blur-sm border border-zinc-700/50 relative overflow-hidden"
-                  style={{ boxShadow: `0 0 16px ${themeClass.glow}30` }}
+                  style={{
+                    boxShadow: `0 0 16px ${themeClass.glow}30`,
+                    animation: 'cardBounceIn 0.4s var(--spring-bounce) both',
+                    animationDelay: '0.05s',
+                  }}
                 >
                   <div className={`text-[11px] font-black tracking-widest mb-1 ${themeClass.text}`}>
                     {player.primaryStat.label}
@@ -266,6 +283,10 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                 <div
                   key={i}
                   className="bg-zinc-900/78 rounded-lg p-3 backdrop-blur-sm border border-zinc-700/50"
+                  style={{
+                    animation: 'cardBounceIn 0.4s var(--spring-bounce) both',
+                    animationDelay: `${(i + 1) * 0.08 + 0.05}s`,
+                  }}
                 >
                   <div className="text-[11px] font-black text-zinc-300 tracking-widest mb-1">
                     {stat.label}
@@ -291,14 +312,17 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
             {/* ★プライマリ指標★ 画面のメイン主役、巨大表示 */}
             {player.primaryStat && (
               <div
-                className={`z-20 mb-4 bg-zinc-900/78 rounded-2xl p-4 backdrop-blur-sm relative overflow-hidden transition-all duration-300 ${
+                className={`z-20 mb-4 bg-zinc-900/78 rounded-2xl p-4 backdrop-blur-sm relative overflow-hidden ${
                   primaryFocused
-                    ? 'border-[3px] border-amber-400/80 scale-[1.02] animate-pulse-soft'
+                    ? 'border-[3px] border-amber-400/80 scale-[1.02]'
                     : 'border-2 border-zinc-700/60'
                 }`}
-                style={{ boxShadow: primaryFocused
+                style={{
+                  boxShadow: primaryFocused
                   ? `0 0 40px ${themeClass.glow}80, 0 0 16px rgba(251,191,36,0.5)`
-                  : `0 0 32px ${themeClass.glow}40` }}
+                  : `0 0 32px ${themeClass.glow}40`,
+                  animation: 'cardBounceIn 0.45s var(--spring-bounce) both',
+                }}
               >
                 {/* 装飾: 背景に薄くラベル文字 */}
                 <div className="absolute -top-3 right-2 text-[42px] font-black opacity-[0.06] leading-none select-none pointer-events-none"
@@ -318,8 +342,8 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                     <span className="text-[12px] font-black text-zinc-300 tracking-widest mb-1">
                       {player.primaryStat.label}
                     </span>
-                    {/* ★巨大数値★ (★v5.17.0★ font-impact + neon-number 適用) */}
-                    <span className={`text-[68px] font-impact leading-none ${
+                    {/* ★巨大数値★ (★v5.17.0★ font-impact + neon-number 適用、★v5.19.0★ バネ出現) */}
+                    <span className={`hero-value-pop text-[68px] font-impact leading-none ${
                       isNeg ? 'neon-number-red' : 'neon-number'
                     }`}>
                       {player.primaryStat.value}
@@ -354,7 +378,11 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                           ? 'border-2 border-amber-400/80 scale-105 animate-pulse-soft'
                           : 'border border-zinc-700/50'
                       }`}
-                      style={focused ? { boxShadow: '0 0 20px rgba(251,191,36,0.6), 0 0 8px rgba(251,191,36,0.4)' } : {}}
+                      style={{
+                        ...(focused ? { boxShadow: '0 0 20px rgba(251,191,36,0.6), 0 0 8px rgba(251,191,36,0.4)' } : {}),
+                        animation: `cardBounceIn 0.35s var(--spring-bounce) both${focused ? ', pulse 2s ease-in-out infinite' : ''}`,
+                        animationDelay: `${i * 0.06 + 0.2}s`,
+                      }}
                     >
                       {/* ★v5.15.5★ フォーカス時は枠 + scale + amber 色のみ (テキスト「話題中」削除) */}
                       <div className={`text-[10px] font-black tracking-widest mb-0.5 ${

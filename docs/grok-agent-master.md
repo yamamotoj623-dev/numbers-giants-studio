@@ -87,6 +87,11 @@ hook 「{13字以内}」
 - `"zoomShake"`: オチ直前の最大盛り上げ (「覚醒の理由は…」)
 - ★id:1 (hook) には不要★ — 自動でフラッシュ + hook_impact SE が入る
 
+#### script.spotlightMode (★v5.18.14新★)
+- シーンごとに選手スポットの表示パターンを切替: `"default"|"quote"|"stats_grid"|"single_metric"`
+- 省略時は `layoutData.spotlight.mode` を継承
+- 1動画内で「シーン3=default (データ表示) → シーン5=quote (発言ピック) → シーン7=single_metric (衝撃数字)」のように使い分ける
+
 #### versus_card の kana は不要
 - `categoryScores[].kana` は v5.15.5 で表示廃止、出力に含めても無視される
 - 出力する必要なし (省略推奨)

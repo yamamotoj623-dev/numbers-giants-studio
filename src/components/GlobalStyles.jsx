@@ -179,6 +179,49 @@ const CSS_TEXT = `
 
   /* ★v5.18.0★ 冒頭フラッシュ (打撃音/ミット音と同時に画面が一瞬白く光る) */
   @keyframes hookFlash {
+
+  /* ★v5.19.0★ Hook メディアオーバーレイ遷移パターン */
+  @keyframes hookMediaFlashIn {
+    0% { opacity: 0; filter: brightness(3); }
+    30% { opacity: 1; filter: brightness(2); }
+    100% { opacity: 1; filter: brightness(1); }
+  }
+  @keyframes hookMediaFlashOut {
+    0% { opacity: 1; filter: brightness(1); }
+    70% { opacity: 1; filter: brightness(2.5); }
+    100% { opacity: 0; filter: brightness(3); }
+  }
+  @keyframes hookMediaZoomIn {
+    0% { opacity: 0; transform: scale(1.8) rotate(2deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+  @keyframes hookMediaZoomOut {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.6); filter: blur(8px); }
+  }
+  @keyframes hookMediaSlideIn {
+    0% { opacity: 0; transform: translateX(-100%); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes hookMediaSlideOut {
+    0% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(100%); }
+  }
+  @keyframes hookMediaGlitchIn {
+    0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+    12% { opacity: 1; clip-path: inset(30% 60% 40% 0); }
+    25% { clip-path: inset(0 30% 60% 20%); }
+    37% { clip-path: inset(50% 0 10% 50%); }
+    50% { clip-path: inset(20% 20% 30% 10%); }
+    75% { clip-path: inset(5% 5% 5% 5%); }
+    100% { clip-path: inset(0 0 0 0); }
+  }
+  @keyframes hookMediaGlitchOut {
+    0% { clip-path: inset(0 0 0 0); }
+    30% { clip-path: inset(20% 20% 30% 10%); }
+    60% { clip-path: inset(50% 0 10% 50%); }
+    100% { opacity: 0; clip-path: inset(0 100% 0 0); }
+  }
     0% { opacity: 0; }
     8% { opacity: 0.9; }
     20% { opacity: 0.4; }
@@ -220,12 +263,123 @@ const CSS_TEXT = `
     width: 100%; height: 100%;
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
-    transition: opacity 0.45s ease-out;
+    /* ★v5.19.0★ レイアウト切替を fade + scale + slide でリッチに */
+    transition: opacity 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: scale(1) translateY(0);
   }
-  .layout-fade-wrap.fade-in { opacity: 1; }
-  .layout-fade-wrap.fade-out { opacity: 0; }
+  .layout-fade-wrap.fade-in { opacity: 1; transform: scale(1) translateY(0); }
+  .layout-fade-wrap.fade-out { opacity: 0; transform: scale(0.96) translateY(6px); }
   .phase { display: none; position: absolute; inset: 0; }
   .phase.active { display: block; }
+
+  /* ================================================================ */
+  /* ★v5.19.0★ バネアニメーション基盤                                */
+  /* ================================================================ */
+  :root {
+    --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --spring-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --spring-snappy: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    --spring-elastic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  }
+
+  /* ★ ランキング行のスタガードバネ入場 ★ */
+  @keyframes rankRowIn {
+    0% { opacity: 0; transform: translateX(-30px) scale(0.9); }
+    60% { opacity: 1; transform: translateX(4px) scale(1.02); }
+    80% { transform: translateX(-2px) scale(0.99); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  .rank-row-anim {
+    opacity: 0;
+    animation: rankRowIn 0.5s var(--spring-bounce) forwards;
+  }
+  .rank-row-anim:nth-child(1) { animation-delay: 0.05s; }
+  .rank-row-anim:nth-child(2) { animation-delay: 0.12s; }
+  .rank-row-anim:nth-child(3) { animation-delay: 0.19s; }
+  .rank-row-anim:nth-child(4) { animation-delay: 0.26s; }
+  .rank-row-anim:nth-child(5) { animation-delay: 0.33s; }
+  .rank-row-anim:nth-child(6) { animation-delay: 0.40s; }
+  .rank-row-anim:nth-child(7) { animation-delay: 0.47s; }
+  .rank-row-anim:nth-child(8) { animation-delay: 0.54s; }
+  .rank-row-anim:nth-child(9) { animation-delay: 0.61s; }
+  .rank-row-anim:nth-child(10){ animation-delay: 0.68s; }
+
+  /* ★ バーのバネ伸長 ★ */
+  @keyframes barSpring {
+    0% { transform: scaleX(0); transform-origin: left; }
+    60% { transform: scaleX(1.06); }
+    80% { transform: scaleX(0.97); }
+    100% { transform: scaleX(1); }
+  }
+  .bar-spring {
+    animation: barSpring 0.6s var(--spring-bounce) forwards;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  /* ★ 数値カウントアップ用の弾むパルス ★ */
+  @keyframes numReveal {
+    0% { opacity: 0; transform: scale(0.5) translateY(8px); }
+    50% { opacity: 1; transform: scale(1.15) translateY(-2px); }
+    70% { transform: scale(0.95) translateY(1px); }
+    100% { transform: scale(1) translateY(0); }
+  }
+  .num-spring { animation: numReveal 0.45s var(--spring-bounce) forwards; }
+
+  /* ★ テロップ入場 強化 (バウンスイン) ★ */
+  @keyframes telopBounceIn {
+    0% { opacity: 0; transform: translateY(20px) scale(0.85); }
+    50% { opacity: 1; transform: translateY(-3px) scale(1.03); }
+    70% { transform: translateY(1px) scale(0.99); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ★ カード/パネル出現 (弾むスケール) ★ */
+  @keyframes cardBounceIn {
+    0% { opacity: 0; transform: scale(0.8) translateY(15px); }
+    55% { opacity: 1; transform: scale(1.04) translateY(-2px); }
+    75% { transform: scale(0.98) translateY(1px); }
+    100% { transform: scale(1) translateY(0); }
+  }
+
+  /* ★ バッジ・ピル 脈動 (微小スケール呼吸) ★ */
+  @keyframes badgeBreath {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+
+  /* ★ ランキングフォーカス行のグロー脈動 ★ */
+  @keyframes focusRowGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+    50% { box-shadow: 0 0 12px 2px rgba(249,115,22,0.25); }
+  }
+
+  /* ★ spotlight: 主指標の値が弾んで出現 ★ */
+  @keyframes heroValuePop {
+    0% { opacity: 0; transform: scale(0) rotate(-8deg); }
+    50% { opacity: 1; transform: scale(1.2) rotate(3deg); }
+    70% { transform: scale(0.9) rotate(-1deg); }
+    85% { transform: scale(1.05) rotate(0.5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  .hero-value-pop { animation: heroValuePop 0.65s var(--spring-elastic) forwards; }
+
+  /* ★ レーダーポリゴンの弾む描画 ★ */
+  @keyframes radarPolyBounce {
+    0% { opacity: 0; transform: scale(0); }
+    55% { opacity: 1; transform: scale(1.08); }
+    75% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+
+  /* ★ 浮遊パーティクル (常時) — ボケ光が漂う ★ */
+  @keyframes floatParticle {
+    0% { transform: translate(0, 0) scale(1); opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { transform: translate(var(--fx, 30px), var(--fy, -60px)) scale(var(--fs, 0.5)); opacity: 0; }
+  }
 
   /* ================================================================ */
   /* アニメ */
@@ -449,17 +603,35 @@ const CSS_TEXT = `
   .radar-svg-box svg { width: 100%; height: auto; display: block; }
 
   /* 描画時間 0.8s に短縮 */
-  /* レーダー描画アニメ: 全て radarFadeIn (opacity) に統一。
-     normal phase 初回のみ発火、highlight ではCSSマッチせず完全無発火 */
-  .phase[data-p="normal"].active .radar-main-poly { animation: radarFadeIn 0.5s ease-out forwards; }
-  .phase[data-p="normal"].active .radar-sub-poly { animation: radarFadeIn 0.5s ease-out 0.15s backwards; }
-  .phase[data-p="normal"].active .radar-dot { animation: radarFadeIn 0.3s ease-out backwards; }
+  /* ★v5.19.0★ レーダー描画アニメを fade → バネバウンスに昇格
+     ポリゴンが scale(0) から弾んで出現、ドットは順次ポップイン */
+  .phase[data-p="normal"].active .radar-main-poly {
+    animation: radarPolyBounce 0.6s var(--spring-bounce) forwards;
+    transform-origin: center;
+  }
+  .phase[data-p="normal"].active .radar-sub-poly {
+    animation: radarPolyBounce 0.5s var(--spring-bounce) 0.15s backwards;
+    transform-origin: center;
+  }
+  /* ドット: 小さく → ポンッと出現 */
+  @keyframes radarDotSpring {
+    0% { opacity: 0; transform: scale(0); }
+    60% { opacity: 1; transform: scale(1.4); }
+    80% { transform: scale(0.85); }
+    100% { transform: scale(1); }
+  }
+  .phase[data-p="normal"].active .radar-dot { animation: radarDotSpring 0.3s var(--spring-bounce) backwards; }
   .phase[data-p="normal"].active .radar-dot:nth-of-type(1) { animation-delay: 0.3s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(2) { animation-delay: 0.35s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(3) { animation-delay: 0.4s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(4) { animation-delay: 0.45s; }
-  .phase[data-p="normal"].active .radar-dot:nth-of-type(5) { animation-delay: 0.5s; }
-  .phase[data-p="normal"].active .radar-label-group { animation: radarFadeIn 0.3s ease-out backwards; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(2) { animation-delay: 0.37s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(3) { animation-delay: 0.44s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(4) { animation-delay: 0.51s; }
+  .phase[data-p="normal"].active .radar-dot:nth-of-type(5) { animation-delay: 0.58s; }
+  /* ラベル: ふわっとスライドイン */
+  @keyframes labelSlideIn {
+    0% { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .phase[data-p="normal"].active .radar-label-group { animation: labelSlideIn 0.3s var(--spring-smooth) backwards; }
   .phase[data-p="normal"].active .radar-label-group:nth-of-type(1) { animation-delay: 0.55s; }
   .phase[data-p="normal"].active .radar-label-group:nth-of-type(2) { animation-delay: 0.6s; }
   .phase[data-p="normal"].active .radar-label-group:nth-of-type(3) { animation-delay: 0.65s; }
@@ -556,7 +728,12 @@ const CSS_TEXT = `
   .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 8px; padding-right: 60px; }
 
   /* ★v5.18.1★ max-width を 280px に拡大 (左端使えるので幅取れる) */
-  .telop-bg { background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 280px; border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+  /* ★v5.19.0★ テロップ吹き出しにバウンスイン追加 — 毎回気持ちよく出現 */
+  .telop-bg {
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 280px;
+    border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    animation: telopBounceIn 0.35s var(--spring-bounce) both;
+  }
 
   /* ★v5.18.1★ speaker-a (数原): オレンジ→青系へ (オレンジは数値強調用に取っておく) */
   .telop-bg[data-speaker="a"] { border-color: rgba(56,189,248,0.85); box-shadow: 0 4px 16px rgba(56,189,248,0.4), 0 0 24px rgba(56,189,248,0.2); }

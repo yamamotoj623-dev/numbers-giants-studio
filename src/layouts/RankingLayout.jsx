@@ -45,6 +45,26 @@ import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
 import { isEnglishMetric } from '../lib/metricUtils';
+import { useSpringNumber } from '../hooks/useSpringNumber';
+
+// ★v5.19.0★ 数値をバネ物理でカウントアップ表示
+function SpringValue({ value, unit }) {
+  const raw = String(value || '');
+  const numMatch = raw.match(/^([+-]?)(\d*\.?\d+)/);
+  const numericVal = numMatch ? parseFloat(numMatch[0]) : NaN;
+  const decimals = numMatch ? (numMatch[2].split('.')[1] || '').length : 0;
+  const hasLeadingDot = raw.startsWith('.');
+
+  const springVal = useSpringNumber(isNaN(numericVal) ? 0 : numericVal, {
+    stiffness: 150, damping: 16, precision: decimals > 0 ? 0.001 : 0.5,
+  });
+
+  if (isNaN(numericVal)) return <>{raw}{unit || ''}</>;
+
+  let formatted = springVal.toFixed(decimals);
+  if (hasLeadingDot && formatted.startsWith('0.')) formatted = formatted.slice(1);
+  return <>{formatted}{unit || ''}</>;
+}
 
 // mood ごとのスタイル定義
 const MOOD_STYLES = {
@@ -260,12 +280,13 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       ⋯ 圏外 ⋯
                     </div>
                   )}
+                  {/* ★v5.19.0★ rank-row-anim でバネ入場 (左からスライドイン + バウンス) */}
                   <div
-                    className={`flex items-center px-3 py-2 border-b border-zinc-800 ${rowClass} ${
+                    className={`rank-row-anim flex items-center px-3 py-2 border-b border-zinc-800 ${rowClass} ${
                       isFocused ? 'scale-[1.04] z-10 relative' : ''
-                    } transition-all duration-300`}
+                    }`}
                     style={isFocused && moodStyle.glowColor ? {
-                      animation: 'pulse 2s ease-in-out infinite'
+                      animation: 'focusRowGlow 2s ease-in-out infinite, rankRowIn 0.5s var(--spring-bounce) forwards',
                     } : {}}
                   >
                     {/* 順位 */}
@@ -293,7 +314,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                         )}
                         {isFocused && (
                           <span className={`ml-1.5 text-[10px] ${moodStyle.accentText || themeClass.text}`}
-                                style={{ animation: 'pulse 1.2s ease-in-out infinite' }}>
+                                style={{ animation: 'badgeBreath 1.2s ease-in-out infinite' }}>
                             ◀ 注目
                           </span>
                         )}
@@ -301,22 +322,24 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       {entry.sub && <div className="text-[10px] font-bold text-zinc-500 truncate leading-tight">{entry.sub}</div>}
                     </div>
 
-                    {/* 値 + バー (★v5.17.0★ font-impact 適用) */}
+                    {/* 値 + バー (★v5.19.0★ バネアニメーション) */}
                     <div className="flex-shrink-0 flex flex-col items-end" style={{ width: 80 }}>
-                      <div className={`text-[18px] font-impact leading-none ${
+                      <div className={`num-spring text-[18px] font-impact leading-none ${
                         isFocused
                           ? (mood === 'best' ? 'text-yellow-300' : mood === 'worst' ? 'text-red-300' : themeClass.text)
                           : (isMain ? themeClass.text : (isTop3 ? 'text-white' : 'text-zinc-400'))
                       }`} style={isFocused || isMain ? { textShadow: `0 0 10px ${themeClass.glow}80` } : {}}>
-                        {entry.value}{activeMetric.unit || ''}
+                        <SpringValue value={entry.value} unit={activeMetric.unit || ''} />
                       </div>
-                      <div className="w-full h-1 bg-zinc-800 rounded-full mt-1 overflow-hidden">
+                      <div className="w-full h-1.5 bg-zinc-800 rounded-full mt-1 overflow-hidden">
+                        {/* ★v5.19.0★ bar-spring でバネ伸長 (scaleX ベース) */}
                         <div
-                          className="h-full rounded-full transition-all duration-500"
+                          className="h-full rounded-full bar-spring"
                           style={{
                             width: `${barPct}%`,
                             background: barColor,
-                            boxShadow: isFocused ? `0 0 6px ${moodStyle.glowColor || themeClass.glow}` : 'none'
+                            boxShadow: isFocused ? `0 0 8px ${moodStyle.glowColor || themeClass.glow}` : 'none',
+                            animationDelay: `${idx * 0.07 + 0.15}s`,
                           }}
                         />
                       </div>

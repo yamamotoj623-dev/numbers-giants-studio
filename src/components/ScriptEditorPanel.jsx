@@ -179,17 +179,32 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
               placeholder="テロップ表示テキスト (改行可)"
             />
 
-            {/* 簡易プレビュー: layoutType / highlight が設定されてれば常時表示 */}
-            {!isExpanded && (script.layoutType || script.highlight) && (
+            {/* 簡易プレビュー: layoutType / highlight / focusEntry 等が設定されてれば常時表示 */}
+            {!isExpanded && (script.layoutType || script.highlight || script.focusEntry || script.spotlightMode) && (
               <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                 {script.layoutType && (
                   <span className="text-[9px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded">
                     🎨 {LAYOUT_TYPES[script.layoutType]?.label || script.layoutType}
                   </span>
                 )}
+                {script.spotlightMode && (
+                  <span className="text-[9px] bg-teal-100 text-teal-700 font-bold px-1.5 py-0.5 rounded">
+                    👤 {script.spotlightMode}
+                  </span>
+                )}
+                {script.focusEntry && (
+                  <span className="text-[9px] bg-sky-100 text-sky-700 font-bold px-1.5 py-0.5 rounded">
+                    🎯 {script.focusEntry}
+                  </span>
+                )}
                 {script.highlight && (
                   <span className="text-[9px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded">
                     ⭐ {comparisons.find(c => c.id === script.highlight)?.label || script.highlight}
+                  </span>
+                )}
+                {script.focusMetric && (
+                  <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded">
+                    📊 {script.focusMetric}
                   </span>
                 )}
                 {script.se && (
@@ -202,6 +217,65 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
 
             {isExpanded && (
               <div className="mt-2 space-y-1.5 border-t pt-2">
+                {/* ★v5.19.0★ フック (id:1) 専用: 画像/動画インサート */}
+                {script.isCatchy && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-2">
+                    <label className="text-[10px] font-bold text-amber-800 block mb-1">
+                      🎬 フック画像/動画 (冒頭に一瞬表示されるインサート)
+                    </label>
+                    <div className="flex gap-1.5 items-center">
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        className="text-[10px] flex-1"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const { saveHookMedia } = await import('./HookMediaOverlay.jsx');
+                            const type = file.type.startsWith('video') ? 'video' : 'image';
+                            await saveHookMedia(file, type);
+                            alert(`✅ フック${type === 'video' ? '動画' : '画像'}を登録しました。再読み込みで反映されます。`);
+                          } catch (err) {
+                            alert('保存に失敗しました: ' + err.message);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={async () => {
+                          try {
+                            const { clearHookMedia } = await import('./HookMediaOverlay.jsx');
+                            await clearHookMedia();
+                            alert('フックメディアを削除しました');
+                          } catch (err) {
+                            alert('削除に失敗: ' + err.message);
+                          }
+                        }}
+                        className="text-[9px] bg-zinc-200 hover:bg-red-100 text-zinc-600 hover:text-red-600 px-2 py-1 rounded"
+                      >
+                        削除
+                      </button>
+                    </div>
+                    <div className="text-[9px] text-amber-700 mt-1">
+                      PNG/JPG/WebP/MP4 対応。冒頭約0.8秒のフラッシュインサートとして表示。
+                    </div>
+                    {/* ★v5.19.0★ 切替アニメーションパターン選択 */}
+                    <div className="mt-1.5">
+                      <label className="text-[9px] text-amber-700 font-bold">切替パターン:</label>
+                      <select
+                        value={projectData.hookMediaPattern || 'flash'}
+                        onChange={(e) => onChange({ ...projectData, hookMediaPattern: e.target.value })}
+                        className="ml-1 text-[10px] bg-white px-1.5 py-0.5 border border-amber-200 rounded outline-none"
+                      >
+                        <option value="flash">⚡ flash (フラッシュ白飛び)</option>
+                        <option value="zoom">🔍 zoom (ズームイン → 溶ける)</option>
+                        <option value="slide">➡️ slide (左からスライド)</option>
+                        <option value="glitch">🔥 glitch (グリッチノイズ)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold flex items-center gap-1 mb-0.5">🔊 読み上げ用テキスト</label>
                   <input
@@ -270,6 +344,24 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                     {Object.entries(LAYOUT_TYPES).map(([key, info]) => (
                       <option key={key} value={key}>{info.emoji || '📊'} {info.label}</option>
                     ))}
+                  </select>
+                </div>
+
+                {/* ★v5.18.14★ spotlightMode: シーンごとに選手スポットの表示パターンを変更 */}
+                <div>
+                  <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                    👤 スポットモード (選手スポット表示時)
+                  </label>
+                  <select
+                    value={script.spotlightMode || ''}
+                    onChange={(e) => handleChange(script.id, 'spotlightMode', e.target.value || undefined)}
+                    className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                  >
+                    <option value="">継承 (グローバル設定)</option>
+                    <option value="default">📊 default (主指標+サブ)</option>
+                    <option value="single_metric">💥 single_metric (1指標超巨大)</option>
+                    <option value="stats_grid">📋 stats_grid (基本成績網羅)</option>
+                    <option value="quote">💬 quote (発言ピック)</option>
                   </select>
                 </div>
 
