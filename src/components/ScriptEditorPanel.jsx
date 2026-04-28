@@ -257,7 +257,8 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                       </button>
                     </div>
                     <div className="text-[9px] text-amber-700 mt-1">
-                      PNG/JPG/WebP/MP4 対応。冒頭約0.8秒のフラッシュインサートとして表示。
+                      PNG/JPG/WebP/MP4 対応。
+                      <span className="text-amber-900 font-bold"> id:1 の TTS が終わるまで自動表示</span>。
                     </div>
                     {/* ★v5.19.0★ 切替アニメーションパターン選択 */}
                     <div className="mt-1.5">
@@ -267,10 +268,30 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                         onChange={(e) => onChange({ ...projectData, hookMediaPattern: e.target.value })}
                         className="ml-1 text-[10px] bg-white px-1.5 py-0.5 border border-amber-200 rounded outline-none"
                       >
-                        <option value="flash">⚡ flash (フラッシュ白飛び)</option>
-                        <option value="zoom">🔍 zoom (ズームイン → 溶ける)</option>
-                        <option value="slide">➡️ slide (左からスライド)</option>
-                        <option value="glitch">🔥 glitch (グリッチノイズ)</option>
+                        <option value="flash">⚡ flash (フラッシュ白飛び→揺れ持続)</option>
+                        <option value="zoom">🔍 zoom (ズームイン→Ken Burns 持続)</option>
+                        <option value="slide">➡️ slide (左からスライド→揺れ持続)</option>
+                        <option value="glitch">🔥 glitch (グリッチ→ノイズ持続)</option>
+                      </select>
+                    </div>
+                    {/* ★v5.19.4★ 表示時間調整 */}
+                    <div className="mt-1.5">
+                      <label className="text-[9px] text-amber-700 font-bold">表示時間:</label>
+                      <select
+                        value={projectData.hookMediaDurationMs ?? 'auto'}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          onChange({ ...projectData, hookMediaDurationMs: v === 'auto' ? 'auto' : parseInt(v, 10) });
+                        }}
+                        className="ml-1 text-[10px] bg-white px-1.5 py-0.5 border border-amber-200 rounded outline-none"
+                      >
+                        <option value="auto">⏱ auto (id:1 の TTS が終わるまで)</option>
+                        <option value="500">0.5 秒 (一瞬)</option>
+                        <option value="1000">1.0 秒</option>
+                        <option value="1500">1.5 秒</option>
+                        <option value="2000">2.0 秒</option>
+                        <option value="3000">3.0 秒</option>
+                        <option value="5000">5.0 秒</option>
                       </select>
                     </div>
                   </div>
@@ -381,6 +402,8 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
 
                 {/* ★v5.18.4★ focusEntry: 選手スポット/ランキングで「どの選手を主役にするか」
                     ★v5.18.7★ 候補が無くても手入力で指定できるように常時表示 + 候補は datalist で補助 */}
+                {/* ★v5.19.4★ プルダウン化 — datalist+input より探しやすい
+                    候補なし時のみ手入力フォールバック */}
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
                     🎯 フォーカス選手 (選手スポット / ランキング用)
@@ -391,21 +414,20 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                     )}
                   </label>
                   {focusEntryCandidates.length > 0 ? (
-                    <>
-                      <input
-                        type="text"
-                        list={`focus-entries-${script.id}`}
-                        value={script.focusEntry || ''}
-                        onChange={(e) => handleChange(script.id, 'focusEntry', e.target.value || undefined)}
-                        placeholder="継承 (前のシーンと同じ)"
-                        className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
-                      />
-                      <datalist id={`focus-entries-${script.id}`}>
-                        {focusEntryCandidates.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </datalist>
-                    </>
+                    <select
+                      value={script.focusEntry || ''}
+                      onChange={(e) => handleChange(script.id, 'focusEntry', e.target.value || undefined)}
+                      className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                    >
+                      <option value="">継承 (前のシーンと同じ)</option>
+                      {focusEntryCandidates.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                      {/* ★ JSON で書かれた値が候補にない場合も表示できるようフォールバック */}
+                      {script.focusEntry && !focusEntryCandidates.some(c => c.value === script.focusEntry) && (
+                        <option value={script.focusEntry}>⚠️ {script.focusEntry} (候補外)</option>
+                      )}
+                    </select>
                   ) : (
                     <input
                       type="text"

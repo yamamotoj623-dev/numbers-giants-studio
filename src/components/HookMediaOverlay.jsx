@@ -45,14 +45,23 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
       // 入場アニメ後 → visible
       timerRef.current = setTimeout(() => {
         setPhase('visible');
-        // visible 維持 → exit
-        timerRef.current = setTimeout(() => {
-          setPhase('exiting');
-          timerRef.current = setTimeout(() => setPhase('hidden'), 400);
-        }, durationMs);
+        // ★v5.19.4★ durationMs === 'auto' なら exit させない
+        // (id:1 phase が変わって isVisible が false になるまで visible 維持)
+        if (durationMs !== 'auto' && typeof durationMs === 'number') {
+          timerRef.current = setTimeout(() => {
+            setPhase('exiting');
+            timerRef.current = setTimeout(() => setPhase('hidden'), 400);
+          }, durationMs);
+        }
       }, 400);
     } else {
-      setPhase('hidden');
+      // ★v5.19.4★ isVisible が false になったら exit して消える
+      if (phase === 'visible' || phase === 'entering') {
+        setPhase('exiting');
+        timerRef.current = setTimeout(() => setPhase('hidden'), 400);
+      } else {
+        setPhase('hidden');
+      }
     }
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [isVisible, mediaUrl, durationMs]);
@@ -64,6 +73,15 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
     : phase === 'exiting' ? animConfig.exit
     : 'none';
 
+  // ★v5.19.4★ 表示中の持続アニメ — 画像/動画が「動き続けて」スクロールを止める
+  // パターン別に visible 中の subtle motion を加える
+  const sustainAnim = (phase === 'visible') ? ({
+    flash:  'hookMediaShakeIdle 0.8s ease-in-out infinite',
+    zoom:   'hookMediaKenBurns 8s ease-in-out infinite alternate',
+    slide:  'hookMediaShakeIdle 1.2s ease-in-out infinite',
+    glitch: 'hookMediaGlitchIdle 2s steps(8) infinite',
+  }[pattern] || 'hookMediaKenBurns 8s ease-in-out infinite alternate') : 'none';
+
   return (
     <div
       className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden"
@@ -72,7 +90,7 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
       {/* 背景ブラー */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-      {/* メディア */}
+      {/* メディア — ★v5.19.4★ visible 中は持続アニメ (Ken Burns / 微振動) */}
       {mediaType === 'video' ? (
         <video
           src={mediaUrl}
@@ -81,14 +99,14 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
           loop
           playsInline
           className="relative z-10 w-full h-full object-cover"
-          style={{ filter: 'brightness(1.1) contrast(1.05)' }}
+          style={{ filter: 'brightness(1.1) contrast(1.05)', animation: sustainAnim }}
         />
       ) : (
         <img
           src={mediaUrl}
           alt=""
           className="relative z-10 w-full h-full object-cover"
-          style={{ filter: 'brightness(1.1) contrast(1.05)' }}
+          style={{ filter: 'brightness(1.1) contrast(1.05)', animation: sustainAnim }}
         />
       )}
 

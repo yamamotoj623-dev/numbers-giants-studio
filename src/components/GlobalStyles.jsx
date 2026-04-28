@@ -222,6 +222,23 @@ const CSS_TEXT = `
     60% { clip-path: inset(50% 0 10% 50%); }
     100% { opacity: 0; clip-path: inset(0 100% 0 0); }
   }
+  /* ★v5.19.4★ 表示中の持続アニメ — 視聴者の目を捉え続ける */
+  @keyframes hookMediaKenBurns {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.15) translate(-3%, -2%); }
+  }
+  @keyframes hookMediaShakeIdle {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(-3px, 1px) rotate(-0.3deg); }
+    50% { transform: translate(2px, -1px) rotate(0.2deg); }
+    75% { transform: translate(-1px, 2px) rotate(-0.1deg); }
+  }
+  @keyframes hookMediaGlitchIdle {
+    0%, 90%, 100% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+    92% { clip-path: inset(20% 0 60% 0); transform: translate(2px, 0); }
+    94% { clip-path: inset(60% 0 20% 0); transform: translate(-2px, 0); }
+    96% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+  }
     0% { opacity: 0; }
     8% { opacity: 0.9; }
     20% { opacity: 0.4; }
@@ -796,9 +813,10 @@ const CSS_TEXT = `
   .telop-normal .em-r { color: #FF6B47; font-size: 1.15em; text-shadow: 0 0 10px rgba(255,107,71,0.7); }
   .telop-normal .em-n { color: var(--neon-yellow); font-family: monospace; font-size: 1.2em; letter-spacing: -0.5px; text-shadow: 0 0 8px var(--neon-yellow-glow); }
 
-  /* テロップを音声開始と同期して即表示(0.3s) */
-  .phase.active .telop-wrap-normal .telop-bg { animation: telopSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) 0.3s backwards; }
-  .phase.active .telop-wrap-hl .telop-bg { animation: telopSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) 0.3s backwards; }
+  /* ★v5.19.4★ テロップを音声開始と同期して即表示(0.3s) — telopSlideUp → telopBounceIn にアップグレード
+     旧ルールが新しい .telop-bg { animation: telopBounceIn ... } を上書きしていたため、ここで統一 */
+  .phase.active .telop-wrap-normal .telop-bg { animation: telopBounceIn 0.5s var(--spring-bounce) 0.25s backwards !important; }
+  .phase.active .telop-wrap-hl .telop-bg { animation: telopBounceIn 0.5s var(--spring-bounce) 0.25s backwards !important; }
 
   /* ================================================================ */
   /* フェーズC — 情報量削減+数値上部配置 */

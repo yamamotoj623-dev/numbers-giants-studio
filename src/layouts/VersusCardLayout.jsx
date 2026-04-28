@@ -92,9 +92,9 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
   return (
     <>
-      {/* ★v5.19.3★ key は focusedLabel のみ — 同一フォーカス継続時はアニメ再発火しない
-          (scriptId を入れていた v5.19.2 の挙動を撤回: 毎scriptで再アニメは過剰だった) */}
-      <div key={`vs-${animationKey}-${focusedLabel || ''}`}
+      {/* ★v5.19.4★ key は animationKey のみ — VS カード自体は再生開始時にしかバウンスインしない
+          (焦点指標の変更は内部の focused row 個別 remount で処理する) */}
+      <div key={`vs-${animationKey}`}
            className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* ヘッダー: 両選手のラベルと VS のみ (装飾バッジ無し) */}
@@ -146,13 +146,16 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
             return (
               <div
-                key={i}
-                className={`rank-row-anim relative px-3 py-2.5 border-b border-zinc-800 last:border-b-0 ${
+                /* ★v5.19.4★ focused 行のみ focusedLabel 込みの key で個別 remount
+                   = 焦点指標が変わった瞬間にその行だけバウンスでハイライトする */
+                key={focused ? `${i}-foc-${focusedLabel}` : `${i}`}
+                className={`relative px-3 py-2.5 border-b border-zinc-800 last:border-b-0 ${
                   focused ? 'bg-amber-500/15 ring-2 ring-amber-400/60 rounded-md' : ''
                 }`}
                 style={{
-                  animationDelay: `${i * 0.08 + 0.15}s`,
-                  ...(focused ? { animation: `focusRowGlow 2s ease-in-out infinite, rankRowIn 0.5s var(--spring-bounce) forwards ${i * 0.08 + 0.15}s` } : {}),
+                  ...(focused ? {
+                    animation: `focusRowGlow 2s ease-in-out infinite, rankRowIn 0.55s var(--spring-bounce) backwards`,
+                  } : {}),
                 }}
               >
                 {/* ★v5.15.5★ フォーカス時は左側矢印 + 行全体ハイライト (テキスト「話題中」は削除) */}

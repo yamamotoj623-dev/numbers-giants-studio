@@ -178,9 +178,9 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
 
   return (
     <>
-      {/* ★v5.19.2★ key に activeMetric.id + focusedName を含めて、
-          metric 切替・フォーカス変更のたびにアニメーションが再発火するようにする */}
-      <div key={`rank-${animationKey}-${activeMetric?.id || ''}-${focusedName || ''}`}
+      {/* ★v5.19.4★ key は activeMetric.id のみ — metric 切替時はカード全体バネ入場、
+          focusEntry 変更だけでは全体は動かさない (focused 行が下で個別 remount される) */}
+      <div key={`rank-${animationKey}-${activeMetric?.id || ''}`}
            className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[32%] px-3">
         {/* タブ切替 (複数指標時のみ) */}
         {data.mode === "multi" && metrics.length > 1 && (

@@ -187,7 +187,7 @@ export function PreviewFrame({
               mediaType={hookMedia.type}
               pattern={projectData?.hookMediaPattern || 'flash'}
               isVisible={phase === 'hook'}
-              durationMs={800}
+              durationMs={projectData?.hookMediaDurationMs ?? 'auto'}
             />
           )}
 

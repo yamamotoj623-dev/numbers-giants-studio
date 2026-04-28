@@ -174,7 +174,9 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   return (
     <>
       {/* ★v5.19.2★ focusQuoteIndex も key に含めて quote 切替時にアニメ再発火 */}
-      <div key={`spot-${animationKey}-${player.id || player.name || 'p'}-${mode}-${focusQuoteIndex ?? 0}`}
+      {/* ★v5.19.4★ player/mode が変わった時のみ全体再発火。focusQuoteIndex のみの変化では再発火しない
+          (quote の text/source 自体に下で個別 key を付けて部分remount) */}
+      <div key={`spot-${animationKey}-${player.id || player.name || 'p'}-${mode}`}
            className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* スポットライト感の背景 */}
@@ -210,7 +212,9 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
             <div className="text-[80px] leading-none opacity-20 -mb-4 select-none" style={{ color: themeClass.primary }}>
               "
             </div>
-            <div className="text-[20px] font-black text-white text-center leading-snug px-3 py-2"
+            {/* ★v5.19.4★ key={focusQuoteIndex} で quote 切替時のみここだけ remount → numReveal が走る */}
+            <div key={`q-${focusQuoteIndex ?? 0}`}
+                 className="num-spring text-[20px] font-black text-white text-center leading-snug px-3 py-2"
                  style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
               {resolvedQuote?.text || '(発言が登録されていません)'}
             </div>
@@ -218,7 +222,9 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
               "
             </div>
             {resolvedQuote?.source && (
-              <div className={`mt-4 text-[10px] font-bold tracking-wider ${themeClass.text} opacity-80`}>
+              <div key={`qs-${focusQuoteIndex ?? 0}`}
+                   className={`mt-4 text-[10px] font-bold tracking-wider ${themeClass.text} opacity-80`}
+                   style={{ animation: 'cardBounceIn 0.5s var(--spring-bounce) both 0.2s' }}>
                 — {resolvedQuote.source}
               </div>
             )}
