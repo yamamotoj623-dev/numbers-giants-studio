@@ -524,6 +524,10 @@ const CSS_TEXT = `
   /* 4行モード: フォント縮小 */
   .telop-hook.lines-4 { font-size: 38px; line-height: 1.02; }
   .telop-hook .em-y { color: var(--neon-yellow); font-size: 1.3em; letter-spacing: -2.5px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 18px var(--neon-yellow-glow), 0 0 36px rgba(255,233,75,0.5); }
+  /* ★v5.19.2★ hook 用の em-o / em-r / em-n が未定義だったバグ修正 */
+  .telop-hook .em-o { color: var(--p-bright); font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 14px var(--p-glow), 0 0 28px rgba(249,115,22,0.5); }
+  .telop-hook .em-r { color: #FF6B47; font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 14px rgba(255,107,71,0.8), 0 0 28px rgba(255,107,71,0.4); }
+  .telop-hook .em-n { color: var(--neon-yellow); font-family: monospace; font-size: 1.3em; letter-spacing: -1px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 12px var(--neon-yellow-glow); }
 
   .telop-hook .line { display: block; opacity: 0; margin: 2px 0; }
 
@@ -1168,6 +1172,35 @@ const CSS_TEXT = `
       0 0 24px rgba(248,113,113,0.4),
       0 0 4px rgba(255,255,255,0.5);
   }
+
+  /* ★v5.19.2★ 勝者数値のシマー (光の筋が横切る) — VS カード等で利用 */
+  @keyframes shimmerSweep {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .num-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.3) 40%,
+      rgba(255,255,255,0.6) 50%,
+      rgba(255,255,255,0.3) 60%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: shimmerSweep 2.5s ease-in-out infinite;
+  }
+
+  /* ★v5.19.2★ 数値のきらりん (1回だけ光る) */
+  @keyframes numFlash {
+    0% { filter: brightness(1); }
+    15% { filter: brightness(1.8); }
+    30% { filter: brightness(1); }
+    100% { filter: brightness(1); }
+  }
+  .num-flash { animation: numFlash 0.6s ease-out; }
 `;
 
 export const GlobalStyles = () => <style>{CSS_TEXT}</style>;

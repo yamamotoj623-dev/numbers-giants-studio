@@ -173,7 +173,9 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
 
   return (
     <>
-      <div key={`zoom-${animationKey}-${player.id || 'p'}-${mode}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
+      {/* ★v5.19.2★ focusQuoteIndex も key に含めて quote 切替時にアニメ再発火 */}
+      <div key={`spot-${animationKey}-${player.id || player.name || 'p'}-${mode}-${focusQuoteIndex ?? 0}`}
+           className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* スポットライト感の背景 */}
         <div className="absolute inset-0 pointer-events-none" style={{

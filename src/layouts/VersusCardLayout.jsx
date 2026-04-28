@@ -92,10 +92,14 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
   return (
     <>
-      <div key={`zoom-${animationKey}`} className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
+      {/* ★v5.19.2★ key に currentIndex を含めてスクリプト変更時にアニメ再発火 */}
+      <div key={`vs-${animationKey}-${currentScript?.highlight || ''}-${currentScript?.id || 0}`}
+           className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* ヘッダー: 両選手のラベルと VS のみ (装飾バッジ無し) */}
-        <div className="z-20 mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        {/* ★v5.19.2★ ヘッダーにもバウンスイン */}
+        <div className="z-20 mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2"
+             style={{ animation: 'cardBounceIn 0.4s var(--spring-bounce) both' }}>
           {/* main 側 */}
           <div className="flex flex-col items-end">
             <span className={`text-[14px] font-black ${themeClass.text} tracking-tighter leading-none`}>
@@ -106,11 +110,12 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
             </span>
           </div>
 
-          {/* VS */}
+          {/* VS — ★v5.19.2★ バウンスポップ */}
           <span className="text-[20px] font-black italic tracking-tighter px-2" style={{
             background: `linear-gradient(180deg, ${themeClass.primary} 0%, #fff 50%, #38bdf8 100%)`,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
+            animation: 'heroValuePop 0.5s var(--spring-elastic) both 0.1s',
           }}>
             VS
           </span>
@@ -126,9 +131,10 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
           </div>
         </div>
 
-        {/* メイン: 純粋な数字比較 */}
-        <div className="z-20 bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm">
-          {(data.categoryScores || []).map((cat, i) => {
+        {/* メイン: 純粋な数字比較 — ★v5.19.2★ カード全体にバウンスイン */}
+        <div className="z-20 bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm"
+             style={{ animation: 'cardBounceIn 0.45s var(--spring-bounce) both 0.05s' }}>
+          {(Array.isArray(data.categoryScores) ? data.categoryScores : []).map((cat, i) => {
             const winner = judgeWinner(cat);
             const mainWin = winner === 'main';
             const subWin = winner === 'sub';
@@ -140,13 +146,18 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
             return (
               <div
                 key={i}
-                className={`relative px-3 py-2.5 border-b border-zinc-800 last:border-b-0 transition-all duration-300 ${
-                  focused ? 'bg-amber-500/15 animate-pulse-soft ring-2 ring-amber-400/60 rounded-md' : ''
+                className={`rank-row-anim relative px-3 py-2.5 border-b border-zinc-800 last:border-b-0 ${
+                  focused ? 'bg-amber-500/15 ring-2 ring-amber-400/60 rounded-md' : ''
                 }`}
+                style={{
+                  animationDelay: `${i * 0.08 + 0.15}s`,
+                  ...(focused ? { animation: `focusRowGlow 2s ease-in-out infinite, rankRowIn 0.5s var(--spring-bounce) forwards ${i * 0.08 + 0.15}s` } : {}),
+                }}
               >
                 {/* ★v5.15.5★ フォーカス時は左側矢印 + 行全体ハイライト (テキスト「話題中」は削除) */}
                 {focused && (
-                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 text-amber-400 text-[20px] animate-bounce-x drop-shadow-lg">
+                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 text-amber-400 text-[20px] drop-shadow-lg"
+                       style={{ animation: 'badgeBreath 1.2s ease-in-out infinite' }}>
                     ▶
                   </div>
                 )}
@@ -162,31 +173,37 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
                 {/* ★純粋な数字比較★: main 数値 / 矢印 / sub 数値 */}
                 <div className="grid grid-cols-[1fr_30px_1fr] items-center gap-2">
-                  {/* main 数値 (★v5.17.0★ font-impact + 発光強化) */}
+                  {/* main 数値 (★v5.19.2★ num-spring + 勝者はシマー光沢) */}
                   <div className="text-right">
-                    <span className={`font-impact leading-none transition-all ${
+                    <span className={`num-spring font-impact leading-none ${
                       focused ? 'text-[34px]' : 'text-[28px]'
                     } ${
-                      mainWin ? (focused ? 'neon-number' : themeClass.text) : 'text-zinc-500'
-                    }`} style={mainWin && !focused ? { textShadow: `0 0 14px ${themeClass.glow}, 0 0 28px ${themeClass.glow}80` } : {}}>
+                      mainWin ? `${focused ? 'neon-number' : themeClass.text} num-shimmer` : 'text-zinc-500'
+                    }`} style={{
+                      ...(mainWin && !focused ? { textShadow: `0 0 14px ${themeClass.glow}, 0 0 28px ${themeClass.glow}80` } : {}),
+                      animationDelay: `${i * 0.08 + 0.3}s`,
+                    }}>
                       {mainDisplay}
                     </span>
                   </div>
 
-                  {/* 中央矢印 (勝者を指す) */}
+                  {/* 中央矢印 (勝者を指す) — ★v5.19.2★ バッジ呼吸 */}
                   <div className="text-[16px] font-black text-center">
-                    {mainWin && <span className={themeClass.text} style={{ textShadow: `0 0 8px ${themeClass.glow}` }}>◀</span>}
-                    {subWin && <span className="text-sky-400" style={{ textShadow: '0 0 8px rgba(56,189,248,0.7)' }}>▶</span>}
+                    {mainWin && <span className={themeClass.text} style={{ textShadow: `0 0 8px ${themeClass.glow}`, animation: 'badgeBreath 1.5s ease-in-out infinite' }}>◀</span>}
+                    {subWin && <span className="text-sky-400" style={{ textShadow: '0 0 8px rgba(56,189,248,0.7)', animation: 'badgeBreath 1.5s ease-in-out infinite' }}>▶</span>}
                     {!mainWin && !subWin && <span className="text-zinc-600">=</span>}
                   </div>
 
-                  {/* sub 数値 (★v5.17.0★ font-impact + 発光強化) */}
+                  {/* sub 数値 (★v5.19.2★ num-spring + 勝者はシマー光沢) */}
                   <div className="text-left">
-                    <span className={`font-impact leading-none transition-all ${
+                    <span className={`num-spring font-impact leading-none ${
                       focused ? 'text-[34px]' : 'text-[28px]'
                     } ${
-                      subWin ? 'text-sky-300' : 'text-zinc-500'
-                    }`} style={subWin ? { textShadow: '0 0 14px rgba(56,189,248,0.85), 0 0 28px rgba(56,189,248,0.4)' } : {}}>
+                      subWin ? 'text-sky-300 num-shimmer' : 'text-zinc-500'
+                    }`} style={{
+                      ...(subWin ? { textShadow: '0 0 14px rgba(56,189,248,0.85), 0 0 28px rgba(56,189,248,0.4)' } : {}),
+                      animationDelay: `${i * 0.08 + 0.3}s`,
+                    }}>
                       {subDisplay}
                     </span>
                   </div>
