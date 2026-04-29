@@ -69,29 +69,32 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
   if (phase === 'hidden' || !mediaUrl) return null;
 
   const animConfig = ANIM_PATTERNS[pattern] || ANIM_PATTERNS.flash;
-  const animation = phase === 'entering' ? animConfig.enter
+  const overlayAnimation = phase === 'entering' ? animConfig.enter
     : phase === 'exiting' ? animConfig.exit
     : 'none';
 
-  // ★v5.19.5★ 表示中の持続アニメ — 周期短く・動き大きく、画面が揺れるレベル
-  // パターン別に visible 中の strong motion を加える
-  const sustainAnim = (phase === 'visible') ? ({
-    flash:      'hookMediaShakeIdle 1.4s ease-in-out infinite',     // ガタガタ揺れ続ける
-    zoom:       'hookMediaKenBurns 4.5s ease-in-out infinite alternate', // 大胆 Ken Burns
-    slide:      'hookMediaShakeIdle 1.6s ease-in-out infinite',
-    glitch:     'hookMediaGlitchIdle 1.8s steps(8) infinite',
-    zoom_pulse: 'hookMediaZoomPulse 1.5s ease-in-out infinite',     // ★新★ ドンドン拡縮
-  }[pattern] || 'hookMediaShakeIdle 1.4s ease-in-out infinite') : 'none';
+  // ★v5.19.6★ 画像/動画は visible に達した瞬間から大胆に動く
+  // entering 中は CSS の opacity transition で表示、画像自体は visible になったら無条件アニメ
+  // 画像にはオーバーレイ(entering/exit)とは別に、独自の continuous アニメを掛ける
+  const mediaAnim = (phase === 'entering' || phase === 'visible')
+    ? ({
+        flash:      'hookMediaShakeIdle 1.4s ease-in-out infinite',
+        zoom:       'hookMediaKenBurns 4.5s ease-in-out infinite alternate',
+        slide:      'hookMediaShakeIdle 1.6s ease-in-out infinite',
+        glitch:     'hookMediaGlitchIdle 1.8s steps(8) infinite',
+        zoom_pulse: 'hookMediaZoomPulse 1.5s ease-in-out infinite',
+      }[pattern] || 'hookMediaShakeIdle 1.4s ease-in-out infinite')
+    : 'none';
 
   return (
     <div
       className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden"
-      style={{ animation }}
+      style={{ animation: overlayAnimation }}
     >
       {/* 背景ブラー */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-      {/* メディア — ★v5.19.4★ visible 中は持続アニメ (Ken Burns / 微振動) */}
+      {/* メディア — ★v5.19.6★ entering と同時に sustain アニメ開始 (画像が必ず動く) */}
       {mediaType === 'video' ? (
         <video
           src={mediaUrl}
@@ -100,14 +103,24 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
           loop
           playsInline
           className="relative z-10 w-full h-full object-cover"
-          style={{ filter: 'brightness(1.1) contrast(1.05)', animation: sustainAnim }}
+          style={{
+            filter: 'brightness(1.1) contrast(1.05)',
+            animation: mediaAnim,
+            transformOrigin: 'center',
+            willChange: 'transform',
+          }}
         />
       ) : (
         <img
           src={mediaUrl}
           alt=""
           className="relative z-10 w-full h-full object-cover"
-          style={{ filter: 'brightness(1.1) contrast(1.05)', animation: sustainAnim }}
+          style={{
+            filter: 'brightness(1.1) contrast(1.05)',
+            animation: mediaAnim,
+            transformOrigin: 'center',
+            willChange: 'transform',
+          }}
         />
       )}
 

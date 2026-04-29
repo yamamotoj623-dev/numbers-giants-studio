@@ -263,7 +263,7 @@ export function TeamContextLayout({ projectData, currentScript, animationKey, ph
         )}
       </div>
 
-      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}
+      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} currentScript={currentScript} />}
     </>
   );
 }

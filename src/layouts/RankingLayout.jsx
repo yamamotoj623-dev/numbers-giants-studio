@@ -356,7 +356,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
         </div>
       </div>
 
-      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}
+      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} currentScript={currentScript} />}
     </>
   );
 }

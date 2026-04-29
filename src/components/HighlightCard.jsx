@@ -4,14 +4,51 @@
  * currentScript.highlight で指定された comparison を大カードで深掘り表示
  * レーダー以外のレイアウトでも画面中央にどーんと出す
  *
+ * ★v5.19.6★ スコープ対応:
+ *   comparison.variants[] に複数スコープ (例: 通季 / 対左 / 対右 / vs他選手) を持たせ、
+ *   currentScript.highlightScope で表示する variant を切り替え。
+ *   旧来の comp.valMain/valSub も引き続きデフォルト variant として動作。
+ *
  * RadarCompareLayout の HighlightView と同じスタイルを使用 (highlight-card CSS)
  */
 
 import React from 'react';
 import { isEnglishMetric } from '../lib/metricUtils';
 
-export function HighlightCard({ comp, projectData }) {
+/**
+ * comparison から表示用 variant を解決
+ * @param {object} comp - comparison オブジェクト
+ * @param {string} scopeId - currentScript.highlightScope の値 ('overall' | 'vs_left' | 'vs_right' | 'last_year' | 'vs_player_xxx' 等)
+ * @returns {{ valMain, valSub, mainLabel, subLabel, winner, scopeLabel }}
+ */
+function resolveVariant(comp, scopeId) {
+  // 新形式: variants[] 配列を持つ場合
+  if (Array.isArray(comp?.variants) && comp.variants.length > 0) {
+    const target = (scopeId && comp.variants.find(v => v.id === scopeId)) || comp.variants[0];
+    return {
+      valMain:    target.valMain,
+      valSub:     target.valSub,
+      mainLabel:  target.mainLabel,
+      subLabel:   target.subLabel,
+      winner:     target.winner,
+      scopeLabel: target.label,  // 「対左投手」「今季 vs 昨季」等
+    };
+  }
+  // 旧形式: comp 直下の valMain/valSub
+  return {
+    valMain:    comp.valMain,
+    valSub:     comp.valSub,
+    mainLabel:  comp.mainLabel,
+    subLabel:   comp.subLabel,
+    winner:     comp.winner,
+    scopeLabel: null,
+  };
+}
+
+export function HighlightCard({ comp, projectData, currentScript }) {
   if (!comp) return null;
+
+  const variant = resolveVariant(comp, currentScript?.highlightScope);
 
   // ★v5.15.5★ 英語指標のみ kana/formula 表示 (ユーザー要望)
   const showKanaFormula = isEnglishMetric(comp.label);
@@ -24,6 +61,12 @@ export function HighlightCard({ comp, projectData }) {
         <div className="hl-label-group">
           {showKanaFormula && comp.kana && <span className="hl-kana-compact">{comp.kana}</span>}
           <span className="hl-label-compact">{comp.label}</span>
+          {/* ★v5.19.6★ スコープラベル (例: 対左投手 / 今季vs昨季) を併記 */}
+          {variant.scopeLabel && (
+            <span className="ml-1.5 text-[10px] font-bold text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded">
+              {variant.scopeLabel}
+            </span>
+          )}
         </div>
       </div>
 
@@ -35,16 +78,16 @@ export function HighlightCard({ comp, projectData }) {
         </div>
       )}
 
-      {/* 値 vs 値 */}
+      {/* 値 vs 値 (★v5.19.6★ scope に応じた variant を表示) */}
       <div className="hl-values">
-        <div className={`hl-val-main ${comp.winner === 'main' ? 'winner' : 'loser'}`}>
-          <div className="num">{comp.valMain}{comp.unit || ''}</div>
-          <div className="tag">{projectData.mainPlayer?.label || '今季'}</div>
+        <div className={`hl-val-main ${variant.winner === 'main' ? 'winner' : 'loser'}`}>
+          <div className="num">{variant.valMain}{comp.unit || ''}</div>
+          <div className="tag">{variant.mainLabel || projectData.mainPlayer?.label || '今季'}</div>
         </div>
         <div className="hl-vs">vs</div>
-        <div className={`hl-val-sub ${comp.winner === 'sub' ? 'winner' : 'loser'}`}>
-          <div className="num">{comp.valSub}{comp.unit || ''}</div>
-          <div className="tag">{projectData.subPlayer?.label || '昨季'}</div>
+        <div className={`hl-val-sub ${variant.winner === 'sub' ? 'winner' : 'loser'}`}>
+          <div className="num">{variant.valSub}{comp.unit || ''}</div>
+          <div className="tag">{variant.subLabel || projectData.subPlayer?.label || '昨季'}</div>
         </div>
       </div>
 

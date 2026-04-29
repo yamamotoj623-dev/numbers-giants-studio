@@ -374,6 +374,60 @@ const CSS_TEXT = `
     70% { transform: translateY(1px) scale(0.99); }
     100% { opacity: 1; transform: translateY(0) scale(1); }
   }
+  /* ★v5.19.6★ 8種類のテロップ entrance アニメ — 毎シーンで異なる動きに */
+  @keyframes telopSlideRight {
+    0% { opacity: 0; transform: translateX(-80px) scale(0.92); }
+    60% { opacity: 1; transform: translateX(8px) scale(1.04); }
+    80% { transform: translateX(-3px) scale(0.99); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes telopSlideLeft {
+    0% { opacity: 0; transform: translateX(80px) scale(0.92); }
+    60% { opacity: 1; transform: translateX(-8px) scale(1.04); }
+    80% { transform: translateX(3px) scale(0.99); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes telopZoomPop {
+    0% { opacity: 0; transform: scale(0.3); }
+    50% { opacity: 1; transform: scale(1.18); }
+    70% { transform: scale(0.92); }
+    85% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  @keyframes telopRotateIn {
+    0% { opacity: 0; transform: rotate(-12deg) scale(0.7) translateY(15px); }
+    60% { opacity: 1; transform: rotate(3deg) scale(1.06) translateY(-2px); }
+    80% { transform: rotate(-1deg) scale(0.98); }
+    100% { opacity: 1; transform: rotate(0) scale(1) translateY(0); }
+  }
+  @keyframes telopFlipDown {
+    0% { opacity: 0; transform: translateY(-30px) rotateX(-60deg); }
+    60% { opacity: 1; transform: translateY(5px) rotateX(10deg); }
+    80% { transform: translateY(-2px) rotateX(-3deg); }
+    100% { opacity: 1; transform: translateY(0) rotateX(0); }
+  }
+  @keyframes telopShakeIn {
+    0% { opacity: 0; transform: translate(-40px, -10px) rotate(-3deg); }
+    20% { opacity: 1; transform: translate(8px, 3px) rotate(2deg); }
+    40% { transform: translate(-5px, -2px) rotate(-1.5deg); }
+    60% { transform: translate(3px, 1px) rotate(1deg); }
+    80% { transform: translate(-1px, 0) rotate(-0.3deg); }
+    100% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  }
+  @keyframes telopElasticIn {
+    0% { opacity: 0; transform: scaleX(0) scaleY(2); }
+    40% { opacity: 1; transform: scaleX(1.2) scaleY(0.7); }
+    60% { transform: scaleX(0.92) scaleY(1.1); }
+    80% { transform: scaleX(1.04) scaleY(0.97); }
+    100% { transform: scaleX(1) scaleY(1); }
+  }
+  /* 表示後の strut: 微小なふわつき (生命感) */
+  @keyframes telopStrut {
+    0%, 100% { transform: translate(0, 0) scale(1) rotate(0); }
+    25% { transform: translate(-1px, -1px) scale(1.005) rotate(-0.2deg); }
+    50% { transform: translate(1px, 0) scale(0.998) rotate(0.2deg); }
+    75% { transform: translate(0, 1px) scale(1.005) rotate(-0.1deg); }
+  }
 
   /* ★ カード/パネル出現 (弾むスケール) ★ */
   /* ★v5.19.3★ 0.45s → 0.7s に延長 */
@@ -1247,6 +1301,85 @@ const CSS_TEXT = `
     100% { filter: brightness(1); }
   }
   .num-flash { animation: numFlash 0.6s ease-out; }
+
+  /* ★v5.19.6★ scenePreset — 1シーン全体の演出を束ねたバリアント
+     phone-root に data-scene-preset="..." が付与され、ここで上書き */
+
+  /* cinematic_zoom: 全体ズーム + 周辺暗減 */
+  #phone-root[data-scene-preset="cinematic_zoom"]::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
+    animation: scenePresetVignette 3s ease-in-out infinite alternate;
+  }
+  #phone-root[data-scene-preset="cinematic_zoom"] .anim-layer { animation: scenePresetSlowZoom 8s ease-in-out infinite alternate !important; }
+  @keyframes scenePresetVignette {
+    0% { opacity: 0.7; } 100% { opacity: 1; }
+  }
+  @keyframes scenePresetSlowZoom {
+    0% { transform: scale(1); } 100% { transform: scale(1.05); }
+  }
+
+  /* neon_burst: ネオングロー + 色収差 */
+  #phone-root[data-scene-preset="neon_burst"]::before {
+    content: ''; position: absolute; inset: -10%; pointer-events: none; z-index: 6;
+    background: radial-gradient(circle at 30% 20%, rgba(249,115,22,0.18), transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(56,189,248,0.18), transparent 50%);
+    mix-blend-mode: screen;
+    animation: scenePresetNeonShift 4s ease-in-out infinite;
+  }
+  #phone-root[data-scene-preset="neon_burst"] .anim-layer {
+    filter: drop-shadow(2px 0 0 rgba(255,80,80,0.4)) drop-shadow(-2px 0 0 rgba(80,200,255,0.4));
+  }
+  @keyframes scenePresetNeonShift {
+    0%, 100% { transform: translate(0, 0); }
+    33% { transform: translate(8%, -5%); }
+    66% { transform: translate(-6%, 4%); }
+  }
+
+  /* mono_drama: モノクロ+赤強調 */
+  #phone-root[data-scene-preset="mono_drama"] .anim-layer {
+    filter: grayscale(0.85) contrast(1.15);
+  }
+  #phone-root[data-scene-preset="mono_drama"]::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
+    background: linear-gradient(to bottom, transparent 0%, rgba(255,40,40,0.12) 100%);
+  }
+
+  /* pastel_pop: 明度+彩度上げ */
+  #phone-root[data-scene-preset="pastel_pop"] .anim-layer {
+    filter: brightness(1.08) saturate(0.85) hue-rotate(-5deg);
+  }
+  #phone-root[data-scene-preset="pastel_pop"]::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
+    background: linear-gradient(135deg, rgba(255,200,220,0.15) 0%, rgba(200,230,255,0.15) 100%);
+  }
+
+  /* blackboard: 黒板テクスチャ */
+  #phone-root[data-scene-preset="blackboard"] {
+    background: #1a2820 !important;
+  }
+  #phone-root[data-scene-preset="blackboard"] .anim-layer {
+    filter: sepia(0.2) contrast(1.1);
+  }
+  #phone-root[data-scene-preset="blackboard"]::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px, transparent 18px,
+      rgba(255,255,255,0.02) 18px, rgba(255,255,255,0.02) 19px
+    );
+  }
+
+  /* breaking_news: 赤ボーダーフラッシュ */
+  #phone-root[data-scene-preset="breaking_news"]::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
+    border: 4px solid rgba(220,38,38,0.9);
+    box-shadow: inset 0 0 30px rgba(220,38,38,0.4);
+    animation: scenePresetBreakingFlash 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes scenePresetBreakingFlash {
+    0% { opacity: 0.6; } 100% { opacity: 1; }
+  }
 `;
 
 export const GlobalStyles = () => <style>{CSS_TEXT}</style>;

@@ -370,7 +370,21 @@ ${currentData.title || '(動画タイトル)'} — テーマ: ${currentData.them
 
   "comparisons": [
     /* 5-10種類の指標。台本の script.highlight でこの id を参照 */
-    { "id": "isop", "label": "ISO+", "kana": "アイソピ", "thresholds": {...} },
+    /* ★v5.19.6新★ variants[] でスコープ別 (対左/対右/今季vs昨季/vs他選手) の値を持てる */
+    {
+      "id": "avg",
+      "label": "打率",
+      "kana": "だりつ",
+      "radarMatch": "打撃力",
+      "unit": "",
+      "variants": [
+        { "id": "overall", "label": "通季", "valMain": ".305", "valSub": ".278", "mainLabel": "今季", "subLabel": "昨季", "winner": "main" },
+        { "id": "vs_left", "label": "対左投手", "valMain": ".201", "valSub": ".245", "mainLabel": "今季", "subLabel": "昨季", "winner": "sub" },
+        { "id": "vs_right", "label": "対右投手", "valMain": ".342", "valSub": ".289", "mainLabel": "今季", "subLabel": "昨季", "winner": "main" }
+      ]
+    },
+    /* 旧形式 (variants なしで valMain/valSub 直書き) も後方互換 */
+    { "id": "isop", "label": "ISO+", "kana": "アイソピ", "valMain": ".172", "valSub": ".095", "winner": "main" },
     ...
   ],
 
@@ -483,7 +497,9 @@ function buildScriptJsonPrompt(currentData, templateData) {
       "speech": "...",
       "layoutType": "radar_compare",  // データ側の利用可能レイアウト
       "spotlightMode": "default",     // (任意) 選手スポット表示時のモード切替: default/quote/stats_grid/single_metric
+      "scenePreset": "cinematic_zoom",// (任意) ★v5.19.6新★ シーン全体の演出: default/cinematic_zoom/neon_burst/mono_drama/pastel_pop/blackboard/breaking_news ※同じ動画内で 3-5 種類使い分けると紙芝居脱却
       "highlight": "isop",            // 上記の comparisons.id から
+      "highlightScope": "vs_left",    // (任意) ★v5.19.6新★ 指標が variants[] を持つ場合のスコープ id (例: overall/vs_left/vs_right/last_year)
       "focusEntry": "okamoto",        // 上記の players.id から (★player.id と完全一致させること★)
       "focusQuoteIndex": 0,           // (任意) quote ピック切替 (player.quotes[idx])
       "focusMetric": "ops",           // (任意) ranking 用 metric 切替 (ranking.metrics[].id)

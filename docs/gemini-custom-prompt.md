@@ -99,8 +99,10 @@
   speech: "TTS用読み仮名(漢字を必ずひらがなに、数字も読み仮名)",
   isCatchy: true (id:1のみ),
   layoutType: "...",  ← 切替時のみ
+  scenePreset: "default|cinematic_zoom|neon_burst|mono_drama|pastel_pop|blackboard|breaking_news",  ← ★v5.19.6新★ シーン全体の演出を切替 (紙芝居脱却用)。シーン毎に違う preset を当てると同じ動画でも飽きない
   spotlightMode: "default|quote|stats_grid|single_metric",  ← ★v5.18.14新★ 選手スポット表示時のモード。シーンごとに切替可 (省略時はlayoutData.spotlight.mode を継承)
   highlight: "comparisonsのid",  ← 該当指標の話してる時 (ranking でも metric.id を兼ねる旧来仕様)
+  highlightScope: "variants[].id",  ← ★v5.19.6新★ 同じ指標でも 'overall'/'vs_left'/'vs_right'/'last_year' 等のスコープを選んで表示
   focusEntry: "spotlight時のid (player.id) または ranking時のentry.name",
   focusQuoteIndex: 0,  ← ★v5.18.13新★ 同じ player の中で別の quote を選ぶ時のインデックス (player.quotes[idx])
   focusMetric: "ranking.metrics[].id",  ← ★v5.18.13新★ ranking で動画中に metric を切替える時の専用フィールド (highlight より優先)

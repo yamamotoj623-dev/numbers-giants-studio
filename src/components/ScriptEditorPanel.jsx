@@ -14,6 +14,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, Copy, Trash2, ArrowUp, ArrowDown, Plus } from 'lucide-react';
 import { SE_PRESETS, LAYOUT_TYPES } from '../lib/config';
+import { SCENE_PRESETS } from '../lib/scenePresets';
 
 export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
   const [expandedIds, setExpandedIds] = useState(new Set());
@@ -180,8 +181,13 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
             />
 
             {/* 簡易プレビュー: layoutType / highlight / focusEntry 等が設定されてれば常時表示 */}
-            {!isExpanded && (script.layoutType || script.highlight || script.focusEntry || script.spotlightMode) && (
+            {!isExpanded && (script.layoutType || script.highlight || script.focusEntry || script.spotlightMode || script.scenePreset) && (
               <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                {script.scenePreset && (
+                  <span className="text-[9px] bg-fuchsia-100 text-fuchsia-700 font-bold px-1.5 py-0.5 rounded">
+                    🎬 {script.scenePreset}
+                  </span>
+                )}
                 {script.layoutType && (
                   <span className="text-[9px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded">
                     🎨 {LAYOUT_TYPES[script.layoutType]?.label || script.layoutType}
@@ -200,6 +206,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                 {script.highlight && (
                   <span className="text-[9px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded">
                     ⭐ {comparisons.find(c => c.id === script.highlight)?.label || script.highlight}
+                    {script.highlightScope && <span className="ml-0.5 text-amber-600">/{script.highlightScope}</span>}
                   </span>
                 )}
                 {script.focusMetric && (
@@ -369,6 +376,23 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                   </select>
                 </div>
 
+                {/* ★v5.19.6★ scenePreset: シーン全体の演出を切替 (紙芝居からの脱却) */}
+                <div>
+                  <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                    🎬 演出プリセット (シーン全体の見せ方)
+                  </label>
+                  <select
+                    value={script.scenePreset || ''}
+                    onChange={(e) => handleChange(script.id, 'scenePreset', e.target.value || undefined)}
+                    className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                  >
+                    <option value="">継承 (前のシーンと同じ)</option>
+                    {Object.entries(SCENE_PRESETS).map(([id, p]) => (
+                      <option key={id} value={id}>{p.label} — {p.description}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* ★v5.18.14★ spotlightMode: シーンごとに選手スポットの表示パターンを変更 */}
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
@@ -400,6 +424,32 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                     ))}
                   </select>
                 </div>
+
+                {/* ★v5.19.6★ ハイライトスコープ — 同じ指標で「対左/対右/今季vs昨季」等を切替 */}
+                {(() => {
+                  const selectedComp = (Array.isArray(comparisons) ? comparisons : []).find(c => c.id === script.highlight);
+                  const variants = Array.isArray(selectedComp?.variants) ? selectedComp.variants : [];
+                  if (variants.length === 0) return null;
+                  return (
+                    <div>
+                      <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
+                        🎯 スコープ ({selectedComp.label} の比較対象を切替)
+                      </label>
+                      <select
+                        value={script.highlightScope || ''}
+                        onChange={(e) => handleChange(script.id, 'highlightScope', e.target.value || undefined)}
+                        className="w-full text-[10px] bg-white px-1.5 py-1 border border-zinc-200 rounded outline-none"
+                      >
+                        <option value="">デフォルト (variants[0])</option>
+                        {variants.map(v => (
+                          <option key={v.id} value={v.id}>
+                            {v.label}: {v.valMain} vs {v.valSub}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })()}
 
                 {/* ★v5.18.4★ focusEntry: 選手スポット/ランキングで「どの選手を主役にするか」
                     ★v5.18.7★ 候補が無くても手入力で指定できるように常時表示 + 候補は datalist で補助 */}

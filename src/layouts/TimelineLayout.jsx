@@ -293,7 +293,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
       </div>
 
       {/* ハイライト時: HighlightCard 大カード */}
-      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}
+      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} currentScript={currentScript} />}
     </div>
   );
 }

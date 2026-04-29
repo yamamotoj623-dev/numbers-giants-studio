@@ -53,6 +53,43 @@ function getHookAnim(projectData) {
   return shakePatterns.includes(pattern) ? 'shake' : 'pop';
 }
 
+// ★v5.19.6★ テロップ吹き出し — 毎マウント時に異なる entrance アニメを選んで「紙芝居からの脱却」
+// 8 種類の entrance アニメを順繰り (id ベース) + 微小な strut アニメ (常時微振動) で生命感を
+const TELOP_ENTRANCE_ANIMS = [
+  'telopBounceIn',     // 下から弾む
+  'telopSlideRight',   // 左から滑る
+  'telopSlideLeft',    // 右から滑る
+  'telopZoomPop',      // ズームポップ
+  'telopRotateIn',     // 回転インとともに
+  'telopFlipDown',     // 上から落ちて戻る
+  'telopShakeIn',      // 振動して登場
+  'telopElasticIn',    // 弾性的にスケール
+];
+function TelopBubble({ speaker, text, textSize, kind }) {
+  // text のハッシュで entrance アニメを決定 (毎シーンで違うアニメに、シーン固定で再現性も)
+  const animIdx = React.useMemo(() => {
+    const s = String(text || '') + (kind || '') + (speaker || '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    return Math.abs(h) % TELOP_ENTRANCE_ANIMS.length;
+  }, [text, kind, speaker]);
+  const animName = TELOP_ENTRANCE_ANIMS[animIdx];
+  // strut: 表示後の微小な揺れ (1.5s 後から開始、無限ループ)
+  const strutAnim = `${animName} 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both, telopStrut 4s ease-in-out 1.5s infinite`;
+
+  return (
+    <div
+      className="telop-bg"
+      data-speaker={(speaker || 'A').toLowerCase()}
+      style={{ animation: strutAnim }}
+    >
+      <div className={`telop-normal ${speaker === 'B' ? 'b' : ''} size-${textSize}`}>
+        {renderFormattedText(text, false, speaker)}
+      </div>
+    </div>
+  );
+}
+
 export function PreviewFrame({
   projectData,
   currentScript,
@@ -123,7 +160,11 @@ export function PreviewFrame({
   };
 
   return (
-    <div className={phoneClasses} style={phoneStyle} id="phone-root" key={`phone-${animationKey}`}>
+    <div className={phoneClasses}
+         style={phoneStyle}
+         id="phone-root"
+         data-scene-preset={currentScript?.scenePreset || projectData?.defaultScenePreset || 'default'}
+         key={`phone-${animationKey}`}>
 
       {/* ★v5.19.0★ 浮遊ボケ光パーティクル — 常にぬるっと動いて視覚退屈を防ぐ */}
       <div className="absolute inset-0 pointer-events-none z-[3] overflow-hidden" aria-hidden="true">
@@ -270,62 +311,38 @@ export function PreviewFrame({
           />
 
           {/* テロップ
-              ★連続同speakerバグ対策 (v5.11.1)★
-              外側 wrapper の key を speaker だけにすると、A→A→A の連続でリマウントされず
-              .telop-bg のアニメーション (backwards) が発火せず**テロップが切り替わらない**バグになる。
-              currentIndex を key に含めることで、id 変化のたびに外側もリマウント → アニメ毎回発火
-              ★v5.19.5★ inline style + key で確実に animation 再発火させる (CSS 競合回避) */}
+              ★v5.19.6★ 動かない問題の真因対策 — class + style 両方つけ、アニメ名は CSS 統一、
+              key は currentScript.id (確実にユニーク) で完全 remount */}
           {phase === 'normal' && (
-            <div className="telop-wrap-normal" key={`telop-n-${currentScript?.speaker || 'a'}-${currentIndex}`}>
-              <div
-                key={`tg-n-${currentIndex}`}
-                className="telop-bg"
-                data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}
-                style={{ animation: 'telopBounceIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
-              >
-                <div
-                  className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
-                  key={`telop-n-inner-${currentIndex}`}
-                >
-                  {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
-                </div>
-              </div>
+            <div className="telop-wrap-normal" key={`telop-n-${currentScript?.id ?? currentIndex}`}>
+              <TelopBubble
+                speaker={currentScript?.speaker}
+                text={currentScript?.text}
+                textSize={textSize}
+                kind="normal"
+              />
             </div>
           )}
           {phase === 'highlight' && (
-            <div className="telop-wrap-hl" key={`telop-h-${currentScript?.speaker || 'a'}-${currentIndex}`}>
-              <div
-                key={`tg-h-${currentIndex}`}
-                className="telop-bg"
-                data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}
-                style={{ animation: 'telopBounceIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
-              >
-                <div
-                  className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
-                  key={`telop-h-inner-${currentIndex}`}
-                >
-                  {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
-                </div>
-              </div>
+            <div className="telop-wrap-hl" key={`telop-h-${currentScript?.id ?? currentIndex}`}>
+              <TelopBubble
+                speaker={currentScript?.speaker}
+                text={currentScript?.text}
+                textSize={textSize}
+                kind="hl"
+              />
             </div>
           )}
 
           {/* アウトロのテロップ */}
           {phase === 'outro' && currentScript?.text && (
-            <div className="telop-wrap-outro" key={`telop-o-${currentScript?.speaker || 'a'}-${currentIndex}`}>
-              <div
-                key={`tg-o-${currentIndex}`}
-                className="telop-bg"
-                data-speaker={currentScript?.speaker?.toLowerCase() || 'a'}
-                style={{ animation: 'telopBounceIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both' }}
-              >
-                <div
-                  className={`telop-normal ${currentScript?.speaker === 'B' ? 'b' : ''} size-${textSize}`}
-                  key={`telop-o-inner-${currentIndex}`}
-                >
-                  {renderFormattedText(currentScript?.text, false, currentScript?.speaker)}
-                </div>
-              </div>
+            <div className="telop-wrap-outro" key={`telop-o-${currentScript?.id ?? currentIndex}`}>
+              <TelopBubble
+                speaker={currentScript?.speaker}
+                text={currentScript?.text}
+                textSize={textSize}
+                kind="outro"
+              />
             </div>
           )}
 

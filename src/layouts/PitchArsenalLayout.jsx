@@ -250,7 +250,7 @@ export function PitchArsenalLayout({ projectData, currentScript, animationKey, p
         )}
       </div>
 
-      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} />}
+      {isHighlight && <HighlightCard comp={highlightComp} projectData={projectData} currentScript={currentScript} />}
     </>
   );
 }
