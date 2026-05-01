@@ -300,8 +300,27 @@ const CSS_TEXT = `
     60% { clip-path: inset(50% 0 10% 50%); }
     100% { opacity: 0; clip-path: inset(0 100% 0 0); }
   }
-  /* ★v5.19.5★ 表示中の持続アニメ — 画面が揺れるレベルにインパクト強化
-     画像が「ぐわんぐわん」「ガタガタ」と動き続けて視聴者の目を捉える */
+  /* ★v5.20★ HookMediaOverlay の入場アニメ — 持続アニメと連結する用に簡素化 */
+  @keyframes hookEntryFade {
+    0% { opacity: 0; filter: brightness(2.5); }
+    100% { opacity: 1; filter: brightness(1); }
+  }
+  @keyframes hookEntryZoom {
+    0% { opacity: 0; transform: scale(1.5); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes hookEntrySlide {
+    0% { opacity: 0; transform: translateX(-100%); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes hookEntryGlitch {
+    0%   { opacity: 0; clip-path: inset(0 100% 0 0); }
+    25%  { opacity: 1; clip-path: inset(20% 0 60% 0); }
+    50%  { clip-path: inset(50% 0 30% 0); }
+    75%  { clip-path: inset(70% 0 10% 0); }
+    100% { opacity: 1; clip-path: inset(0 0 0 0); }
+  }
+  /* ★v5.19.5★ 表示中の持続アニメ — 画面が揺れるレベルにインパクト強化 */
   @keyframes hookMediaKenBurns {
     0%   { transform: scale(1) translate(0, 0); }
     25%  { transform: scale(1.15) translate(-2%, -3%); }
@@ -708,8 +727,12 @@ const CSS_TEXT = `
 
   .hook-telop-wrap { position: absolute; top: 36%; left: 50%; transform: translate(-50%, -50%); z-index: 20; width: 100%; padding: 0 12px; }
   .telop-hook { font-size: 46px; font-weight: 900; text-align: center; line-height: 1.05; letter-spacing: -1.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 10px 30px rgba(0,0,0,1); }
-  /* 4行モード: フォント縮小 */
+  /* ★v5.20★ 行数別の自動縮小 (4/5/6行+ サポート) */
   .telop-hook.lines-4 { font-size: 38px; line-height: 1.02; }
+  .telop-hook.lines-5 { font-size: 32px; line-height: 1.0; letter-spacing: -1.8px; }
+  .telop-hook.lines-6 { font-size: 28px; line-height: 0.98; letter-spacing: -2px; }
+  /* ★v5.20★ UI から手動でフォントスケール (0.7-1.3) — projectData.hookFontScale */
+  #phone-root[data-hook-font-scale="0.7"] .telop-hook { font-size: 0.7em; }
   .telop-hook .em-y { color: var(--neon-yellow); font-size: 1.3em; letter-spacing: -2.5px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 18px var(--neon-yellow-glow), 0 0 36px rgba(255,233,75,0.5); }
   /* ★v5.19.2★ hook 用の em-o / em-r / em-n が未定義だったバグ修正 */
   .telop-hook .em-o { color: var(--p-bright); font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 14px var(--p-glow), 0 0 28px rgba(249,115,22,0.5); }

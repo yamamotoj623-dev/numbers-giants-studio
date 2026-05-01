@@ -323,14 +323,14 @@ export function PreviewFrame({
               key を毎ループ更新して再生のたびに発火 */}
           <div className="hook-flash-overlay" key={`flash-${animationKey}-${currentIndex}`} />
 
-          {/* ★v5.19.0★ ユーザーアップロード画像/動画インサート (hook のみ) */}
+          {/* ★v5.20★ ユーザーアップロード画像/動画インサート (hook のみ)
+              isVisible だけで描画判定、phase が hook のあいだ表示し続ける */}
           {hookMedia && (
             <HookMediaOverlay
               mediaUrl={hookMedia.url}
               mediaType={hookMedia.type}
               pattern={projectData?.hookMediaPattern || 'flash'}
               isVisible={phase === 'hook'}
-              durationMs={projectData?.hookMediaDurationMs ?? 'auto'}
             />
           )}
 
@@ -366,7 +366,10 @@ export function PreviewFrame({
             )}
           </div>
           <div className="hook-telop-wrap">
-            <div className={`telop-hook ${getHookTextClass(currentScript?.text)}`}>
+            <div
+              className={`telop-hook ${getHookTextClass(currentScript?.text)}`}
+              style={projectData?.hookFontScale ? { fontSize: `calc(46px * ${projectData.hookFontScale})` } : undefined}
+            >
               {renderHookLines(currentScript?.text)}
             </div>
           </div>
@@ -516,7 +519,11 @@ function renderHookLines(text) {
 function getHookTextClass(text) {
   if (!text) return '';
   const lines = text.split('\n').length;
-  return lines >= 4 ? 'lines-4' : '';
+  // ★v5.20★ 4行/5行/6行+ で段階的にフォントを小さく
+  if (lines >= 6) return 'lines-6';
+  if (lines >= 5) return 'lines-5';
+  if (lines >= 4) return 'lines-4';
+  return '';
 }
 
 function renderHookStatCell(projectData, key, label) {

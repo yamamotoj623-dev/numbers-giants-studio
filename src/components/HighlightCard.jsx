@@ -120,9 +120,35 @@ function formatFormula(f) {
   );
 }
 
+// ★v5.20★ criteria 表示の堅牢化 — AI が「高いほどいい」等を混入させても自然に表示
+//   1. 文字列 "優秀: .300以上"           → ".300以上"
+//   2. 文字列 "高いほどいい"               → '' (空)
+//   3. 文字列 ".300以上"                   → ".300以上"
+//   4. オブジェクト {threshold,direction}  → ".300以上" / "2.50以下"
 function cleanCriteria(c) {
   if (!c) return '';
-  return c.replace(/^[^:：]*[:：]\s*/, '').trim();
+  // オブジェクト形式
+  if (typeof c === 'object') {
+    if (c.threshold) {
+      const dir = String(c.direction || '').toLowerCase();
+      const arrow = (dir.includes('lower') || dir.includes('low')) ? '以下' : '以上';
+      return `${c.threshold}${arrow}`;
+    }
+    return '';
+  }
+  const s = String(c).trim();
+  // 「高い/低い ほど良い/いい」だけの説明文は捨てる
+  if (/^(高|低)[いく]?(ほど)?(良い|いい|優秀|有利|好)$/.test(s)) return '';
+  // 「: 」区切りなら後半を取る
+  const colon = s.split(/[:::]\s*/);
+  if (colon.length >= 2) {
+    const after = colon.slice(1).join(': ').trim();
+    return /(以上|以下|以内|超|未満)/.test(after) ? after : (after.length <= 12 ? after : '');
+  }
+  // 数値基準が含まれていればそのまま
+  if (/(以上|以下|以内|超|未満)/.test(s)) return s;
+  // それ以外の長文説明は捨てる
+  return '';
 }
 
 // レイアウト用ヘルパー: phase==='highlight' で comparison 見つかったら HighlightCard 返す

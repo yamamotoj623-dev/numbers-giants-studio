@@ -67,6 +67,8 @@
   radarStats: { isop, isod, bb_k, rc27, ab_hr } 各 {main:0-100, sub:0-100, label:"日本語"},
   layoutData: <使うレイアウト分すべて格納>,
   comparisons: [5項目必須] 各 {id, label, kana, desc, formula, criteria, radarMatch, unit, valMain, valSub, winner:"main|sub", variants?:[...]},
+    ★criteria★: ".300以上" / "2.50以下" の**数値基準のみ**を文字列で。「高いほど良い」等の説明文は禁止 (UI で表示しても意味不明になる)
+    例: criteria: ".300以上" / criteria: "2.50以下" / criteria: "1.000以上"
     ★v5.19.6新 variants★: 同じ指標で複数スコープを持たせたい時 (対左/対右/通季/vs他選手) に使う。
        variants:[
          {id:"overall",  label:"通季",     valMain:".305", valSub:".278", mainLabel:"今季", subLabel:"昨季", winner:"main"},
@@ -132,10 +134,10 @@
     "unit": "month",
     "metric": "OPS",
     "points": [
-      { "label": "4月", "main": ".724", "sub": ".598" },
-      { "label": "5月", "main": ".810", "sub": ".621", "isPeak": true, "highlight": true },
-      { "label": "6月", "main": ".945", "sub": ".688" },
-      { "label": "7月", "main": ".678", "sub": ".605", "isBottom": true }
+      { "label": "4月", "value": ".724" },
+      { "label": "5月", "value": ".810", "isPeak": true, "highlight": true },
+      { "label": "6月", "value": ".945" },
+      { "label": "7月", "value": ".678", "isBottom": true }
     ]
   }
 }
@@ -144,8 +146,9 @@
 - unit: "day"|"week"|"month"|"year"。シーズン直近の動画なら "day"、年間推移なら "month"
 - metric: 表示指標名 ("OPS"/"打率"/"防御率" 等)
 - points: 最低 2 点、推奨 3-7 点
-- main: 主役の値 (★文字列で出力★ → 0始まり小数は ".724")
-- sub: 比較線の値 (任意)。リーグ平均・前年・ライバル選手等
+- ★各 point は `value` (主役の値) と任意の `sub` (比較線) を持つ★。**`main` は使わない** — `value` に統一
+- value: 文字列で出力 (★0始まり小数は ".724"★)
+- sub: リーグ平均・前年・ライバル選手等を任意で
 - isPeak: 動画のピーク (急上昇)、isBottom: 谷、highlight: 注目点 (アニメ強調)
 
 ────────────────────────────────────────

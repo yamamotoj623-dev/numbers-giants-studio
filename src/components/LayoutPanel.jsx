@@ -164,6 +164,32 @@ export function LayoutPanel({ projectData, onChange }) {
       {/* ★v5.19.7★ id:1 (フック) の 4 指標カスタマイズ */}
       <HookStatsEditor projectData={projectData} onChange={onChange} />
 
+      {/* ★v5.20★ id:1 フックフォント調整 */}
+      <div className="bg-white p-3 rounded-lg border border-zinc-200">
+        <div className="font-bold text-sm text-zinc-700 mb-2">🔤 フックタイトル文字サイズ</div>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="0.6"
+            max="1.4"
+            step="0.05"
+            value={projectData.hookFontScale ?? 1.0}
+            onChange={(e) => setField('hookFontScale', parseFloat(e.target.value))}
+            className="flex-1"
+          />
+          <span className="text-[11px] font-mono w-10 text-right">{(projectData.hookFontScale ?? 1.0).toFixed(2)}x</span>
+          <button
+            onClick={() => setField('hookFontScale', 1.0)}
+            className="text-[10px] px-2 py-1 bg-zinc-100 text-zinc-600 rounded hover:bg-zinc-200"
+          >
+            リセット
+          </button>
+        </div>
+        <div className="text-[9px] text-zinc-500 mt-1">
+          0.6x〜1.4x で文字を縮小/拡大。行数自動調整 (4-6行 サポート) と組み合わせて使用。
+        </div>
+      </div>
+
       {/* ★v5.19.7★ アスペクト比選択 */}
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="font-bold text-sm text-zinc-700 mb-2">📐 動画アスペクト比</div>
@@ -213,17 +239,14 @@ export function LayoutPanel({ projectData, onChange }) {
       {projectData.layoutType === 'batter_heatmap' && (
         <HeatmapDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {(projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking') && (
+      {/* ★v5.20★ ランキング専用エディタ */}
+      {projectData.layoutType === 'ranking' && (
+        <RankingDataEditor projectData={projectData} onChange={onChange} />
+      )}
+      {projectData.layoutType === 'team_context' && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
-          <div className="font-bold mb-1">📝 {
-            projectData.layoutType === 'team_context' ? 'チーム文脈データ' : 'ランキングデータ'
-          }</div>
-          <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.{
-            projectData.layoutType === 'team_context' ? 'context' : 'ranking'
-          }</code> を直接編集してください{
-            projectData.layoutType === 'ranking' ? '。mood:"best"|"worst"|"neutral"でトーン切替。' :
-            '。mode:"single"でチームビュー、mode:"compare"でセ平均比較。'
-          }</div>
+          <div className="font-bold mb-1">📝 チーム文脈データ</div>
+          <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.context</code> を直接編集してください。mode:"single"でチームビュー、mode:"compare"でセ平均比較。</div>
         </div>
       )}
 
@@ -402,7 +425,7 @@ function VersusDataEditor({ projectData, onChange }) {
 
       <div className="mt-2 bg-amber-50 border border-amber-200 rounded p-2 text-[10px] text-amber-800">
         💡 <code className="bg-amber-100 px-1 rounded">script.highlight</code> の comparison ラベルと一致する指標は
-        「話題中」マーク付きでパルス強調されます (v5.14.0 新)。
+        オレンジ枠+グローでハイライトされます (v5.14.0 新)。
       </div>
     </div>
   );
@@ -722,7 +745,7 @@ function SpotlightDataEditor({ projectData, onChange }) {
       <div className="bg-amber-50 border border-amber-200 rounded p-2 text-[10px] text-amber-800">
         💡 <strong>ヒント</strong>: <code className="bg-amber-100 px-1 rounded">script.focusEntry</code> で表示する選手を切替できます。
         ラベルが <code className="bg-amber-100 px-1 rounded">script.highlight</code> の comparison ラベルと一致すると、
-        該当指標が「話題中」マーク付きでパルス強調されます。
+        該当指標がオレンジ枠+グローでハイライトされます。
       </div>
     </div>
   );
@@ -918,6 +941,119 @@ function HookStatsEditor({ projectData, onChange }) {
       </button>
       <div className="text-[9px] text-zinc-500 mt-1.5">
         フックの 4 指標を変更可能。データキー (左) は mainPlayer.stats から選択、表示名 (中) は自由テキスト。
+      </div>
+    </div>
+  );
+}
+
+// ★v5.20★ ランキング専用エディタ
+function RankingDataEditor({ projectData, onChange }) {
+  const ranking = projectData.layoutData?.ranking || { mode: 'single', mood: 'neutral', metrics: [] };
+  const metrics = Array.isArray(ranking.metrics) ? ranking.metrics : [];
+
+  const update = (newR) => {
+    onChange({
+      ...projectData,
+      layoutData: { ...(projectData.layoutData || {}), ranking: newR },
+    });
+  };
+  const updateMetric = (mi, field, val) => {
+    const next = metrics.map((m, i) => i === mi ? { ...m, [field]: val } : m);
+    update({ ...ranking, metrics: next });
+  };
+  const updateEntry = (mi, ei, field, val) => {
+    const next = metrics.map((m, i) => {
+      if (i !== mi) return m;
+      const entries = (m.entries || []).map((e, j) => j === ei ? { ...e, [field]: val } : e);
+      return { ...m, entries };
+    });
+    update({ ...ranking, metrics: next });
+  };
+  const addMetric = () => {
+    update({
+      ...ranking, metrics: [...metrics, {
+        id: `metric_${metrics.length + 1}`, label: '指標', kana: '', unit: '',
+        entries: [{ rank: 1, name: '選手1', team: 'G', value: '0' }],
+      }],
+    });
+  };
+  const removeMetric = (mi) => {
+    update({ ...ranking, metrics: metrics.filter((_, i) => i !== mi) });
+  };
+  const addEntry = (mi) => {
+    const next = metrics.map((m, i) => {
+      if (i !== mi) return m;
+      const entries = m.entries || [];
+      return { ...m, entries: [...entries, { rank: entries.length + 1, name: '選手', team: '', value: '0' }] };
+    });
+    update({ ...ranking, metrics: next });
+  };
+  const removeEntry = (mi, ei) => {
+    const next = metrics.map((m, i) => {
+      if (i !== mi) return m;
+      return { ...m, entries: (m.entries || []).filter((_, j) => j !== ei) };
+    });
+    update({ ...ranking, metrics: next });
+  };
+
+  return (
+    <div className="bg-white p-3 rounded-lg border border-zinc-200">
+      <div className="font-bold text-sm text-zinc-700 mb-2">📊 ランキングエディタ</div>
+
+      {/* mood */}
+      <div className="mb-2">
+        <label className="text-[10px] font-bold text-zinc-600 mb-1 block">トーン</label>
+        <div className="flex gap-1">
+          {[
+            { id: 'best', label: '🏆 best (上位/ポジ)' },
+            { id: 'worst', label: '⚠️ worst (下位/ネガ)' },
+            { id: 'neutral', label: '➖ neutral (中立)' },
+          ].map(m => (
+            <button
+              key={m.id}
+              onClick={() => update({ ...ranking, mood: m.id })}
+              className={`flex-1 text-[10px] py-1 rounded border ${
+                (ranking.mood || 'neutral') === m.id ? 'bg-indigo-50 border-indigo-400 text-indigo-700' : 'bg-white border-zinc-200 text-zinc-600'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* metrics */}
+      <div className="space-y-3">
+        {metrics.map((m, mi) => (
+          <div key={mi} className="border border-zinc-200 rounded p-2 bg-zinc-50">
+            <div className="grid grid-cols-[1fr_1fr_60px_60px_24px] gap-1 items-center mb-1.5">
+              <input value={m.id || ''} onChange={(e) => updateMetric(mi, 'id', e.target.value)} placeholder="id" className="text-[11px] px-1.5 py-1 border rounded" />
+              <input value={m.label || ''} onChange={(e) => updateMetric(mi, 'label', e.target.value)} placeholder="表示名" className="text-[11px] px-1.5 py-1 border rounded" />
+              <input value={m.kana || ''} onChange={(e) => updateMetric(mi, 'kana', e.target.value)} placeholder="読み" className="text-[11px] px-1.5 py-1 border rounded" />
+              <input value={m.unit || ''} onChange={(e) => updateMetric(mi, 'unit', e.target.value)} placeholder="単位" className="text-[11px] px-1.5 py-1 border rounded" />
+              <button onClick={() => removeMetric(mi)} className="text-red-500 hover:bg-red-50 rounded text-[14px]">×</button>
+            </div>
+            <div className="space-y-1">
+              {(m.entries || []).map((e, ei) => (
+                <div key={ei} className="grid grid-cols-[40px_1fr_50px_1fr_20px_24px] gap-1 items-center">
+                  <input type="number" value={e.rank ?? ''} onChange={(ev) => updateEntry(mi, ei, 'rank', parseInt(ev.target.value) || 0)} className="text-[11px] px-1.5 py-1 border rounded text-right" />
+                  <input value={e.name || ''} onChange={(ev) => updateEntry(mi, ei, 'name', ev.target.value)} placeholder="選手名" className="text-[11px] px-1.5 py-1 border rounded" />
+                  <input value={e.team || ''} onChange={(ev) => updateEntry(mi, ei, 'team', ev.target.value)} placeholder="球団" className="text-[11px] px-1.5 py-1 border rounded" />
+                  <input value={e.value ?? ''} onChange={(ev) => updateEntry(mi, ei, 'value', ev.target.value)} placeholder="値" className="text-[11px] px-1.5 py-1 border rounded" />
+                  <input type="checkbox" checked={!!e.isMainPlayer} onChange={(ev) => updateEntry(mi, ei, 'isMainPlayer', ev.target.checked)} title="主役マーク" />
+                  <button onClick={() => removeEntry(mi, ei)} className="text-red-400 hover:bg-red-50 rounded text-[12px]">×</button>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => addEntry(mi)} className="mt-1 w-full text-[10px] py-1 bg-zinc-100 text-zinc-600 rounded hover:bg-zinc-200">+ 選手を追加</button>
+          </div>
+        ))}
+      </div>
+      <button onClick={addMetric} className="mt-2 w-full text-[11px] py-1.5 bg-indigo-50 text-indigo-700 rounded font-bold hover:bg-indigo-100">
+        + 指標を追加
+      </button>
+      <div className="text-[9px] text-zinc-500 mt-1.5">
+        各指標の id は台本の script.focusMetric で参照。team は球団略称 (G/T/D/S/B/E/L/F/H/M)。主役マークでオレンジ強調。
       </div>
     </div>
   );
