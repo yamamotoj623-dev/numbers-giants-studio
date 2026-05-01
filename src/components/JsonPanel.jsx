@@ -328,124 +328,210 @@ ${JSON.stringify(templateData, null, 2)}
 function buildDataJsonPrompt(currentData, templateData) {
   const playerTypeLabel = currentData.playerType === 'batter' ? '野手' : currentData.playerType === 'pitcher' ? '投手' : 'チーム';
   const { data: existingData } = splitProjectData(currentData);
-  const numericRules = currentData.playerType === 'batter'
-    ? '・打率/出塁率/長打率 (.250, .350): 「にわり・ごぶ」のように【割・分・厘】で記述\n'
-    + '・OPSやIsoPなど (.850, .172): 「てんはちごーぜろ」「てんいちななに」'
-    : currentData.playerType === 'pitcher'
-    ? '・防御率やFIP (2.15, 3.50): 「にてんいちご」「さんてんごぜろ」'
-    : '・打率/防御率/勝率の混合: 各指標ごとに上記2分類を参照';
 
-  return `# ★データJSON生成タスク★
+  return `# データJSON生成タスク (Grok 推奨)
 
 ## 役割
-あなたはプロ野球データの**リサーチ担当**。動画用の「データJSON」を生成してください。
-台本(scripts)は別工程で生成するので、**今回は scripts を含めないこと**。
+プロ野球データのリサーチ担当として、動画用「データJSON」を生成する。
+台本(scripts)は別工程なので **出力に含めない**。
 
-## 動画ストーリーの大枠
-${currentData.title || '(動画タイトル)'} — テーマ: ${currentData.theme || '(未指定)'} / 期間: ${currentData.period || '(未指定)'}
-プレイヤータイプ: ${playerTypeLabel}
+## 動画ストーリー
+- タイトル: ${currentData.title || '(未指定)'}
+- テーマ: ${currentData.theme || '(未指定)'}
+- 期間: ${currentData.period || '(未指定)'}
+- 選手タイプ: ${playerTypeLabel}
 
-## ★重要★ データを「使い回せる倉庫」として充実させる
-1動画内で、以下のような使い分けをしたい:
-- 1つの spotlight に **3-5 人分の player 候補** を入れる (シーンごとに別の選手をフォーカス)
-- 1人の player に **複数の quote を持たせる** (発言ピックを使い分け、quotes 配列を活用)
-- ranking の各 metric には **上位 5-10 人** 入れる
-- comparisons は **5-10 種類** の指標を定義 (動画中で使い分けたいハイライトすべて)
+## 数値表記ルール (★絶対守る★)
+- 打率 / 出塁率 / 長打率 / OPS / IsoP / IsoD / 防御率 / WHIP : 先頭の0を省略 → 例: \`0.305\` ではなく \`".305"\`、\`0.000\` ではなく \`"-"\`
+- データが0または不明 → \`"-"\` (アプリ側で「データなし」表現)
+- 打席数 / 本塁打 / 打点 / 三振 等の整数 → そのまま整数 (例: 152)
+- 全ての数値は **文字列で出力** (例: \`"value": ".305"\`)。アプリで再フォーマットしない。
 
-## 出力する JSON 構造
+## 出力 JSON (フルテンプレート)
+以下の **すべての項目** を埋めて出力してください。
+データが取れない指標は省略可、ただし comparisons は最低 5 種、spotlight.players は最低 3 人。
+
 \`\`\`json
 {
   "schemaVersion": "5.0.0",
-  "layoutType": "(初期レイアウト、後で台本側で上書き可)",
   "playerType": "${currentData.playerType || 'batter'}",
-  "theme": "${currentData.theme || 'orange'}",
-  "period": "${currentData.period || ''}",
-  "hookAnimation": "shake",
-  "smartLoop": true,
-  "audio": { "bgmId": null, "bgmVolume": 0.15, "voiceVolume": 1.0, "seVolume": 0.6 },
+  "period": "${currentData.period || '2026.04時点'}",
 
-  "mainPlayer": { "name": "...", "number": "...", "stats": { "pa": ..., ... } },
-  "subPlayer": { ... },
-  "radarStats": { /* 5指標 */ },
+  "mainPlayer": {
+    "name": "選手名",
+    "number": "背番号 (文字列)",
+    "label": "今季",
+    "stats": {
+      ${currentData.playerType === 'pitcher'
+        ? '"era": "2.45", "whip": "1.05", "so": 156, "win": 12, "ip": "120.0", "sv": 0'
+        : currentData.playerType === 'team'
+        ? '"rank": 1, "winRate": ".615", "runs": 412, "runsAllowed": 305, "games": 60, "hr": 78'
+        : '"pa": 245, "ab": 220, "avg": ".305", "hr": 18, "rbi": 52, "ops": ".945"'}
+    }
+  },
+  "subPlayer": {
+    "name": "比較対象 (昨季の同選手 or ライバル)",
+    "label": "昨季",
+    "stats": { /* mainPlayer と同じ stats キーを揃える */ }
+  },
+
+  "radarStats": {
+    /* 5 軸のレーダーチャート用、各 main/sub は 0-100 の偏差値 */
+    "isop":  { "main": 75, "sub": 60, "label": "長打力" },
+    "isod":  { "main": 65, "sub": 55, "label": "選球眼" },
+    "bb_k":  { "main": 70, "sub": 50, "label": "三振率" },
+    "rc27":  { "main": 80, "sub": 65, "label": "得点創出" },
+    "ab_hr": { "main": 72, "sub": 58, "label": "本塁打率" }
+  },
 
   "comparisons": [
-    /* 5-10種類の指標。台本の script.highlight でこの id を参照 */
-    /* ★v5.19.6新★ variants[] でスコープ別 (対左/対右/今季vs昨季/vs他選手) の値を持てる */
+    /* ハイライト指標。台本 script.highlight で id 参照。最低 5 種類入れる。
+       同じ指標で **対左/対右/通季** を変えたい場合は variants[] を使う。
+       単純な比較しかしない指標は variants なしで valMain/valSub 直書き OK。 */
     {
       "id": "avg",
       "label": "打率",
       "kana": "だりつ",
+      "desc": "打席で安打を打つ確率。野球の最も基本的な指標。",
+      "criteria": "優秀: .300以上",
       "radarMatch": "打撃力",
       "unit": "",
       "variants": [
-        { "id": "overall", "label": "通季", "valMain": ".305", "valSub": ".278", "mainLabel": "今季", "subLabel": "昨季", "winner": "main" },
-        { "id": "vs_left", "label": "対左投手", "valMain": ".201", "valSub": ".245", "mainLabel": "今季", "subLabel": "昨季", "winner": "sub" },
+        { "id": "overall",  "label": "通季",     "valMain": ".305", "valSub": ".278", "mainLabel": "今季", "subLabel": "昨季", "winner": "main" },
+        { "id": "vs_left",  "label": "対左投手", "valMain": ".201", "valSub": ".245", "mainLabel": "今季", "subLabel": "昨季", "winner": "sub" },
         { "id": "vs_right", "label": "対右投手", "valMain": ".342", "valSub": ".289", "mainLabel": "今季", "subLabel": "昨季", "winner": "main" }
       ]
     },
-    /* 旧形式 (variants なしで valMain/valSub 直書き) も後方互換 */
-    { "id": "isop", "label": "ISO+", "kana": "アイソピ", "valMain": ".172", "valSub": ".095", "winner": "main" },
-    ...
+    {
+      "id": "isop",
+      "label": "ISO+",
+      "kana": "アイソピー",
+      "desc": "長打率と打率の差。純粋な長打力。",
+      "formula": "長打率 - 打率",
+      "criteria": "優秀: .200以上",
+      "radarMatch": "長打力",
+      "unit": "",
+      "valMain": ".172",
+      "valSub": ".095",
+      "winner": "main"
+    }
+    /* 残り 3-8 種類: ISO-D, BB/K, OPS, OPS+, RC27, 出塁率, 長打率 等を網羅 */
   ],
 
   "layoutData": {
+    /* 各レイアウト用のデータ。使わないレイアウトは省略可 */
+
+    "timeline": {
+      "unit": "month",
+      "metric": "OPS",
+      "points": [
+        { "label": "4月", "main": ".724", "sub": ".598" },
+        { "label": "5月", "main": ".810", "sub": ".621" }
+      ]
+    },
+
+    "versus": {
+      "categoryScores": [
+        /* 各 category は label/main/sub。winner はアプリで自動判定 */
+        { "label": "打率",   "kana": "だりつ", "main": ".305", "sub": ".278", "rawMain": ".305", "rawSub": ".278" },
+        { "label": "本塁打", "main": 18, "sub": 12 },
+        { "label": "OPS",    "main": ".945", "sub": ".812" }
+      ]
+    },
+
     "spotlight": {
       "players": [
-        /* 3-5 人分。台本の script.focusEntry で id を指定して切り替え */
         {
-          "id": "okamoto", "name": "岡本和真", "team": "G", "label": "26年(今季)",
-          "stats": [...],
+          "id": "okamoto",
+          "name": "岡本和真",
+          "team": "G",
+          "label": "26年 (今季)",
+          "primaryStat": { "label": "OPS", "value": ".945", "compareValue": { "label": "リーグ平均", "value": ".712" } },
+          "stats": [
+            { "label": "打率",   "value": ".305" },
+            { "label": "本塁打", "value": 18 },
+            { "label": "打点",   "value": 52 },
+            { "label": "出塁率", "value": ".385" }
+          ],
           "quotes": [
-            /* 複数の発言ピック。台本側で focusQuoteIndex で選択 */
+            /* 1選手 2-4 個の発言。台本 focusQuoteIndex で切替 */
             { "text": "もっと長打を打ちたい", "source": "2026/4 取材" },
             { "text": "守備位置はどこでも", "source": "2026/3 春季練習" },
-            ...
+            { "text": "監督の信頼に応えたい", "source": "2026/4 ヒーローインタビュー" }
           ]
-        },
-        ...
+        }
+        /* 残り 2-4 人 (シーン毎に focusEntry で別選手にフォーカス) */
       ]
     },
+
     "ranking": {
       "metrics": [
-        /* 動画中で使う metric を全部用意 */
         {
-          "id": "ops", "label": "OPS", "kana": "オーピーエス",
+          "id": "ops",
+          "label": "OPS",
+          "kana": "オーピーエス",
+          "unit": "",
           "entries": [
-            { "rank": 1, "name": "...", "team": "G", "value": "1.013" },
-            /* 5-10人 */
-            ...
+            { "rank": 1, "name": "選手名", "team": "G", "value": "1.013" },
+            { "rank": 2, "name": "選手名", "team": "T", "value": ".945" }
+            /* 5-10 人。team は球団略称 (G/T/D/S/B/E/L/F/H/M) */
           ]
-        },
-        ...
+        }
+        /* 動画内で切替えたい metric を 2-3 個 */
       ]
     },
-    "timeline": { /* points 配列 */ },
-    "versus": { /* categoryScores 配列 */ }
+
+    "arsenal": {
+      /* pitch_arsenal レイアウト用。投手データのみ */
+      "mode": "single",
+      "pitches": [
+        { "name": "ストレート", "pct": 48, "avg": ".205", "velocity": 152, "color": "#ef4444" },
+        { "name": "スプリット", "pct": 22, "avg": ".150", "velocity": 138, "color": "#3b82f6" },
+        { "name": "スライダー", "pct": 18, "avg": ".180", "velocity": 132, "color": "#10b981" },
+        { "name": "カーブ",     "pct": 8,  "avg": ".250", "velocity": 118, "color": "#f59e0b" }
+      ]
+    },
+
+    "heatmap": {
+      /* batter_heatmap レイアウト用。打者データのみ */
+      "mode": "vs_handedness",
+      "vsRight": [".180", ".240", ".290",   ".220", ".310", ".340",   ".150", ".220", ".260"],
+      "vsLeft":  [".200", ".260", ".280",   ".210", ".280", ".320",   ".170", ".230", ".240"]
+      /* 9 値 = 上段3 (内角・真中・外角) + 中段3 + 下段3 */
+    }
   }
 }
 \`\`\`
 
-## 数値の読みルール (今回は${playerTypeLabel}用)
-${numericRules}
+## ★各項目の入力ガイド★
+| 項目 | 内容 | 必須 |
+|---|---|---|
+| mainPlayer.name | 選手名 (例: "岡本和真") | ✅ |
+| mainPlayer.stats | playerType 別キー (上記参照) | ✅ |
+| comparisons | 5-10 種類の指標。各 id 一意、kana 必須 (TTS用) | ✅ |
+| comparisons[].variants | 同指標で対左/対右/通季を持ちたい時のみ。なければ valMain/valSub 直書き | 任意 |
+| layoutData.spotlight.players | 3-5 人、各 id 一意。quotes 2-4 個、stats 4-6 個 | spotlight 使うなら必須 |
+| layoutData.ranking.metrics | 動画内で切替えたい metric。各 entries 5-10 人 | ranking 使うなら必須 |
+| layoutData.timeline.points | 月別 or 試合別の推移 | timeline 使うなら必須 |
+| layoutData.versus.categoryScores | 比較カテゴリ 5-7 個 | versus_card 使うなら必須 |
+| layoutData.arsenal.pitches | 球種 4-6 種類 | pitch_arsenal 使うなら必須 |
+| layoutData.heatmap.zones (single) または vsRight/vsLeft (vs_handedness) | 9 値の打率配列 | batter_heatmap 使うなら必須 |
 
-## ★既存データを参考に (このフィールド名・形式で出してください)★
+## ★出力に含めない項目★ (UIで設定済、出力すると上書きで消える)
+- hookMediaPattern / hookMediaDurationMs / hookAnimation / hookStats
+- silhouetteType / theme / smartLoop / audio / aspectRatio / pattern
+- scripts (台本は別工程)
+- defaultScenePreset
+
+## 既存データ (参考、フィールド名と形式を揃える)
 \`\`\`json
-${JSON.stringify(existingData, null, 2).slice(0, 4000)}
+${JSON.stringify(existingData, null, 2).slice(0, 3500)}
 \`\`\`
 
-## 注意
-- **scripts は含めない** (台本は別工程)
-- リサーチには web 検索を活用、推測ではなく一次ソース (NPB公式 > 球団 > 大手紙) を優先
-- 数値は最新を反映 (期間: ${currentData.period || '(未指定)'})
-- ★**以下のフィールドは出力に含めないこと**★ (アプリ側でユーザーが UI から設定する):
-  - \`hookMediaPattern\` / \`hookMediaDurationMs\` (id:1 画像/動画の表示設定)
-  - \`hookAnimation\` (フックの揺れ方)
-  - \`silhouetteType\` (シルエット種類)
-  - \`theme\` (テーマカラー)
-  - \`smartLoop\` (シームレスループ設定)
-  - \`audio\` (BGM/SE 音量)
-  もし含めるとアプリ側でユーザー設定が消えてしまう。これらは既に設定済みなので**完全に出力から除外**してください。
-- 球団横断ランキングでは entries[].team を必ず入れる
+## リサーチ
+- web 検索で一次ソース (NPB 公式 > 球団公式 > 大手紙) を優先
+- 数値は ${currentData.period || '直近'} 時点
+- 推測でなく実数値を出す
 `;
 }
 

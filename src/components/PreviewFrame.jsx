@@ -14,6 +14,7 @@ import { LayoutRouter } from '../layouts/LayoutRouter.jsx';
 import { renderFormattedText } from '../lib/textRender.jsx';
 import { Silhouette } from './Silhouettes.jsx';
 import { HookMediaOverlay, getHookMedia } from './HookMediaOverlay.jsx';
+import { formatStat } from '../lib/statFormat';
 
 function getPhase(currentScript, currentIndex, scripts, projectData) {
   if (!currentScript) return 'normal';
@@ -65,8 +66,10 @@ const TELOP_ENTRANCE_ANIMS = [
   'telopShakeIn',      // 振動して登場
   'telopElasticIn',    // 弾性的にスケール
 ];
+// ★v5.19.7★ テロップ文字単位アニメ — 1文字ずつ順次フェードイン+スケール
+// 紙芝居感の解消。発言中も文字が躍動する。
 function TelopBubble({ speaker, text, textSize, kind }) {
-  // text のハッシュで entrance アニメを決定 (毎シーンで違うアニメに、シーン固定で再現性も)
+  // text のハッシュで entrance アニメを決定 (毎シーンで違うアニメに、再現性あり)
   const animIdx = React.useMemo(() => {
     const s = String(text || '') + (kind || '') + (speaker || '');
     let h = 0;
@@ -74,20 +77,79 @@ function TelopBubble({ speaker, text, textSize, kind }) {
     return Math.abs(h) % TELOP_ENTRANCE_ANIMS.length;
   }, [text, kind, speaker]);
   const animName = TELOP_ENTRANCE_ANIMS[animIdx];
-  // strut: 表示後の微小な揺れ (1.5s 後から開始、無限ループ)
-  const strutAnim = `${animName} 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both, telopStrut 4s ease-in-out 1.5s infinite`;
+  const bubbleAnim = `${animName} 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both, telopStrut 4s ease-in-out 1.2s infinite`;
 
   return (
     <div
       className="telop-bg"
       data-speaker={(speaker || 'A').toLowerCase()}
-      style={{ animation: strutAnim }}
+      style={{ animation: bubbleAnim }}
     >
-      <div className={`telop-normal ${speaker === 'B' ? 'b' : ''} size-${textSize}`}>
-        {renderFormattedText(text, false, speaker)}
+      <div className={`telop-normal ${speaker === 'B' ? 'b' : ''} size-${textSize} telop-charwise`}>
+        {/* ★v5.19.7★ 文字単位アニメで紙芝居から脱却 */}
+        <CharwiseText text={text} speaker={speaker} />
       </div>
     </div>
   );
+}
+
+// 1文字ずつ表示するコンポーネント (絵文字・em タグ対応)
+function CharwiseText({ text, speaker }) {
+  if (!text) return null;
+  // 既存の renderFormattedText が複雑な装飾を返すので、
+  // それの結果に対して文字単位アニメを適用する代わりに、
+  // 装飾入った状態を単一文字 span に展開する別アプローチ
+  const formatted = renderFormattedText(text, false, speaker);
+  return <CharwiseWalker node={formatted} startIndex={0} />;
+}
+
+// React node tree を再帰的に walk して、文字レベルで span に分解
+function CharwiseWalker({ node, startIndex = 0 }) {
+  if (node == null || typeof node === 'boolean') return null;
+  // 文字列 → 1文字ずつ span に
+  if (typeof node === 'string' || typeof node === 'number') {
+    const str = String(node);
+    return (
+      <>
+        {Array.from(str).map((ch, i) => (
+          <span
+            key={`c-${i}`}
+            className="telop-char"
+            style={{ animationDelay: `${(startIndex + i) * 0.025}s` }}
+          >
+            {ch === ' ' ? '\u00A0' : ch}
+          </span>
+        ))}
+      </>
+    );
+  }
+  // 配列 → 各要素を再帰
+  if (Array.isArray(node)) {
+    let consumed = 0;
+    return (
+      <>
+        {node.map((child, idx) => {
+          const elem = <CharwiseWalker key={idx} node={child} startIndex={startIndex + consumed} />;
+          consumed += countChars(child);
+          return elem;
+        })}
+      </>
+    );
+  }
+  // React element → children を walk して props を維持
+  if (React.isValidElement(node)) {
+    const children = node.props?.children;
+    return React.cloneElement(node, {}, <CharwiseWalker node={children} startIndex={startIndex} />);
+  }
+  return null;
+}
+
+function countChars(node) {
+  if (node == null || typeof node === 'boolean') return 0;
+  if (typeof node === 'string' || typeof node === 'number') return String(node).length;
+  if (Array.isArray(node)) return node.reduce((s, c) => s + countChars(c), 0);
+  if (React.isValidElement(node)) return countChars(node.props?.children);
+  return 0;
 }
 
 export function PreviewFrame({
@@ -134,22 +196,32 @@ export function PreviewFrame({
     return '😲';
   }, [currentIndex, scripts]);
 
-  const effectiveSquare = isSquareMode || isRecordingMode;
+  // ★v5.19.7★ aspectRatio 対応 — projectData.aspectRatio で 9:16 / 16:9 / 1:1 切替
+  const aspectRatio = projectData?.aspectRatio || '9:16';
+  const isLandscape = aspectRatio === '16:9';
+  const isSquare1to1 = aspectRatio === '1:1';
+
+  const effectiveSquare = isSquareMode || isRecordingMode || isSquare1to1;
   const effectiveShowSafe = showSafeZone && !isRecordingMode;
 
   const phoneClasses = [
     'phone',
     effectiveSquare ? 'square' : '',
+    isLandscape ? 'landscape' : '',
     isRecordingMode ? 'record-mode' : '',
     isFullscreenMode ? 'fullscreen' : '',
   ].filter(Boolean).join(' ');
 
+  const arRatio = isLandscape ? '16/9' : isSquare1to1 ? '1/1' : '9/16';
   const phoneStyle = isFullscreenMode ? {
-    width: 'auto',
-    height: '95vh',
+    width: isLandscape ? '95vw' : 'auto',
+    height: isLandscape ? 'auto' : '95vh',
     maxHeight: '95vh',
-    aspectRatio: effectiveSquare ? '9/16' : '9/16',
-  } : {};
+    maxWidth: isLandscape ? '95vw' : undefined,
+    aspectRatio: arRatio,
+  } : {
+    aspectRatio: arRatio,
+  };
 
   // 現在フェーズのクラス (data-p + anim-pop/shake)
   const phaseClassMap = {
@@ -314,7 +386,7 @@ export function PreviewFrame({
               ★v5.19.6★ 動かない問題の真因対策 — class + style 両方つけ、アニメ名は CSS 統一、
               key は currentScript.id (確実にユニーク) で完全 remount */}
           {phase === 'normal' && (
-            <div className="telop-wrap-normal" key={`telop-n-${currentScript?.id ?? currentIndex}`}>
+            <div className="telop-wrap-normal" key={`telop-n-${currentIndex}`}>
               <TelopBubble
                 speaker={currentScript?.speaker}
                 text={currentScript?.text}
@@ -324,7 +396,7 @@ export function PreviewFrame({
             </div>
           )}
           {phase === 'highlight' && (
-            <div className="telop-wrap-hl" key={`telop-h-${currentScript?.id ?? currentIndex}`}>
+            <div className="telop-wrap-hl" key={`telop-h-${currentIndex}`}>
               <TelopBubble
                 speaker={currentScript?.speaker}
                 text={currentScript?.text}
@@ -336,7 +408,7 @@ export function PreviewFrame({
 
           {/* アウトロのテロップ */}
           {phase === 'outro' && currentScript?.text && (
-            <div className="telop-wrap-outro" key={`telop-o-${currentScript?.id ?? currentIndex}`}>
+            <div className="telop-wrap-outro" key={`telop-o-${currentIndex}`}>
               <TelopBubble
                 speaker={currentScript?.speaker}
                 text={currentScript?.text}
@@ -418,16 +490,32 @@ function getHookTextClass(text) {
 }
 
 function renderHookStatCell(projectData, key, label) {
-  const v = projectData?.mainPlayer?.stats?.[key] || '-';
+  const raw = projectData?.mainPlayer?.stats?.[key];
+  // ★v5.19.7★ 0 / null / undefined → '-'、0始まり小数 → '.xxx'
+  const formatted = formatStat(raw,
+    ['avg', 'ops', 'era', 'whip', 'winRate'].includes(key) ? 'rate' : 'auto'
+  );
   return (
     <div className="cell" key={key}>
-      <span className="v">{v}</span>
+      <span className="v">{formatted}</span>
       <span className="l">{label}</span>
     </div>
   );
 }
 
 function renderHookStatsCells(projectData) {
+  // ★v5.19.7★ projectData.hookStats でカスタマイズ可能 — 例: [{key:'avg', label:'打率'}, ...]
+  const customCells = Array.isArray(projectData?.hookStats) ? projectData.hookStats : null;
+  if (customCells && customCells.length > 0) {
+    return (
+      <>
+        {customCells.slice(0, 4).map(cell => (
+          renderHookStatCell(projectData, cell.key, cell.label)
+        ))}
+      </>
+    );
+  }
+
   const playerType = projectData?.playerType;
   if (playerType === 'pitcher') {
     return (
@@ -440,7 +528,6 @@ function renderHookStatsCells(projectData) {
     );
   }
   if (playerType === 'team') {
-    // チームテーマ: 順位/勝率/得点/失点 を表示
     return (
       <>
         {renderHookStatCell(projectData, 'rank', '順位')}

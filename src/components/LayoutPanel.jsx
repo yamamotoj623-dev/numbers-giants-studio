@@ -161,6 +161,41 @@ export function LayoutPanel({ projectData, onChange }) {
         )}
       </div>
 
+      {/* ★v5.19.7★ id:1 (フック) の 4 指標カスタマイズ */}
+      <HookStatsEditor projectData={projectData} onChange={onChange} />
+
+      {/* ★v5.19.7★ アスペクト比選択 */}
+      <div className="bg-white p-3 rounded-lg border border-zinc-200">
+        <div className="font-bold text-sm text-zinc-700 mb-2">📐 動画アスペクト比</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[
+            { id: '9:16', label: '縦 9:16', desc: 'Shorts/Reel' },
+            { id: '16:9', label: '横 16:9', desc: 'YouTube 通常' },
+            { id: '1:1',  label: '正方 1:1', desc: 'Instagram' },
+          ].map(ar => (
+            <button
+              key={ar.id}
+              onClick={() => setField('aspectRatio', ar.id)}
+              className={`py-1.5 text-xs font-bold rounded-lg border transition ${
+                (projectData.aspectRatio || '9:16') === ar.id
+                  ? 'bg-indigo-50 border-indigo-400 text-indigo-700 ring-2 ring-indigo-300'
+                  : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+              }`}
+            >
+              <div className="text-[11px]">{ar.label}</div>
+              <div className="text-[9px] opacity-70">{ar.desc}</div>
+            </button>
+          ))}
+        </div>
+        {projectData.aspectRatio === '16:9' && (
+          <div className="mt-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+            ⚠️ 横長は基本対応のみ (要素位置の最適化済み)。
+            radar / spotlight はチャートが左半分に寄り、右側に余白が出ます。
+            完全な横長専用レイアウトは段階的に対応予定。
+          </div>
+        )}
+      </div>
+
       {projectData.layoutType === 'timeline' && (
         <TimelineDataEditor projectData={projectData} onChange={onChange} />
       )}
@@ -170,27 +205,24 @@ export function LayoutPanel({ projectData, onChange }) {
       {projectData.layoutType === 'player_spotlight' && (
         <SpotlightDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {(projectData.layoutType === 'pitch_arsenal' || projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking' || projectData.layoutType === 'batter_heatmap') && (
+      {/* ★v5.19.7★ 球種構成エディタ */}
+      {projectData.layoutType === 'pitch_arsenal' && (
+        <ArsenalDataEditor projectData={projectData} onChange={onChange} />
+      )}
+      {/* ★v5.19.7★ ヒートマップエディタ */}
+      {projectData.layoutType === 'batter_heatmap' && (
+        <HeatmapDataEditor projectData={projectData} onChange={onChange} />
+      )}
+      {(projectData.layoutType === 'team_context' || projectData.layoutType === 'ranking') && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
           <div className="font-bold mb-1">📝 {
-            projectData.layoutType === 'pitch_arsenal' ? '球種データ' :
-            projectData.layoutType === 'team_context' ? 'チーム文脈データ' :
-            projectData.layoutType === 'ranking' ? 'ランキングデータ' :
-            projectData.layoutType === 'batter_heatmap' ? '打者ゾーンデータ' :
-            'データ'
+            projectData.layoutType === 'team_context' ? 'チーム文脈データ' : 'ランキングデータ'
           }</div>
           <div>JSONパネルで <code className="bg-amber-100 px-1 rounded">layoutData.{
-            projectData.layoutType === 'pitch_arsenal' ? 'arsenal' :
-            projectData.layoutType === 'team_context' ? 'context' :
-            projectData.layoutType === 'ranking' ? 'ranking' :
-            projectData.layoutType === 'batter_heatmap' ? 'heatmap' :
-            'data'
+            projectData.layoutType === 'team_context' ? 'context' : 'ranking'
           }</code> を直接編集してください{
             projectData.layoutType === 'ranking' ? '。mood:"best"|"worst"|"neutral"でトーン切替。' :
-            projectData.layoutType === 'team_context' ? '。mode:"single"でチームビュー、mode:"compare"でセ平均比較。' :
-            projectData.layoutType === 'pitch_arsenal' ? '。mode:"single"|"compare"|"vs_batter"。' :
-            projectData.layoutType === 'batter_heatmap' ? '。mode:"single"|"vs_handedness"。' :
-            '（サンプルデータがデフォルト）。'
+            '。mode:"single"でチームビュー、mode:"compare"でセ平均比較。'
           }</div>
         </div>
       )}
@@ -691,6 +723,201 @@ function SpotlightDataEditor({ projectData, onChange }) {
         💡 <strong>ヒント</strong>: <code className="bg-amber-100 px-1 rounded">script.focusEntry</code> で表示する選手を切替できます。
         ラベルが <code className="bg-amber-100 px-1 rounded">script.highlight</code> の comparison ラベルと一致すると、
         該当指標が「話題中」マーク付きでパルス強調されます。
+      </div>
+    </div>
+  );
+}
+
+// ★v5.19.7★ 球種構成エディタ
+function ArsenalDataEditor({ projectData, onChange }) {
+  const arsenal = projectData.layoutData?.arsenal || { mode: 'single', pitches: [] };
+  const pitches = Array.isArray(arsenal.pitches) ? arsenal.pitches : [];
+
+  const update = (newArsenal) => {
+    onChange({
+      ...projectData,
+      layoutData: { ...(projectData.layoutData || {}), arsenal: newArsenal },
+    });
+  };
+  const updatePitch = (i, field, val) => {
+    const next = pitches.map((p, idx) => idx === i ? { ...p, [field]: val } : p);
+    update({ ...arsenal, pitches: next });
+  };
+  const addPitch = () => {
+    update({ ...arsenal, pitches: [...pitches, { name: '球種', pct: 10, avg: 0.250, velocity: 140, color: '#a3a3a3' }] });
+  };
+  const removePitch = (i) => {
+    update({ ...arsenal, pitches: pitches.filter((_, idx) => idx !== i) });
+  };
+
+  return (
+    <div className="bg-white p-3 rounded-lg border border-zinc-200">
+      <div className="font-bold text-sm text-zinc-700 mb-2">⚾ 球種構成エディタ</div>
+      <div className="space-y-1.5">
+        {pitches.map((p, i) => (
+          <div key={i} className="grid grid-cols-[1fr_60px_60px_60px_24px_24px] gap-1 items-center">
+            <input value={p.name || ''} onChange={(e) => updatePitch(i, 'name', e.target.value)}
+                   placeholder="球種" className="text-[11px] px-1.5 py-1 border rounded" />
+            <input type="number" value={p.pct ?? ''} onChange={(e) => updatePitch(i, 'pct', parseFloat(e.target.value) || 0)}
+                   placeholder="%" className="text-[11px] px-1.5 py-1 border rounded text-right" />
+            <input type="number" step="0.001" value={p.avg ?? ''} onChange={(e) => updatePitch(i, 'avg', parseFloat(e.target.value) || 0)}
+                   placeholder="被打率" className="text-[11px] px-1.5 py-1 border rounded text-right" />
+            <input type="number" value={p.velocity ?? ''} onChange={(e) => updatePitch(i, 'velocity', parseFloat(e.target.value) || 0)}
+                   placeholder="km/h" className="text-[11px] px-1.5 py-1 border rounded text-right" />
+            <input type="color" value={p.color || '#a3a3a3'} onChange={(e) => updatePitch(i, 'color', e.target.value)}
+                   className="w-6 h-6 border rounded cursor-pointer" />
+            <button onClick={() => removePitch(i)} className="text-red-500 hover:bg-red-50 rounded text-[14px]">×</button>
+          </div>
+        ))}
+      </div>
+      <button onClick={addPitch} className="mt-2 w-full text-[11px] py-1.5 bg-indigo-50 text-indigo-700 rounded font-bold hover:bg-indigo-100">
+        + 球種を追加
+      </button>
+      <div className="text-[9px] text-zinc-500 mt-1.5">
+        左から: 球種名 / 割合% / 被打率 / 球速 / カラー
+      </div>
+    </div>
+  );
+}
+
+// ★v5.19.7★ ヒートマップエディタ (3x3 グリッド)
+function HeatmapDataEditor({ projectData, onChange }) {
+  const heatmap = projectData.layoutData?.heatmap || { mode: 'single', zones: Array(9).fill(0.250) };
+  const mode = heatmap.mode || 'single';
+
+  const update = (newHm) => {
+    onChange({
+      ...projectData,
+      layoutData: { ...(projectData.layoutData || {}), heatmap: newHm },
+    });
+  };
+  const updateZone = (key, i, val) => {
+    const arr = Array.isArray(heatmap[key]) ? [...heatmap[key]] : Array(9).fill(0.250);
+    arr[i] = val;
+    update({ ...heatmap, [key]: arr });
+  };
+
+  const renderGrid = (key, label) => {
+    const arr = Array.isArray(heatmap[key]) ? heatmap[key] : Array(9).fill(0.250);
+    return (
+      <div>
+        <div className="text-[10px] font-bold text-zinc-600 mb-1">{label}</div>
+        <div className="grid grid-cols-3 gap-1">
+          {arr.slice(0, 9).map((v, i) => (
+            <input
+              key={i}
+              type="number"
+              step="0.001"
+              value={v ?? ''}
+              onChange={(e) => updateZone(key, i, parseFloat(e.target.value) || 0)}
+              className="text-[11px] px-1 py-1.5 border rounded text-center font-mono"
+              placeholder="-"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-white p-3 rounded-lg border border-zinc-200">
+      <div className="font-bold text-sm text-zinc-700 mb-2">🎯 ゾーン別打率エディタ (左上→右下、上→中→下)</div>
+      <div className="flex gap-1 mb-2">
+        {[
+          { id: 'single', label: '単一' },
+          { id: 'vs_handedness', label: '対右/対左' },
+        ].map(m => (
+          <button
+            key={m.id}
+            onClick={() => update({ ...heatmap, mode: m.id })}
+            className={`flex-1 text-[10px] py-1 rounded border ${
+              mode === m.id ? 'bg-indigo-50 border-indigo-400 text-indigo-700' : 'bg-white border-zinc-200 text-zinc-600'
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+      {mode === 'single' && renderGrid('zones', 'ゾーン別打率 (9エリア)')}
+      {mode === 'vs_handedness' && (
+        <div className="space-y-2">
+          {renderGrid('vsRight', '対右投手')}
+          {renderGrid('vsLeft', '対左投手')}
+        </div>
+      )}
+      <div className="text-[9px] text-zinc-500 mt-1.5">
+        各セルに打率を入力 (例: 0.305)。3x3 グリッドは投手目線で「内角・真ん中・外角」x「高め・真ん中・低め」。
+      </div>
+    </div>
+  );
+}
+
+// ★v5.19.7★ id:1 フック 4指標 カスタマイズ
+function HookStatsEditor({ projectData, onChange }) {
+  const stats = projectData?.mainPlayer?.stats || {};
+  const playerType = projectData?.playerType;
+
+  // 利用可能な指標キー (mainPlayer.stats のキー)
+  const availableKeys = Object.keys(stats);
+
+  // 既定値
+  const defaults = playerType === 'pitcher'
+    ? [{ key:'era', label:'防御率' }, { key:'whip', label:'WHIP' }, { key:'so', label:'奪三振' }, { key:'win', label:'勝利' }]
+    : playerType === 'team'
+    ? [{ key:'rank', label:'順位' }, { key:'winRate', label:'勝率' }, { key:'runs', label:'得点' }, { key:'runsAllowed', label:'失点' }]
+    : [{ key:'avg', label:'打率' }, { key:'ops', label:'OPS' }, { key:'hr', label:'本塁打' }, { key:'rbi', label:'打点' }];
+
+  const cells = Array.isArray(projectData.hookStats) && projectData.hookStats.length > 0
+    ? projectData.hookStats : defaults;
+
+  const update = (newCells) => {
+    onChange({ ...projectData, hookStats: newCells });
+  };
+  const updateCell = (i, field, val) => {
+    const next = cells.map((c, idx) => idx === i ? { ...c, [field]: val } : c);
+    update(next);
+  };
+
+  return (
+    <div className="bg-white p-3 rounded-lg border border-zinc-200">
+      <div className="font-bold text-sm text-zinc-700 mb-2">📊 フック (id:1) の 4 指標</div>
+      <div className="space-y-1.5">
+        {[0,1,2,3].map(i => {
+          const cell = cells[i] || { key: '', label: '' };
+          const previewVal = stats[cell.key];
+          return (
+            <div key={i} className="grid grid-cols-[1fr_1fr_70px] gap-1 items-center">
+              <select
+                value={cell.key || ''}
+                onChange={(e) => updateCell(i, 'key', e.target.value)}
+                className="text-[11px] px-1.5 py-1 border rounded"
+              >
+                <option value="">(未指定)</option>
+                {availableKeys.map(k => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+              </select>
+              <input
+                value={cell.label || ''}
+                onChange={(e) => updateCell(i, 'label', e.target.value)}
+                placeholder="表示名"
+                className="text-[11px] px-1.5 py-1 border rounded"
+              />
+              <div className="text-[10px] text-zinc-500 font-mono text-center">
+                {previewVal !== undefined ? `→ ${previewVal}` : '-'}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        onClick={() => update(defaults)}
+        className="mt-2 w-full text-[10px] py-1 bg-zinc-100 text-zinc-600 rounded font-bold hover:bg-zinc-200"
+      >
+        デフォルトに戻す
+      </button>
+      <div className="text-[9px] text-zinc-500 mt-1.5">
+        フックの 4 指標を変更可能。データキー (左) は mainPlayer.stats から選択、表示名 (中) は自由テキスト。
       </div>
     </div>
   );

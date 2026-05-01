@@ -35,7 +35,7 @@
 
 **出力**: schemaVersion 5.0.0 の JSON のみ
 - 説明文・前置き・後書き **全て禁止**
-- ```json などのコードフェンスも禁止 (生のJSONのみ)
+- 「\`\`\`json」 などのコードフェンスも禁止 (生のJSONのみ)
 - 推測禁止、データ取得は web検索で最新確認
 
 ---
@@ -66,27 +66,303 @@
   ※ playerType="team" の場合: mainPlayer.name = "巨人" / "セ・リーグ" 等のチーム/カテゴリ名
   radarStats: { isop, isod, bb_k, rc27, ab_hr } 各 {main:0-100, sub:0-100, label:"日本語"},
   layoutData: <使うレイアウト分すべて格納>,
-  comparisons: [5項目必須] 各 {id, label, kana, desc, formula, criteria, radarMatch, valMain, valSub, unit, winner:"main|sub"},
+  comparisons: [5項目必須] 各 {id, label, kana, desc, formula, criteria, radarMatch, unit, valMain, valSub, winner:"main|sub", variants?:[...]},
+    ★v5.19.6新 variants★: 同じ指標で複数スコープを持たせたい時 (対左/対右/通季/vs他選手) に使う。
+       variants:[
+         {id:"overall",  label:"通季",     valMain:".305", valSub:".278", mainLabel:"今季", subLabel:"昨季", winner:"main"},
+         {id:"vs_left",  label:"対左投手", valMain:".201", valSub:".245", mainLabel:"今季", subLabel:"昨季", winner:"sub"},
+         {id:"vs_right", label:"対右投手", valMain:".342", valSub:".289", mainLabel:"今季", subLabel:"昨季", winner:"main"}
+       ]
+       台本で script.highlightScope: "vs_left" のように variant.id を指定すると該当 variant が表示される。
+       単一比較しかしない指標は variants なしで valMain/valSub 直書きで OK (後方互換)。
   scripts: [28-30個、id 1から連番],   ★structure-playbook.md 参照★
-  smartLoop: true   ★v5.18新★ 末尾→冒頭シームレスループ。デフォルトtrueでOK (アウトロCTAは表示されないので outroCta も不要)
+  smartLoop: true   ★v5.18新★ 末尾→冒頭シームレスループ。デフォルトtrueでOK
+  hookStats?: [{key, label}, ...]   ★v5.19.7新★ id:1 (フック) の 4 指標カスタマイズ。省略時は playerType 別デフォルト (打者: avg/ops/hr/rbi、投手: era/whip/so/win、チーム: rank/winRate/runs/runsAllowed)
+  aspectRatio: "9:16"|"16:9"|"1:1"   ★v5.19.7新★ 縦長/横長/正方の出力比率
 }
 </schema_top_level>
 
+<numeric_format_rules>
+★v5.19.8★ 数値整形ルール — JSON 出力で必ず守る:
+- 0 (整数) → "0" のまま (本塁打0、勝利0、防御率0.00 は意味のある値、データなしではない)
+- null / undefined / 空文字 → "-" (本当にデータが無い場合のみ。可能なら省略)
+- 0始まりの小数 (打率/防御率/OPS等 1未満) → 先頭の0を除去
+   例: 打率 0.305 → ".305"、出塁率 0.382 → ".382"、防御率 0.85 → ".85"
+- 整数 (本塁打/勝利/打席数等) → そのまま整数
+   例: 本塁打 18、勝利 12、打席 245
+- 1以上の小数 (OPS 1.013 や ERA 4.50 など) → 数値そのまま
+   例: 1.013、4.50
+
+**全数値は JSON 上では文字列で出力**: "valMain": ".305" / "value": "1.013" / "hr": 18
+</numeric_format_rules>
+
 <schema_layoutData>
 使う layoutType の分だけ必ず入れる。空はNG。**詳細は layout-direction.md 参照**。
+以下は 8 レイアウト全ての**完全テンプレート + 入力ガイド**。AI 出力時はこの構造をそのまま埋める。
 
-主要レイアウト:
-- radar_compare:    layoutData: { radar: { stats:[{label, main, sub}] } }
-- timeline:         layoutData: { timeline: { unit, metric, points:[{label, value, isPeak?, isBottom?, highlight?}] } }
-- ranking:          layoutData: { ranking: { mood?:"best"|"worst"|"neutral", showCutoff?, metrics:[{id, label, kana?, unit?, entries:[{rank, name, value, sub?, team?, isMainPlayer?, isTeam?}]}] } }
-  ★team★ (★v5.18.4新★): 球団略称 "G/D/T/S/E/F/B/H/M/L" 等。**球団横断ランキング** で必須。自軍動画 (G が並ぶだけ) では省略推奨
-- versus_card:      layoutData: { versus: { mood?, categoryScores:[{label, kana, rawMain, rawSub, lowerBetter?}] } }
-- player_spotlight: layoutData: { spotlight: { mode?, showPlayerName?, players:[{id, label, primaryStat:{label,value,compareValue?}, stats:[{label,value}], comment, quote?, quoteSource?, quotes?}] } }
-  ★mode 4種★: "default"(標準=主指標+サブ) / "single_metric"(1指標を超巨大、衝撃データ向け) / "stats_grid"(基本成績網羅) / "quote"(発言ピック=quote/quoteSource または quotes[]使用、人間性エピソード向け)
-  ★quotes[] (★v5.18.13新★)★: 1人 player に対する複数発言を配列で保持 [{text, source}, ...]。台本の script.focusQuoteIndex でシーンごとに切替。1動画内で同じ選手の別発言を 2-3 回ピックする時に使用。旧 quote/quoteSource (単数) も後方互換で利用可。
-- pitch_arsenal:    layoutData: { arsenal: { mode, pitches:[...], comparePitches?, vsBatter? } }
-- team_context:     layoutData: { context: { mode, lineup?, rotation?, comparison? } }
-- batter_heatmap:   layoutData: { heatmap: { mode, zones?, vsRight?, vsLeft? } }
+────────────────────────────────────────
+### 1. radar_compare (レーダー比較)
+役割: 「全体像」 — 5 軸でmain/subを比較
+
+```json
+"layoutData": {
+  "radar": {
+    "stats": [
+      { "label": "長打力", "main": 75, "sub": 60 },
+      { "label": "選球眼", "main": 65, "sub": 55 },
+      { "label": "三振率", "main": 70, "sub": 50 },
+      { "label": "得点創出", "main": 80, "sub": 65 },
+      { "label": "本塁打率", "main": 72, "sub": 58 }
+    ]
+  }
+}
+```
+入力ガイド:
+- stats: **必ず 5 軸**。label は radarStats 5 軸のラベルと揃える
+- main / sub: **0-100 の偏差値** (リーグ中央が50、優秀=70+、突出=85+)
+- ※ トップレベル radarStats と内容を揃えること (radarStats が偏差値の元データ、layoutData.radar はチャート用)
+
+────────────────────────────────────────
+### 2. timeline (時系列)
+役割: 「変化」 — 月別/週別/日別/年別の推移
+
+```json
+"layoutData": {
+  "timeline": {
+    "unit": "month",
+    "metric": "OPS",
+    "points": [
+      { "label": "4月", "main": ".724", "sub": ".598" },
+      { "label": "5月", "main": ".810", "sub": ".621", "isPeak": true, "highlight": true },
+      { "label": "6月", "main": ".945", "sub": ".688" },
+      { "label": "7月", "main": ".678", "sub": ".605", "isBottom": true }
+    ]
+  }
+}
+```
+入力ガイド:
+- unit: "day"|"week"|"month"|"year"。シーズン直近の動画なら "day"、年間推移なら "month"
+- metric: 表示指標名 ("OPS"/"打率"/"防御率" 等)
+- points: 最低 2 点、推奨 3-7 点
+- main: 主役の値 (★文字列で出力★ → 0始まり小数は ".724")
+- sub: 比較線の値 (任意)。リーグ平均・前年・ライバル選手等
+- isPeak: 動画のピーク (急上昇)、isBottom: 谷、highlight: 注目点 (アニメ強調)
+
+────────────────────────────────────────
+### 3. ranking (ランキング)
+役割: 「衝撃」 — 順位で位置づけを示す
+
+```json
+"layoutData": {
+  "ranking": {
+    "mood": "best",
+    "showCutoff": false,
+    "metrics": [
+      {
+        "id": "ops",
+        "label": "OPS",
+        "kana": "オーピーエス",
+        "unit": "",
+        "entries": [
+          { "rank": 1, "name": "岡本和真", "team": "G", "value": "1.013", "isMainPlayer": true },
+          { "rank": 2, "name": "村上宗隆", "team": "S", "value": ".945" },
+          { "rank": 3, "name": "牧秀悟",   "team": "DB", "value": ".928" },
+          { "rank": 4, "name": "佐野恵太", "team": "DB", "value": ".895" },
+          { "rank": 5, "name": "大山悠輔", "team": "T", "value": ".878" }
+        ]
+      },
+      {
+        "id": "hr",
+        "label": "本塁打",
+        "kana": "ほんるいだ",
+        "unit": "本",
+        "entries": [
+          { "rank": 1, "name": "岡本和真", "team": "G", "value": 18, "isMainPlayer": true },
+          /* 5-10 人 */
+        ]
+      }
+    ]
+  }
+}
+```
+入力ガイド:
+- mood: "best" (ポジティブ/上位)、"worst" (ネガティブ/下位)、"neutral" (中立)。色味/強調が変わる
+- showCutoff: 圏外マーカー表示 (デフォルト false)
+- metrics: 動画中で切替えたい指標分だけ。各 id は一意、台本 script.focusMetric で参照
+- kana: TTS用 (アルファベット指標は必須)
+- entries: **5-10 人**。rank 1 から連番、value は文字列推奨
+- team: 球団略称 (G/T/D/S/B/E/L/F/H/M)。**球団横断ランキングなら必須**、自軍 (G) 動画では省略可
+- isMainPlayer: 主役選手にマーク (オレンジ強調)、isTeam: チーム動画 (球団全体強調)
+
+────────────────────────────────────────
+### 4. versus_card (対決カード)
+役割: 「対決感」 — 主役 vs 比較対象を1指標ずつ並べて勝敗
+
+```json
+"layoutData": {
+  "versus": {
+    "mood": "neutral",
+    "categoryScores": [
+      { "label": "打率",     "rawMain": ".305", "rawSub": ".278" },
+      { "label": "本塁打",   "rawMain": 18,    "rawSub": 12, "lowerBetter": false },
+      { "label": "OPS",      "rawMain": ".945", "rawSub": ".812" },
+      { "label": "三振率",   "rawMain": ".180", "rawSub": ".220", "lowerBetter": true },
+      { "label": "出塁率",   "rawMain": ".385", "rawSub": ".345" }
+    ]
+  }
+}
+```
+入力ガイド:
+- categoryScores: **5-7 項目** が見やすい
+- rawMain / rawSub: 表示する数値 (★文字列で出力★)
+- lowerBetter: 三振率/防御率/失点等の「低い方が良い」指標で true。指定なし=高い方勝ち
+- 勝敗マークはアプリで自動判定 (◀ ▶ ＝)
+- ※ kana は v5.15.5 で表示廃止、出力不要
+
+────────────────────────────────────────
+### 5. player_spotlight (選手スポット)
+役割: 「主役感」 — 1選手を画面いっぱいに
+
+```json
+"layoutData": {
+  "spotlight": {
+    "mode": "default",
+    "showPlayerName": true,
+    "players": [
+      {
+        "id": "okamoto",
+        "name": "岡本和真",
+        "team": "G",
+        "label": "26年(今季)",
+        "primaryStat": {
+          "label": "OPS",
+          "value": ".945",
+          "compareValue": { "label": "リーグ平均", "value": ".712" }
+        },
+        "stats": [
+          { "label": "打率",   "value": ".305" },
+          { "label": "本塁打", "value": 18 },
+          { "label": "打点",   "value": 52 },
+          { "label": "出塁率", "value": ".385" }
+        ],
+        "comment": "覚醒の3割打者",
+        "quotes": [
+          { "text": "もっと長打を打ちたい", "source": "2026/4 取材" },
+          { "text": "守備位置はどこでも", "source": "2026/3 春季練習" },
+          { "text": "監督の信頼に応えたい", "source": "2026/4 ヒーローインタビュー" }
+        ]
+      },
+      {
+        "id": "sano",
+        "name": "佐野恵太",
+        "team": "DB",
+        "primaryStat": { "label": "OPS", "value": ".895" },
+        "stats": [ /* 同じ構造 */ ],
+        "quotes": [ /* 2-4個 */ ]
+      }
+      /* 主役+対比1-3人 = 計 3-5 人 */
+    ]
+  }
+}
+```
+入力ガイド:
+- mode (4種): "default" (主指標+サブ) / "single_metric" (1指標超巨大) / "stats_grid" (基本成績網羅) / "quote" (発言ピック)
+- players: **3-5 人**。id は一意 (台本 focusEntry で指定)
+- primaryStat: そのシーンの主役指標 1 個
+- compareValue: 比較対象 (リーグ平均・前年・ライバル等)
+- stats: サブ指標 4-6 個
+- quotes: **2-4 個** (台本 focusQuoteIndex で切替)
+- 旧 quote/quoteSource (単数) も後方互換だが新規データは quotes[] 配列推奨
+
+────────────────────────────────────────
+### 6. team_context (チーム文脈)
+役割: 「チームの表情」 — チーム全体・打順・先発ローテ・セ平均比較
+
+```json
+"layoutData": {
+  "context": {
+    "mode": "single",
+    "lineup": [
+      { "order": 1, "name": "丸佳浩", "pos": "中", "ops": ".812" },
+      { "order": 2, "name": "吉川尚輝", "pos": "二", "ops": ".745" },
+      { "order": 3, "name": "岡本和真", "pos": "一", "ops": "1.013" }
+      /* 1-9番 */
+    ],
+    "rotation": [
+      { "name": "戸郷翔征", "era": "2.45", "win": 8, "ip": "85.0" },
+      { "name": "山崎伊織", "era": "3.10", "win": 6, "ip": "72.0" }
+      /* 5-6人 */
+    ],
+    "comparison": {
+      "team": "巨人",
+      "league": "セ平均",
+      "metrics": [
+        { "label": "得点",   "team": 412, "league": 320 },
+        { "label": "失点",   "team": 305, "league": 350, "lowerBetter": true },
+        { "label": "OPS",    "team": ".752", "league": ".698" }
+      ]
+    }
+  }
+}
+```
+入力ガイド:
+- mode: "single" (チームビュー) / "compare" (セ平均比較)
+- lineup: 打順 1-9 番。pos は守備位置 (一/二/三/遊/捕/中/左/右/指)
+- rotation: 先発ローテ 5-6 人
+- comparison: セ平均との対比指標。lowerBetter は失点/被OPS等
+
+────────────────────────────────────────
+### 7. pitch_arsenal (球種パレット)
+役割: 「投手の手の内」 — 球種ごとの被打率・球速・比率
+
+```json
+"layoutData": {
+  "arsenal": {
+    "mode": "single",
+    "pitches": [
+      { "name": "ストレート", "pct": 48, "avg": ".205", "velocity": 152, "color": "#ef4444" },
+      { "name": "スプリット", "pct": 22, "avg": ".150", "velocity": 138, "color": "#3b82f6" },
+      { "name": "スライダー", "pct": 18, "avg": ".180", "velocity": 132, "color": "#10b981" },
+      { "name": "カーブ",     "pct": 8,  "avg": ".250", "velocity": 118, "color": "#f59e0b" },
+      { "name": "チェンジアップ", "pct": 4, "avg": ".200", "velocity": 128, "color": "#8b5cf6" }
+    ]
+  }
+}
+```
+入力ガイド (★投手専用★):
+- mode: "single" (1投手) / "compare" (今季vs昨季の球種変化) / "vs_batter" (対打者別)
+- pitches: **4-6 種類**。pct は割合% (合計100%)
+- avg: 被打率 (★0始まり小数は ".205" 表記★)
+- velocity: 球速 km/h (整数)
+- color: 16進カラー、視認性確保のため明度差つける
+
+────────────────────────────────────────
+### 8. batter_heatmap (打者ゾーン打率)
+役割: 「打者の癖」 — 9 ゾーンの打率を熱地図で
+
+```json
+"layoutData": {
+  "heatmap": {
+    "mode": "vs_handedness",
+    "vsRight": [".180", ".240", ".290",   ".220", ".310", ".340",   ".150", ".220", ".260"],
+    "vsLeft":  [".200", ".260", ".280",   ".210", ".280", ".320",   ".170", ".230", ".240"]
+  }
+}
+```
+mode: "single" の場合:
+```json
+"layoutData": {
+  "heatmap": {
+    "mode": "single",
+    "zones": [".180", ".240", ".290",   ".220", ".310", ".340",   ".150", ".220", ".260"]
+  }
+}
+```
+入力ガイド (★打者専用★):
+- mode: "single" (単一ヒート) / "vs_handedness" (対右投手 vs 対左投手)
+- zones / vsRight / vsLeft: **必ず 9 値の配列**
+- 順序: 上段3 (内角・真中・外角) → 中段3 → 下段3 (投手目線)
+- 値は打率 (★0始まり小数は ".305" 表記★)
 </schema_layoutData>
 
 <schema_script>
@@ -115,6 +391,66 @@
   - "shake": ネガティブ驚き (「実は防御率11.20」)
   - "zoomShake": オチ直前の最大盛り上げ (「覚醒の理由は…」)
 ★id:1 (hook) は zoomBoost 指定不要★ — 自動で冒頭フラッシュ + 太鼓SEが入る
+
+### scripts 配列の完全な実例 (1動画 28-30 シーン)
+
+```json
+"scripts": [
+  /* ===== id:1 動画タイトル (フック、isCatchy: true) ===== */
+  {
+    "id": 1,
+    "speaker": "A",
+    "emoji": "👨‍🏫",
+    "text": "岡本和真\n【.305】\n覚醒の理由",
+    "speech": "おかもとかずまの打率さんわりごぶ。覚醒の理由を解説します。",
+    "isCatchy": true,
+    "layoutType": "radar_compare",
+    "textSize": "xl"
+  },
+
+  /* ===== id:2-3 状況設定 (A→B 呼び合いで開始) ===== */
+  { "id": 2, "speaker": "A", "emoji": "👨‍🏫", "text": "もえかちゃん\n岡本選手\n知ってる?", "speech": "もえかちゃん、岡本選手知ってる?", "textSize": "m" },
+  { "id": 3, "speaker": "B", "emoji": "🤔", "text": "巨人の\n4番ですよね", "speech": "巨人の四番ですよね。", "textSize": "m" },
+
+  /* ===== id:4-8 第1ハイライト: 打率 (variants で対左/対右切替) ===== */
+  { "id": 4, "speaker": "A", "emoji": "👨‍🏫", "text": "今季の打率は\n【.305】", "speech": "今季の打率はさんわりごぶ。", "highlight": "avg", "highlightScope": "overall", "scenePreset": "cinematic_zoom", "textSize": "l", "zoomBoost": "zoom", "se": "stat_reveal" },
+  { "id": 5, "speaker": "B", "emoji": "😲", "text": "凄い数字です\nね!", "speech": "すごい数字ですね!", "textSize": "m" },
+  { "id": 6, "speaker": "A", "emoji": "👨‍🏫", "text": "ですが対左だと\n【.201】", "speech": "ですが対左だとにわりいちぶ。", "highlight": "avg", "highlightScope": "vs_left", "scenePreset": "mono_drama", "textSize": "l", "se": "shock_hit" },
+  { "id": 7, "speaker": "B", "emoji": "🤯", "text": "1割も\n落ちてる…", "speech": "いちわりもおちてる…", "textSize": "m" },
+  { "id": 8, "speaker": "A", "emoji": "👨‍🏫", "text": "対右だと\n【.342】の\n打ち分け", "speech": "対右だとさんわりよんぶの打ち分け。", "highlight": "avg", "highlightScope": "vs_right", "scenePreset": "default", "textSize": "m" },
+
+  /* ===== id:9-13 第2ハイライト: スポットライト (focusEntry + spotlightMode) ===== */
+  { "id": 9, "speaker": "A", "emoji": "👨‍🏫", "text": "選手詳細\n見てみよう", "speech": "選手詳細を見てみよう。", "layoutType": "player_spotlight", "focusEntry": "okamoto", "spotlightMode": "stats_grid", "textSize": "m", "se": "transition_swoosh" },
+  { "id": 10, "speaker": "B", "emoji": "🧐", "text": "OPS .945は\n突出して\nますね", "speech": "オーピーエスきゅーよんごは突出してますね。", "spotlightMode": "single_metric", "scenePreset": "neon_burst", "textSize": "m" },
+  { "id": 11, "speaker": "A", "emoji": "👨‍🏫", "text": "本人は\nこう語る", "speech": "本人はこう語る。", "spotlightMode": "quote", "focusQuoteIndex": 0, "textSize": "m" },
+  { "id": 12, "speaker": "A", "emoji": "👨‍🏫", "text": "そして\n別の取材では", "speech": "そして別の取材では。", "spotlightMode": "quote", "focusQuoteIndex": 1, "textSize": "m" },
+  { "id": 13, "speaker": "B", "emoji": "🥹", "text": "謙虚な姿勢が\n素敵です", "speech": "けんきょなしせいがすてきです。", "textSize": "m" },
+
+  /* ===== id:14-19 第3ハイライト: ランキング (focusMetric で metric 切替) ===== */
+  { "id": 14, "speaker": "A", "emoji": "👨‍🏫", "text": "セ・リーグ\n打率\nランキング", "speech": "セ・リーグの打率ランキング。", "layoutType": "ranking", "focusMetric": "avg", "scenePreset": "default", "textSize": "m", "se": "transition_swoosh" },
+  { "id": 15, "speaker": "B", "emoji": "😲", "text": "岡本が\n1位なんですか", "speech": "おかもとがいちいなんですか。", "textSize": "m" },
+  { "id": 16, "speaker": "A", "emoji": "👨‍🏫", "text": "本塁打でも\n見てみよう", "speech": "本塁打でも見てみよう。", "focusMetric": "hr", "textSize": "m" },
+  { "id": 17, "speaker": "B", "emoji": "🤩", "text": "ここでも\n1位!", "speech": "ここでもいちい!", "textSize": "m", "zoomBoost": "zoom" },
+  { "id": 18, "speaker": "A", "emoji": "👨‍🏫", "text": "OPSは\n圧倒的", "speech": "オーピーエスはあっとうてき。", "focusMetric": "ops", "scenePreset": "breaking_news", "textSize": "m" },
+  { "id": 19, "speaker": "B", "emoji": "🤯", "text": "覚醒\nしてますね…", "speech": "かくせいしてますね…", "textSize": "m" },
+
+  /* ===== id:20-25 ストーリーアーク後半: なぜ覚醒したか (versus_card や timeline) ===== */
+  /* ... 同様に */
+
+  /* ===== id:26-30 締め (二択で問いかけ) ===== */
+  { "id": 28, "speaker": "A", "emoji": "👨‍🏫", "text": "皆さんは\nどう思う?", "speech": "みなさんはどうおもう?", "scenePreset": "blackboard", "textSize": "m" },
+  { "id": 29, "speaker": "B", "emoji": "🤔", "text": "コメントで\n教えて\nください", "speech": "コメントでおしえてください。", "textSize": "m" },
+  { "id": 30, "speaker": "A", "emoji": "👨‍🏫", "text": "次回も\nお楽しみに", "speech": "じかいもおたのしみに。", "textSize": "m" }
+]
+```
+
+★この実例で示している重要な使い分け★:
+- **同じ comparisons.id で variants 切替** (id:4 overall → id:6 vs_left → id:8 vs_right) — 「打率3割」と「対左で2割」の混乱解消
+- **scenePreset を 4 種類使い分け** (cinematic_zoom / mono_drama / neon_burst / breaking_news / blackboard / default)
+- **spotlightMode を 3 シーンで切替** (stats_grid → single_metric → quote)
+- **focusQuoteIndex で同選手の発言を 2 個切替** (id:11 → id:12)
+- **focusMetric で ranking の metric を 3 個切替** (avg → hr → ops)
+- **zoomBoost は 2-3 箇所のみ** (id:4 zoom, id:17 zoom)
 </schema_script>
 
 ---
@@ -129,6 +465,10 @@
 6. **layout-direction.md** の選んだ layoutType の方向性に従っているか?
 7. **yomigana-dictionary.csv** で speech の読み仮名を確認したか? (選手名・指標名)
 8. **JSON のみ** 出力したか? (説明文・前置き・後書き禁止)
+9. ★v5.19.6★ **同じ指標で複数視点 (対左/対右、今季/昨季) が話に出る時、`comparisons[].variants[]` で variant を用意し、台本で `highlightScope` で切替えているか?** (打率3割と言いながら対左で2割の数字が出るような混乱を防ぐ)
+10. ★v5.19.6★ scenePreset を 3-5 種類使い分けて、紙芝居感を消しているか? (1動画通して default だけは NG)
+11. ★v5.19.8★ **数値表記**: 0 が `"-"` になっていないか (本塁打0/勝利0は `"0"` または `0`)、0始まり小数が `"0.305"` でなく `".305"` になっているか?
+12. ★v5.19.7★ 出力に `aspectRatio` `hookStats` `hookMediaPattern` `hookMediaDurationMs` `theme` `silhouetteType` `audio` `smartLoop` `defaultScenePreset` を**含めていないか**? (UI設定保持)
 
 ★ 1つでも NO なら出力前に修正。
 

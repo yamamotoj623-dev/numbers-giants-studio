@@ -56,6 +56,84 @@ const CSS_TEXT = `
 
   .phone { width: 360px; max-width: 92vw; aspect-ratio: 9/16; background: #0a0a0c; border-radius: 32px; border: 6px solid #18181b; box-shadow: 0 15px 40px rgba(0,0,0,0.18); overflow: hidden; position: relative; transition: border-radius 0.3s, border 0.3s; }
   .phone.square { border-radius: 0; border: 1px solid #e4e4e7; }
+  /* ★v5.19.7★ 横長 (16:9) 対応 — YouTube 通常動画向け */
+  .phone.landscape { width: 640px; max-width: 95vw; aspect-ratio: 16/9; }
+
+  /* ★v5.19.8★ 横長レイアウトでの要素再配置
+     縦長前提だと中央のチャートが画面の半分しか使えず、両端が空きすぎる。
+     横長では「左サイド: 選手情報 / 右サイド: チャート/データ」の 2 カラム配置を基本に。 */
+
+  /* ヘッダー (選手名 + 番号) は左上に */
+  .phone.landscape .phase-b-header,
+  .phone.landscape .phase-c-header {
+    top: 18px; left: 18px; right: auto; justify-content: flex-start;
+  }
+  /* 日付は右上 */
+  .phone.landscape .ph-date { top: 18px; right: 18px; font-size: 11px; }
+  /* ロゴは左下に維持 */
+  .phone.landscape .brand-logo-fixed { left: 12px; bottom: 12px; }
+
+  /* テロップを画面中央下に、横幅広めに */
+  .phone.landscape .telop-wrap-normal,
+  .phone.landscape .telop-wrap-hl {
+    bottom: 8%;
+    left: 0; right: 0;
+    align-items: center !important;
+    padding: 0 14px !important;
+  }
+  .phone.landscape .telop-wrap-outro {
+    bottom: 10%;
+  }
+
+  /* ★アバターを画面右下隅に小さく配置★ (縦長は左下/右下 大きく) */
+  .phone.landscape .avatar-wrapper {
+    bottom: 8% !important;
+    transform: scale(0.75) !important;
+    transform-origin: bottom right !important;
+  }
+  .phone.landscape .avatar-wrapper.left {
+    left: auto !important; right: auto !important;
+    bottom: 26% !important;
+    left: 2% !important;
+    transform-origin: bottom left !important;
+  }
+  .phone.landscape .avatar-wrapper.right {
+    right: 2% !important;
+    bottom: 26% !important;
+  }
+
+  /* ハイライトカードは中央配置 (縦長と同じだが横長でも収まるように max-width 縛りを緩める) */
+  .phone.landscape .highlight-card {
+    max-width: 480px; width: 78%;
+  }
+
+  /* レーダーアウター: 縦長は radar 上下左右に配置だったが、横長では左半分のみで描画 */
+  .phone.landscape .radar-outer {
+    top: 50px; bottom: 12%; left: 4%; right: 50%; padding: 0 8px;
+  }
+  /* radar の隣 (右半分) にスペース確保 (将来コンテンツ用) */
+  /* レーダー以外のレイアウトは inset: 0 で全幅使う */
+
+  /* hook (id:1) は中央寄せ */
+  .phone.landscape .hook-telop-wrap {
+    top: 38%;
+    padding: 0 8%;
+  }
+  .phone.landscape .hook-stats-big {
+    top: 64%;
+    left: 8%; right: 8%;
+  }
+  .phone.landscape .hook-silhouette {
+    top: 22%; width: 220px; height: 220px; opacity: 0.15;
+  }
+  .phone.landscape .hook-header {
+    top: 18px; left: 18px; right: 18px;
+  }
+
+  /* hook stats grid を 4 列横並びに (元々 2x2 だが横長は 1x4 が映える) */
+  .phone.landscape .hook-stats-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
   /* 録画モード: 編集用UIを全て非表示 */
   .phone.record-mode .duration-badge { display: none; }
   .phone.record-mode .safe-zone-guide { display: none !important; }
@@ -427,6 +505,17 @@ const CSS_TEXT = `
     25% { transform: translate(-1px, -1px) scale(1.005) rotate(-0.2deg); }
     50% { transform: translate(1px, 0) scale(0.998) rotate(0.2deg); }
     75% { transform: translate(0, 1px) scale(1.005) rotate(-0.1deg); }
+  }
+  /* ★v5.19.7★ テロップ文字単位アニメ — 1文字ずつスケールイン (紙芝居脱却) */
+  @keyframes telopCharIn {
+    0% { opacity: 0; transform: translateY(8px) scale(0.5); filter: blur(2px); }
+    60% { opacity: 1; transform: translateY(-2px) scale(1.1); filter: blur(0); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .telop-char {
+    display: inline-block;
+    opacity: 0;
+    animation: telopCharIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
   /* ★ カード/パネル出現 (弾むスケール) ★ */
@@ -824,17 +913,29 @@ const CSS_TEXT = `
      - speaker-a (数原): 左端〜右端32pxまで使える
      - speaker-b (もえか): 左端14px〜右端60px (Shorts右UI回避) */
   .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 8px; padding-right: 32px; }
-  /* speaker-b (もえか): 右側のセーフゾーン確保 */
+  .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) { align-items: flex-start; padding-left: 6px; padding-right: 22px; }
+  /* speaker-b (もえか): 右側のセーフゾーン確保 (Shorts UI 用) */
   .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
-  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 8px; padding-right: 60px; }
+  .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 6px; padding-right: 50px; }
 
-  /* ★v5.18.1★ max-width を 280px に拡大 (左端使えるので幅取れる) */
-  /* ★v5.19.5★ animation は inline style で React 側から制御 (CSS 競合回避) */
+  /* ★v5.19.8★ テロップ幅をセーフゾーン目一杯に + 日本語の自動改行を制御 (変な位置で折り返さない)
+     - speaker-a 側 padding 32px → speaker-b 側 padding 60px の差分を考慮:
+       phone width 360px、左端 8px + 右側UI 60px ≒ 292px 取れる
+     - max-width: 320px に拡大 (一部 UI とは重なる、ただ視認最優先) */
   .telop-bg {
-    background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px; max-width: 280px;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); border-radius: 14px; padding: 9px 16px;
+    max-width: 320px;
     border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
   }
+  /* ★v5.19.8★ telop-normal は word-break: keep-all でブラウザの自動改行を抑制
+     (\n を入れた箇所だけで改行、不要な縦長化を防ぐ) */
+  .telop-bg .telop-normal {
+    word-break: keep-all;
+    overflow-wrap: break-word;  /* どうしても入らない時だけ break */
+    white-space: pre-line;       /* \n を改行に、連続スペースは1つに */
+  }
+  /* 横長 (16:9) ではテロップを横に長く許可 */
+  .phone.landscape .telop-bg { max-width: 540px; }
 
   /* ★v5.18.1★ speaker-a (数原): オレンジ→青系へ (オレンジは数値強調用に取っておく) */
   .telop-bg[data-speaker="a"] { border-color: rgba(56,189,248,0.85); box-shadow: 0 4px 16px rgba(56,189,248,0.4), 0 0 24px rgba(56,189,248,0.2); }

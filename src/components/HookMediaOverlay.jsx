@@ -1,102 +1,75 @@
 /**
- * HookMediaOverlay (★v5.19.0 新規★)
+ * HookMediaOverlay (★v5.19.7 完全書き直し★)
  *
  * id:1 (hook) で全画面表示するユーザーアップロード画像/動画。
- * 視聴者のスクロールを止める「1秒の衝撃」を演出。
  *
- * アニメーションパターン:
- *   - 'flash': フラッシュ → 画像 → フラッシュ → チャートに切替
- *   - 'zoom':  ズームイン → 画像 → ズームアウトで背景へ溶ける
- *   - 'slide': 左からスライドイン → 静止 → 右へスライドアウト
- *   - 'glitch': グリッチノイズ → 画像出現 → グリッチで消える
- *
- * 画像/動画は IndexedDB に保存 (seStorage と同じ要領)。
- * 表示期間は hookAnimation の自動タイミング (約0.8-1.2秒) に合わせる。
+ * 【今回の修正の核】
+ * 旧実装は phase: 'hidden' から始まって useEffect の setTimeout で 0.4s 後に visible へ。
+ * 初回マウント時の発火タイミング問題で **画像が動かないまま hook が終わる** バグだった。
+ * → phase 管理を簡素化、shown になった瞬間に entrance + sustain を**連結したアニメ1つ**で実行。
  */
 
 import React, { useEffect, useState, useRef } from 'react';
 
-const ANIM_PATTERNS = {
-  flash: {
-    enter: 'hookMediaFlashIn 0.3s ease-out forwards',
-    exit:  'hookMediaFlashOut 0.3s ease-in forwards',
-  },
-  zoom: {
-    enter: 'hookMediaZoomIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-    exit:  'hookMediaZoomOut 0.4s ease-in forwards',
-  },
-  slide: {
-    enter: 'hookMediaSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-    exit:  'hookMediaSlideOut 0.3s ease-in forwards',
-  },
-  glitch: {
-    enter: 'hookMediaGlitchIn 0.4s steps(8) forwards',
-    exit:  'hookMediaGlitchOut 0.3s steps(6) forwards',
-  },
+// 入場 (短い) + 持続 (長くループ) を カンマ連結 — 1つの animation 指定で entrance + sustain
+const COMBINED_ANIMS = {
+  flash:      'hookMediaFlashIn 0.4s ease-out both, hookMediaShakeIdle 1.4s ease-in-out 0.4s infinite',
+  zoom:       'hookMediaZoomIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both, hookMediaKenBurns 4s ease-in-out 0.5s infinite alternate',
+  slide:      'hookMediaSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, hookMediaShakeIdle 1.6s ease-in-out 0.4s infinite',
+  glitch:     'hookMediaGlitchIn 0.5s steps(8) both, hookMediaGlitchIdle 1.8s steps(8) 0.5s infinite',
+  zoom_pulse: 'hookMediaZoomIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, hookMediaZoomPulse 1.5s ease-in-out 0.4s infinite',
 };
 
-export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVisible, durationMs = 1000 }) {
-  const [phase, setPhase] = useState('hidden'); // hidden | entering | visible | exiting
-  const timerRef = useRef(null);
+const EXIT_ANIMS = {
+  flash:      'hookMediaFlashOut 0.3s ease-in forwards',
+  zoom:       'hookMediaZoomOut 0.3s ease-in forwards',
+  slide:      'hookMediaSlideOut 0.3s ease-in forwards',
+  glitch:     'hookMediaGlitchOut 0.3s steps(6) forwards',
+  zoom_pulse: 'hookMediaZoomOut 0.3s ease-in forwards',
+};
+
+export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVisible, durationMs = 'auto' }) {
+  const [showState, setShowState] = useState('hidden'); // 'hidden' | 'shown' | 'exiting'
+  const exitTimerRef = useRef(null);
+  const durationTimerRef = useRef(null);
 
   useEffect(() => {
     if (isVisible && mediaUrl) {
-      setPhase('entering');
-      // 入場アニメ後 → visible
-      timerRef.current = setTimeout(() => {
-        setPhase('visible');
-        // ★v5.19.4★ durationMs === 'auto' なら exit させない
-        // (id:1 phase が変わって isVisible が false になるまで visible 維持)
-        if (durationMs !== 'auto' && typeof durationMs === 'number') {
-          timerRef.current = setTimeout(() => {
-            setPhase('exiting');
-            timerRef.current = setTimeout(() => setPhase('hidden'), 400);
-          }, durationMs);
-        }
-      }, 400);
+      setShowState('shown');
+      console.log('[HookMedia] 表示開始:', { pattern, durationMs });
+      // 明示的な durationMs (number) なら自動 exit
+      if (typeof durationMs === 'number') {
+        durationTimerRef.current = setTimeout(() => {
+          setShowState('exiting');
+          exitTimerRef.current = setTimeout(() => setShowState('hidden'), 300);
+        }, durationMs);
+      }
     } else {
-      // ★v5.19.4★ isVisible が false になったら exit して消える
-      if (phase === 'visible' || phase === 'entering') {
-        setPhase('exiting');
-        timerRef.current = setTimeout(() => setPhase('hidden'), 400);
-      } else {
-        setPhase('hidden');
+      if (showState === 'shown') {
+        setShowState('exiting');
+        exitTimerRef.current = setTimeout(() => setShowState('hidden'), 300);
       }
     }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [isVisible, mediaUrl, durationMs]);
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      if (durationTimerRef.current) clearTimeout(durationTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, mediaUrl, durationMs, pattern]);
 
-  if (phase === 'hidden' || !mediaUrl) return null;
+  if (showState === 'hidden' || !mediaUrl) return null;
 
-  const animConfig = ANIM_PATTERNS[pattern] || ANIM_PATTERNS.flash;
-  const overlayAnimation = phase === 'entering' ? animConfig.enter
-    : phase === 'exiting' ? animConfig.exit
-    : 'none';
-
-  // ★v5.19.6★ 画像/動画は visible に達した瞬間から大胆に動く
-  // entering 中は CSS の opacity transition で表示、画像自体は visible になったら無条件アニメ
-  // 画像にはオーバーレイ(entering/exit)とは別に、独自の continuous アニメを掛ける
-  const mediaAnim = (phase === 'entering' || phase === 'visible')
-    ? ({
-        flash:      'hookMediaShakeIdle 1.4s ease-in-out infinite',
-        zoom:       'hookMediaKenBurns 4.5s ease-in-out infinite alternate',
-        slide:      'hookMediaShakeIdle 1.6s ease-in-out infinite',
-        glitch:     'hookMediaGlitchIdle 1.8s steps(8) infinite',
-        zoom_pulse: 'hookMediaZoomPulse 1.5s ease-in-out infinite',
-      }[pattern] || 'hookMediaShakeIdle 1.4s ease-in-out infinite')
-    : 'none';
+  const mediaAnim = showState === 'exiting'
+    ? (EXIT_ANIMS[pattern] || EXIT_ANIMS.flash)
+    : (COMBINED_ANIMS[pattern] || COMBINED_ANIMS.flash);
 
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden"
-      style={{ animation: overlayAnimation }}
-    >
-      {/* 背景ブラー */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+    <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
 
-      {/* メディア — ★v5.19.6★ entering と同時に sustain アニメ開始 (画像が必ず動く) */}
       {mediaType === 'video' ? (
         <video
+          key={`hookmedia-${mediaUrl}`}
           src={mediaUrl}
           autoPlay
           muted
@@ -104,36 +77,36 @@ export function HookMediaOverlay({ mediaUrl, mediaType, pattern = 'flash', isVis
           playsInline
           className="relative z-10 w-full h-full object-cover"
           style={{
-            filter: 'brightness(1.1) contrast(1.05)',
+            filter: 'brightness(1.1) contrast(1.08) saturate(1.05)',
             animation: mediaAnim,
             transformOrigin: 'center',
-            willChange: 'transform',
+            willChange: 'transform, filter, opacity',
           }}
         />
       ) : (
         <img
+          key={`hookmedia-${mediaUrl}`}
           src={mediaUrl}
           alt=""
           className="relative z-10 w-full h-full object-cover"
           style={{
-            filter: 'brightness(1.1) contrast(1.05)',
+            filter: 'brightness(1.1) contrast(1.08) saturate(1.05)',
             animation: mediaAnim,
             transformOrigin: 'center',
-            willChange: 'transform',
+            willChange: 'transform, filter, opacity',
           }}
         />
       )}
 
-      {/* オーバーレイグラデーション (下部に暗くして文字が読める) */}
       <div className="absolute inset-0 z-20 pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.7) 100%)' }}
+        style={{ background: 'linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7) 100%)' }}
       />
     </div>
   );
 }
 
 // ============================================================================
-// IndexedDB 保存 (seStorage と同じ要領)
+// IndexedDB 保存
 // ============================================================================
 const DB_NAME = 'np-hook-media-db';
 const STORE_NAME = 'media';

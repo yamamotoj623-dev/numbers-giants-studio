@@ -109,6 +109,75 @@ hook 「{13字以内}」
 - ★リサーチ時★: 各 player につき 2-4 個の quote を集める。一次ソース (公式インタビュー・ベースボールマガジン・スポーツ報知 等) 優先
 - 旧 `player.quote / player.quoteSource` (単数) も互換動作するが、新規データは `quotes[]` 配列推奨
 
+#### script.focusMetric (★v5.18.13新★)
+- ranking レイアウトで動画中に metric を切替えたい時の専用フィールド
+- `ranking.metrics[].id` を指定 → 指定 metric が画面に表示される
+- 例: シーン10で metric "ops" のランキング → シーン15で "hr" のランキング、のように1動画で 2-3 metric を見せる時に使う
+- `highlight` フィールドより優先される
+
+### ★v5.19★ 新スキーマ要素
+
+#### comparisons[].variants[] (★v5.19.6新★)
+- **同じ指標で複数スコープ (対左/対右/今季vs昨季/vs他選手) を持たせたい時**に使用
+- 構造:
+  ```json
+  {
+    "id": "avg",
+    "label": "打率",
+    "kana": "だりつ",
+    "variants": [
+      {"id":"overall",  "label":"通季",     "valMain":".305", "valSub":".278", "mainLabel":"今季", "subLabel":"昨季", "winner":"main"},
+      {"id":"vs_left",  "label":"対左投手", "valMain":".201", "valSub":".245", "mainLabel":"今季", "subLabel":"昨季", "winner":"sub"},
+      {"id":"vs_right", "label":"対右投手", "valMain":".342", "valSub":".289", "mainLabel":"今季", "subLabel":"昨季", "winner":"main"}
+    ]
+  }
+  ```
+- 台本で `script.highlightScope: "vs_left"` のように variant.id を指定すると該当 variant が表示される
+- ★単一比較しかしない指標は variants なしで valMain/valSub 直書きで OK★ (後方互換)
+- ★対左/対右が話の中で出てくる時は variants 必須★ — 「打率3割」と言いながら「対左で2割」のような混乱を防ぐ
+
+#### script.highlightScope (★v5.19.6新★)
+- `comparisons[i].variants[j].id` を指定して、同じ指標の中で表示するスコープを切替
+- 例: id:7「通算では3割打者です」→ `highlight:"avg", highlightScope:"overall"`
+       id:8「ですが対左だと…」    → `highlight:"avg", highlightScope:"vs_left"`
+
+#### script.scenePreset (★v5.19.6新★) — 紙芝居脱却の核
+- シーン全体の演出を切替。同じ動画内で 3-5 種類使い分けて紙芝居感を消す
+- 値: `"default"|"cinematic_zoom"|"neon_burst"|"mono_drama"|"pastel_pop"|"blackboard"|"breaking_news"`
+  - `cinematic_zoom`: 重要発言・印象的シーン (全体ズーム+ヴィネット)
+  - `neon_burst`: 新指標発表・サプライズ (ネオングロー+色収差)
+  - `mono_drama`: 悲報・ドラマチック (モノクロ+赤強調)
+  - `pastel_pop`: 朗報・新人紹介 (パステル+明度UP)
+  - `blackboard`: 解説・分析シーン (黒板テクスチャ)
+  - `breaking_news`: 衝撃データ・速報 (赤ボーダーフラッシュ)
+
+#### projectData.hookStats (★v5.19.7新★)
+- id:1 (フック) で表示する 4 指標をカスタマイズ
+- 構造: `[{key:"avg", label:"打率"}, {key:"ops", label:"OPS"}, ...]`
+- key は `mainPlayer.stats` のキー、label は表示名
+- 省略時は playerType 別デフォルト
+- ★テーマ別の最適 4 指標を選ぶ★ — 例: 長打型動画なら hr/ops/isop/slg、選球眼動画なら obp/bb_k/isod/avg
+
+#### projectData.aspectRatio (★v5.19.7新★)
+- `"9:16"` (Shorts/Reel、デフォルト) | `"16:9"` (YouTube 通常) | `"1:1"` (Instagram)
+- ユーザー UI 設定なので**AI 出力には含めない**
+
+### ★v5.19.8★ 数値表記ルール (★絶対遵守★)
+
+| 元の値 | JSON 出力 | 説明 |
+|---|---|---|
+| 整数 0 (本塁打0、勝利0等) | `"0"` または 数値 `0` | 0 は「データなし」ではなく「0という値」。- にしない |
+| `null` / `undefined` / 空 | `"-"` | 本当にデータが取れない場合のみ |
+| 0始まり小数 (打率/防御率/OPS 1未満) | `".305"` `"-.150"` | 先頭の0を除去 |
+| 1以上の小数 (OPS 1.013、ERA 4.50) | `"1.013"` `"4.50"` | そのまま |
+| 整数値 (本塁打18、打席245) | `18` `245` | 数値のまま (整数指標は数値型OK) |
+
+★例★:
+- ✅ `"avg": ".305"`、`"hr": 18`、`"era": ".85"`、`"win": 0`
+- ❌ `"avg": "0.305"` (先頭0除去すべき)
+- ❌ `"win": "-"` (0勝なら "0" or 0)
+- ❌ `"hr": "0"` ← 数値型推奨
+
 ## データ取得
 - 訓練データ禁止、web_search/x_search で最新+URL明記、推測禁止
 - ★X活用必須★: x_search でファン反応・記者解説・取材記事 (詳細はワークスペース指示)
@@ -132,6 +201,10 @@ hook 「{13字以内}」
 9. ★v5.18★ smartLoop: true で末尾→冒頭が違和感なく繋がる締めか?
 10. ★v5.18★ zoomBoost が 2-3 箇所以内? (乱用NG、id:1には不要)
 11. ★v5.18★ player_spotlight 使う時、テーマに合った mode 選択? (衝撃データ→single_metric / 発言→quote / 通常→default)
+12. ★v5.19.6★ 「対左/対右」など同指標で複数視点が話に出る時、`comparisons[].variants[]` で対応する scope を用意し、台本で `highlightScope` で切替えているか?
+13. ★v5.19.6★ scenePreset を 3-5 種類使い分けて、視覚的な紙芝居感を消しているか? (1動画通して default だけだと飽きる)
+14. ★v5.19.8★ 数値表記: 0 が "-" になっていないか? 0始まり小数が "0.305" でなく ".305" になっているか?
+15. ★v5.19.7★ 出力に `aspectRatio` `hookStats` `hookMediaPattern` `hookMediaDurationMs` `theme` `silhouetteType` `audio` `smartLoop` を**含めていないか**? (UI設定保持のため出力からは除外)
 
 ## 禁止
 - 感情論で曖昧化、訓練データ記憶ベースの数字、完璧主義の遅延

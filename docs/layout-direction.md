@@ -138,6 +138,29 @@
 - 比較動画 (今季 vs 昨季、A選手 vs B選手) の標準形
 - 終盤の振り返りで再登場することも
 
+#### データスキーマ
+
+```json
+"layoutData": {
+  "radar": {
+    "stats": [
+      { "label": "長打力",   "main": 75, "sub": 60 },
+      { "label": "選球眼",   "main": 65, "sub": 55 },
+      { "label": "三振率",   "main": 70, "sub": 50 },
+      { "label": "得点創出", "main": 80, "sub": 65 },
+      { "label": "本塁打率", "main": 72, "sub": 58 }
+    ]
+  }
+}
+```
+
+**入力ガイド**:
+- `stats`: **必ず 5 軸**
+- `label`: 軸名 (日本語)。トップレベル radarStats のラベルと揃える
+- `main` / `sub`: **0-100 の偏差値** (リーグ中央値が 50、優秀=70+、突出=85+)
+- ※ トップレベル `radarStats: { isop, isod, bb_k, rc27, ab_hr }` と内容を揃えること
+   (radarStats が偏差値の元データ、layoutData.radar はチャート描画用)
+
 ---
 
 ### 4.2 timeline (時系列) — 役割: 「変化」をドラマチックに見せる
