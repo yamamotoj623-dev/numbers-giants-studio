@@ -93,17 +93,33 @@ function TelopBubble({ speaker, text, textSize, kind }) {
   );
 }
 
+// ★v5.19.9★ 文字単位アニメ展開で例外が起きても真っ白にならない安全網
+class CharwiseSafeBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError(_err) { return { hasError: true }; }
+  componentDidCatch(err, info) { console.warn('[Telop] charwise レンダ失敗、フォールバック:', err); }
+  render() {
+    if (this.state.hasError) {
+      // フォールバック: 装飾無しの素のテキスト
+      return <span>{this.props.fallback}</span>;
+    }
+    return this.props.children;
+  }
+}
+
 // 1文字ずつ表示するコンポーネント (絵文字・em タグ対応)
 function CharwiseText({ text, speaker }) {
   if (!text) return null;
-  // 既存の renderFormattedText が複雑な装飾を返すので、
-  // それの結果に対して文字単位アニメを適用する代わりに、
-  // 装飾入った状態を単一文字 span に展開する別アプローチ
   const formatted = renderFormattedText(text, false, speaker);
-  return <CharwiseWalker node={formatted} startIndex={0} />;
+  return (
+    <CharwiseSafeBoundary fallback={text}>
+      <CharwiseWalker node={formatted} startIndex={0} />
+    </CharwiseSafeBoundary>
+  );
 }
 
 // React node tree を再帰的に walk して、文字レベルで span に分解
+// ★v5.19.9 修正★ <br />, Fragment, void 要素の cloneElement エラーで真っ白になっていたバグ
 function CharwiseWalker({ node, startIndex = 0 }) {
   if (node == null || typeof node === 'boolean') return null;
   // 文字列 → 1文字ずつ span に
@@ -136,9 +152,23 @@ function CharwiseWalker({ node, startIndex = 0 }) {
       </>
     );
   }
-  // React element → children を walk して props を維持
   if (React.isValidElement(node)) {
+    // ★ void 要素 (<br/>, <hr/>, <img/> 等) は children を持てないのでそのまま返す
+    // ★ Fragment は cloneElement で props を保持できないので、children だけ walk して新しい Fragment にする
+    const VOID_ELEMENTS = ['br', 'hr', 'img', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr'];
+    if (typeof node.type === 'string' && VOID_ELEMENTS.includes(node.type)) {
+      return node;
+    }
+    if (node.type === React.Fragment) {
+      return (
+        <React.Fragment>
+          <CharwiseWalker node={node.props?.children} startIndex={startIndex} />
+        </React.Fragment>
+      );
+    }
+    // 通常の React element → children を walk して props を維持
     const children = node.props?.children;
+    if (children == null) return node;  // children なしの要素はそのまま
     return React.cloneElement(node, {}, <CharwiseWalker node={children} startIndex={startIndex} />);
   }
   return null;
