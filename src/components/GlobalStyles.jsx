@@ -183,40 +183,45 @@ const CSS_TEXT = `
     animation: cardExpandLandscape 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.3s backwards, cardPulse 2.5s ease-in-out 1s infinite !important;
   }
   /* ヘッダー (1行: バッジ + 指標名) */
-  .phone.landscape .hl-header-compact { gap: 6px; margin-bottom: 5px; flex-shrink: 0; }
+  .phone.landscape .hl-header-compact { gap: 6px; margin-bottom: 6px; flex-shrink: 0; }
   .phone.landscape .hl-radar-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
   .phone.landscape .hl-label-group { flex-direction: row; align-items: baseline; gap: 6px; }
-  /* ★v5.20.7★ 指標名を大きく */
-  .phone.landscape .hl-label-compact { font-size: 22px; line-height: 1; letter-spacing: 0.5px; }
-  .phone.landscape .hl-kana-compact { font-size: 10px; }
+  /* ★v5.20.9★ 指標名を更に大きく */
+  .phone.landscape .hl-label-compact { font-size: 28px; line-height: 1; letter-spacing: 0.5px; }
+  .phone.landscape .hl-kana-compact { font-size: 11px; }
   /* 計算式 (あれば 1 行) */
-  .phone.landscape .hl-formula-compact { padding: 2px 8px; margin-bottom: 4px; flex-shrink: 0; }
+  .phone.landscape .hl-formula-compact { padding: 2px 8px; margin-bottom: 5px; flex-shrink: 0; }
   .phone.landscape .hl-formula-compact .eq-label { font-size: 8px; padding-right: 5px; }
   .phone.landscape .hl-formula-compact .eq-text { font-size: 12px; }
 
-  /* メインボディ: 左 (値比較) + 右 (説明・基準) を flex で並べる */
-  .phone.landscape .highlight-card > .hl-values { flex-shrink: 0; }
-  .phone.landscape .hl-values { gap: 10px; margin-bottom: 5px; padding: 5px 0; }
-  /* ★v5.20.7★ 指標値を大きく */
-  .phone.landscape .hl-val-main .num { font-size: 36px; letter-spacing: -0.8px; }
-  .phone.landscape .hl-val-sub .num { font-size: 25px; }
+  /* ★v5.20.9★ 値比較: card の残り高さを全部使う + 縦中央寄せ */
+  .phone.landscape .highlight-card > .hl-values {
+    flex: 1;
+    align-items: center;
+    margin-bottom: 0;
+    padding: 6px 0;
+  }
+  .phone.landscape .hl-values { gap: 14px; }
+  /* ★v5.20.9★ 指標値を更に大きく (空きスペースを活用) */
+  .phone.landscape .hl-val-main .num { font-size: 50px; letter-spacing: -1px; }
+  .phone.landscape .hl-val-sub .num { font-size: 34px; }
   .phone.landscape .hl-val-main .tag,
-  .phone.landscape .hl-val-sub .tag { font-size: 10px; margin-top: 2px; }
-  .phone.landscape .hl-vs { font-size: 12px; }
+  .phone.landscape .hl-val-sub .tag { font-size: 11px; margin-top: 3px; }
+  .phone.landscape .hl-vs { font-size: 14px; }
 
-  /* 下部 context: ★v5.20.7★ 高さ自動 (内容に合わせる)、説明は 2 行で切る */
+  /* ★v5.20.9★ 下部 context: 下に張り付かせる (margin-top: auto) */
   .phone.landscape .hl-context-row {
     gap: 5px;
-    flex: none;             /* 残り高さを取らない、自動高さ */
+    flex: none;
+    margin-top: auto;       /* ★card の最下部に押し付ける */
     min-height: 0;
-    max-height: 36px;       /* ★2行分の高さで上限★ */
+    max-height: 36px;
     align-items: stretch;
   }
   .phone.landscape .hl-why-compact { padding: 3px 8px; min-width: 0; overflow: hidden; }
   .phone.landscape .hl-why-compact .label { font-size: 8px; margin-bottom: 1px; }
   .phone.landscape .hl-why-compact .text {
     font-size: 9.5px; line-height: 1.2;
-    /* 2 行で切る */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
