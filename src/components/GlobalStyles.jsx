@@ -111,10 +111,16 @@ const CSS_TEXT = `
     align-items: center !important;
     padding: 0 30px !important;
   }
-  /* テロップ本体: 横長は max 600px (画面幅の約 95%) */
+  /* ★v5.20.4★ テロップ本体: 横長は max 600px、文字も縦長より大きく */
   .phone.landscape .telop-bg {
     max-width: 600px;
-    font-size: 1.1em;
+    font-size: 1.3em;       /* 1.1 → 1.3 (横長は読ませる時間あるので大きめが映える) */
+    padding: 12px 20px;     /* パディングも増やす */
+  }
+  /* 横長テロップの telop-normal 内文字も連動して大きく */
+  .phone.landscape .telop-bg .telop-normal {
+    font-size: 1.05em;
+    line-height: 1.35;
   }
   /* ★v5.20.3★ speaker 別に左右へ寄せる (中央すぎ問題対策) */
   /* speaker-a (数原・男性): 左寄り */
@@ -152,13 +158,39 @@ const CSS_TEXT = `
     /* 上半分のみが主役表示エリア */
   }
 
-  /* ハイライトカード: 横長は上半分中央 */
+  /* ★v5.20.4★ ハイライトカード — 横長は上半分の主役領域に収まるサイズへ縮小
+     縦長は font 42px / 30px / 26px が前提。横長(高さ ~150px)では中身溢れて崩壊するため全体縮小 */
   .phone.landscape .highlight-card {
-    top: 8%;
-    bottom: 45%;
-    max-width: 90%; width: 90%;
-    left: 5%; right: 5%;
+    top: 36px;
+    bottom: 44%;
+    max-width: 92%; width: 92%;
+    left: 4%; right: 4%;
+    padding: 8px 12px 8px 16px;
+    border-radius: 12px;
+    /* phase.active のアニメで cardExpand の transform-origin: top が崩れる場合があるので明示 */
+    transform-origin: center top;
+    overflow: hidden;
   }
+  .phone.landscape .hl-header-compact { gap: 6px; margin-bottom: 4px; }
+  .phone.landscape .hl-radar-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; }
+  .phone.landscape .hl-label-compact { font-size: 18px; line-height: 1; letter-spacing: 0.5px; }
+  .phone.landscape .hl-kana-compact { font-size: 9px; }
+  .phone.landscape .hl-formula-compact { padding: 2px 8px; margin-bottom: 4px; }
+  .phone.landscape .hl-formula-compact .eq-label { font-size: 8px; padding-right: 5px; }
+  .phone.landscape .hl-formula-compact .eq-text { font-size: 11px; }
+  .phone.landscape .hl-values { gap: 12px; margin-bottom: 5px; padding: 5px 0; }
+  .phone.landscape .hl-val-main .num { font-size: 30px; letter-spacing: -0.5px; }
+  .phone.landscape .hl-val-sub .num { font-size: 22px; }
+  .phone.landscape .hl-val-main .tag,
+  .phone.landscape .hl-val-sub .tag { font-size: 9px; margin-top: 2px; }
+  .phone.landscape .hl-vs { font-size: 11px; }
+  .phone.landscape .hl-context-row { gap: 5px; }
+  .phone.landscape .hl-why-compact { padding: 4px 8px; }
+  .phone.landscape .hl-why-compact .label { font-size: 8px; margin-bottom: 1px; }
+  .phone.landscape .hl-why-compact .text { font-size: 10px; line-height: 1.3; }
+  .phone.landscape .hl-criteria-side { padding: 4px 8px; min-width: 56px; }
+  .phone.landscape .hl-criteria-side .label { font-size: 8px; }
+  .phone.landscape .hl-criteria-side .value { font-size: 12px; }
 
   /* hook (id:1) — 横長専用配置 */
   .phone.landscape .hook-telop-wrap {
@@ -1371,6 +1403,26 @@ const CSS_TEXT = `
     width: min(95vw, calc(95vh * 16 / 9)) !important;
     height: auto !important;
     aspect-ratio: 16/9 !important;
+  }
+  /* ★v5.20.4★ 録画モード横長: ピクセル比固定 (1280x720 想定、固定幅で出力安定化) */
+  .phone.record-mode.landscape {
+    width: 1280px !important;
+    height: 720px !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: 16/9 !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  /* 録画モード縦長: 720x1280 */
+  .phone.record-mode:not(.landscape):not([data-ar="1:1"]) {
+    width: 720px !important;
+    height: 1280px !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: 9/16 !important;
+    border-radius: 0 !important;
+    border: none !important;
   }
   /* ★v5.20.2★ 正方 (1:1) フルスクリーン */
   .phone.fullscreen:not(.landscape).square[data-ar="1:1"] {

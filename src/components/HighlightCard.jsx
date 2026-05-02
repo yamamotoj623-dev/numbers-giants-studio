@@ -95,11 +95,11 @@ export function HighlightCard({ comp, projectData, currentScript }) {
       <div className="hl-context-row">
         {comp.desc && (
           <div className="hl-why-compact">
-            <div className="label">理由</div>
+            <div className="label">指標の意味</div>
             <div className="text">{comp.desc}</div>
           </div>
         )}
-        {comp.criteria && (
+        {comp.criteria && cleanCriteria(comp.criteria) && (
           <div className="hl-criteria-side">
             <div className="label">優秀</div>
             <div className="value">{cleanCriteria(comp.criteria)}</div>

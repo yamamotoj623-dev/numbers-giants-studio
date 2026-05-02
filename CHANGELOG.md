@@ -2,6 +2,78 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.20.4] - 2026-05-02 - 横長Phase2仕上げ + ハイライトカード横長対応
+
+**横長 (16:9) の最終仕上げ:**
+- ★Timeline 横長★ 指標名を**ヘッダー中央**に配置 (左寄りから中央へ、凡例は右に固定)
+- ★テロップ横長★ font-size 1.1em → **1.3em** + telop-normal 1.05em (横長は読ませる時間あるので大きく)
+- ★ハイライトカード横長崩壊修正★ 縦長前提の font 42px/30px/26px が横長(高さ ~150px)で溢れていた真因を修正
+  - padding 14→8、border-radius 16→12、overflow hidden 明示
+  - hl-label-compact 26→18px、hl-val-main .num 42→30px、hl-val-sub .num 30→22px、tag 11→9px 等 全体縮小
+  - hl-context-row の 説明/優秀 ブロックも padding/font 縮小で収まる
+- 「理由」表記修正 → 「指標の意味」(comp.desc は指標の説明であり「理由」ではない)
+- cleanCriteria が空を返す時は `.hl-criteria-side` ブロックを非表示 (空白カード防止)
+
+## [5.20.3] - 2026-05-02 - 横長 Phase 2 + UI 横スクロール + テロップ左右寄せ
+
+**Phase 2 — 残り 4 レイアウトの横長専用版完成 (全 8 レイアウト対応):**
+- ★TimelineLandscape★ SVG 折れ線フルワイド (580×200) + パス描画アニメ + ピーク/底バッジ ▲▼
+- ★PitchArsenalLandscape★ 左 38% パイチャート / 右 62% 球種詳細リスト (色サイドバー付き)
+- ★BatterHeatmapLandscape★ 対右ヒート/対左ヒート 横並び、青→黄→赤グラデ自動算出
+- ★TeamContextLandscape★ 3 カラム (打撃/投手/采配) + diff テーブル
+
+**UI 改善:**
+- アプリ右カラムに `min-w-0 overflow-x-auto` で横長プレビューも横スクロールで全部見える
+- テロップ A 左寄り / B 右寄り (アバターと位置リンク、中央すぎ問題解消)
+
+## [5.20.2] - 2026-05-02 - 横長修正パッチ (拡大モード/ロゴ/ランキング/選手名)
+
+**拡大モード横長対応:** `.phone.fullscreen.landscape` で width 基準で算出、aspect-ratio 16/9 維持
+**テロップ幅広く:** padding 90→30、max-width 460→600、font-size 1.05→1.1em
+**ロゴ右上に浮く問題:** ベースの top:10px が残ってると bottom 指定が効かない → top:auto !important で完全リセット
+**出典との重なり修正:** `.source` (z-index 40) がロゴ (z-index 35) を覆っていた → 横長は出典左下、ロゴ右下に分離
+**ランキング2位以下が出ない:** フォールバック entries[]→空 を 10 entries で復活、エリア拡大 + 行 padding 詰めで切れ防止
+**選手名サイズ調整:** 24px → 14px、カラム 32%→30%、wordBreak: keep-all
+
+## [5.20.1] - 2026-05-02 - 横長動画 Phase 1 (本格実装)
+
+**横長 (16:9) 本格実装:**
+- 共通フレーム: ヘッダー左上(36px)、上半分55%が主役領域、下半分45%にテロップ大(max 460px)、アバター 0.65x スケール左右下
+- ★RadarCompareLandscape★ 左 38% 数値リスト+バー、右レーダーチャート 200px
+- ★RankingLandscape★ 2列、左 1-5位 / 右 6-10位、球団色バッジ
+- ★PlayerSpotlightLandscape★ 左 30% 写真不使用テキスト主役、右モード別データ
+- ★VersusCardLandscape★ 左 main / 中央カテゴリ表 / 右 sub
+- LayoutRouter に LAYOUT_COMPONENTS_LANDSCAPE 追加、aspectRatio==='16:9' で切替
+
+## [5.20.0] - 2026-05-01 - 5問題真因対処 (画像/timeline/ranking/criteria/フック行数)
+
+- ★id:1 改行 5-6行対応★ lines-4 (38px) / lines-5 (32px) / lines-6 (28px) 段階縮小、UI スライダーで 0.6x-1.4x 微調整
+- ★timeline JSON/UI 不一致★ AI prompt に `points: [{label, main, sub}]` だったが実コードは `value` 期待 → `value/sub` に統一
+- ★ranking反応しない/UI修正★ RankingDataEditor 新設 (mood/指標追加削除/各 entry セル単位編集)、「話題中」表記全削除
+- ★criteria★ AI が「高いほどいい」等を入れてくる対策: cleanCriteria 堅牢化(説明文→空、{threshold,direction}対応)、AI プロンプトに数値基準のみ許可と明記
+- ★id:1 画像アニメ完全書き直し★ useState/useEffect/setTimeout 全廃→ステートレス化、isVisible 即判定、entry+sustain 連結 (COMBINED_ANIMS)、inline filter 撤去で CSS animation 競合回避
+
+## [5.19.9] - 2026-05-01 - id:2 から真っ白バグ即修正
+
+★真因★: v5.19.7 で導入した CharwiseWalker が `<br />` (void element) を React.cloneElement でクローンしようとして例外発生→React tree 全壊→真っ白
+★修正★: VOID_ELEMENTS リストでチェック、Fragment は特別扱い、children null時は元要素返却、CharwiseSafeBoundary でフォールバック表示
+
+## [5.19.8] - 2026-04-30 - 数値整形修正 + テロップ幅 + 横長レイアウト調整
+
+- 0 はそのまま 0 (本塁打0、勝利0、防御率0.00 は意味のある値): formatStat 修正、null/undefined/'N/A'/'--'/空文字 → '-'、0 → '0' (rate kind でのみ '.000')
+- テロップ幅セーフゾーン目一杯 + 改行制御: max-width 280→320px、word-break: keep-all、white-space: pre-line
+- 横長レイアウト位置最適化 (CSS のみ): ヘッダー左上、テロップ bottom 8%、アバター右下小、Hook 4指標 1x4 横並び
+- 全 18 ファイル構文チェック
+
+## [5.19.7] - 2026-04-30 - 5つの問題真因解決
+
+- 画像動かない真因(3回目): phase 管理を完全廃止、isVisible 即判定 + COMBINED_ANIMS 連結
+- 球種・ヒートマップ専用エディタ: ArsenalDataEditor / HeatmapDataEditor 新設
+- AIプロンプト全面再構築: 8 レイアウトのフルテンプレート + 各項目入力ガイド
+- テロップ紙芝居脱却: CharwiseText / CharwiseWalker で 1文字ずつ span 展開 + telopCharIn アニメ (25ms ディレイ)
+- 横長16:9対応: aspectRatio 9:16/16:9/1:1、phoneStyle 動的計算、LayoutPanel に 📐 アスペクト比セレクタ
+- 同 speaker 連続バグ修正: outer key を currentIndex のみに統一
+
 セマンティックバージョニング (MAJOR.MINOR.PATCH):
 - MAJOR: 破壊的変更
 - MINOR: 後方互換のある機能追加

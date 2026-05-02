@@ -472,6 +472,10 @@ mode: "single" の場合:
 10. ★v5.19.6★ scenePreset を 3-5 種類使い分けて、紙芝居感を消しているか? (1動画通して default だけは NG)
 11. ★v5.19.8★ **数値表記**: 0 が `"-"` になっていないか (本塁打0/勝利0は `"0"` または `0`)、0始まり小数が `"0.305"` でなく `".305"` になっているか?
 12. ★v5.19.7★ 出力に `aspectRatio` `hookStats` `hookMediaPattern` `hookMediaDurationMs` `theme` `silhouetteType` `audio` `smartLoop` `defaultScenePreset` を**含めていないか**? (UI設定保持)
+13. ★v5.20.4★ ユーザー設定の **aspectRatio に配慮した layoutType / 構成**になっているか?
+   - **9:16 (Shorts)**: 縦軸を活かす ranking, player_spotlight, versus_card が映える。30 秒-1 分でスクロール止める短文台本
+   - **16:9 (YouTube 通常)**: 横軸を活かす **timeline (長期推移)**, **batter_heatmap (対右/対左 横並び)**, **team_context (3カラム)** が映える。読ませる時間あるので desc/comment を厚めに
+   - **1:1**: 中央寄せ、シンプルな radar/spotlight が安定
 
 ★ 1つでも NO なら出力前に修正。
 

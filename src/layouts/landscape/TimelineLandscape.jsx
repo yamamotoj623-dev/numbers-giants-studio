@@ -83,10 +83,19 @@ export function TimelineLandscape({ projectData, currentScript, animationKey, ph
         className="absolute z-10 flex flex-col"
         style={{ top: 32, bottom: '42%', left: 14, right: 14 }}
       >
-        {/* ヘッダー: 指標名 + 単位 */}
-        <div className="flex items-baseline gap-2 mb-1">
-          <span className={`text-[15px] font-impact ${themeClass.text}`}>{tlData.metric || 'OPS'}</span>
-          <span className="text-[10px] text-zinc-500">推移 ({tlData.unit === 'month' ? '月別' : tlData.unit === 'week' ? '週別' : tlData.unit === 'day' ? '日別' : tlData.unit === 'year' ? '年別' : ''})</span>
+        {/* ★v5.20.4★ ヘッダー: 指標名は中央、凡例は右 */}
+        <div className="relative flex items-center mb-1 px-2" style={{ minHeight: 22 }}>
+          {/* 中央: 指標名 + 単位 */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-baseline gap-2">
+            <span className={`text-[16px] font-impact ${themeClass.text}`}
+                  style={{ textShadow: `0 0 12px ${themeClass.glow}80` }}>
+              {tlData.metric || 'OPS'}
+            </span>
+            <span className="text-[10px] text-zinc-400">
+              推移{tlData.unit === 'month' ? ' (月別)' : tlData.unit === 'week' ? ' (週別)' : tlData.unit === 'day' ? ' (日別)' : tlData.unit === 'year' ? ' (年別)' : ''}
+            </span>
+          </div>
+          {/* 右: 凡例 */}
           {hasSub && (
             <span className="ml-auto text-[9px] flex items-center gap-2">
               <span className="flex items-center gap-1">
