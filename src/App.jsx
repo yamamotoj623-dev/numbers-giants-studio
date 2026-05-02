@@ -34,6 +34,8 @@ const App = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   // ★v5.20.7★ 拡大画面でのシーン一覧表示
   const [showScenePicker, setShowScenePicker] = useState(false);
+  // ★v5.20.8★ 横長コントロールのアコーディオン (16:9 + landscape の時に使う)
+  const [controlsExpanded, setControlsExpanded] = useState(false);
   // ★v5.18.4★ 保存スロット管理用
   const [showSavePanel, setShowSavePanel] = useState(false);
   const [savedSlots, setSavedSlots] = useState(() => listSlots());
@@ -328,12 +330,12 @@ const App = () => {
         </div>
       )}
 
-      <div className={`flex flex-col items-center justify-start transition-all duration-500 ${isFullscreenMode ? 'w-full h-[100dvh] justify-center bg-black' : 'flex-1 pt-2 min-w-0'}`}>
+      <div className={`flex flex-col items-center justify-start transition-all duration-500 ${isFullscreenMode ? 'w-full h-[100dvh] justify-center bg-black' : 'flex-1 pt-2 shrink-0'}`}>
 
         {isFullscreenMode && !isRecordingMode && (
           <>
-            {/* 左上: 戻る / 再生 / 頭から / 前後シーン / シーン一覧 */}
-            <div className={`absolute top-4 left-4 z-[100] flex gap-2 transition-opacity duration-300 ${isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}>
+            {/* ★v5.20.8★ 左上: 縦並び (動画の左外側、動画に被らない) */}
+            <div className={`absolute top-4 left-3 z-[100] flex flex-col gap-2 transition-opacity duration-300 ${isPlaying ? 'opacity-30 hover:opacity-100' : 'opacity-100'}`}>
               <button
                 onClick={() => setIsFullscreenMode(false)}
                 className="bg-zinc-800/80 hover:bg-zinc-700 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10"
@@ -348,7 +350,6 @@ const App = () => {
               >
                 {isPlaying ? <Square size={18}/> : <Play size={18}/>}
               </button>
-              {/* ★v5.20.7★ 頭から再生 */}
               <button
                 onClick={() => { reset(); setTimeout(() => togglePlay(), 200); }}
                 className="bg-zinc-800/80 hover:bg-zinc-700 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10"
@@ -356,7 +357,6 @@ const App = () => {
               >
                 <RotateCcw size={18}/>
               </button>
-              {/* ★v5.20.7★ 前のシーン */}
               <button
                 onClick={() => jumpTo(currentIndex - 1)}
                 disabled={currentIndex <= 0}
@@ -365,7 +365,6 @@ const App = () => {
               >
                 <SkipBack size={18}/>
               </button>
-              {/* ★v5.20.7★ 次のシーン */}
               <button
                 onClick={() => jumpTo(currentIndex + 1)}
                 disabled={!projectData?.scripts || currentIndex >= projectData.scripts.length - 1}
@@ -374,7 +373,6 @@ const App = () => {
               >
                 <SkipForward size={18}/>
               </button>
-              {/* ★v5.20.7★ シーン一覧 */}
               <button
                 onClick={() => setShowScenePicker(s => !s)}
                 className={`${showScenePicker ? 'bg-amber-500' : 'bg-zinc-800/80 hover:bg-zinc-700'} text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10`}
@@ -402,8 +400,8 @@ const App = () => {
 
             {/* ★v5.20.7★ シーンピッカー (オーバーレイ) */}
             {showScenePicker && (
-              <div className="absolute top-20 left-4 z-[110] bg-zinc-900/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/10 max-h-[60vh] overflow-y-auto p-2"
-                   style={{ width: 280 }}>
+              <div className="absolute top-4 left-16 z-[110] bg-zinc-900/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/10 max-h-[80vh] overflow-y-auto p-2"
+                   style={{ width: 260 }}>
                 <div className="flex items-center justify-between mb-2 px-1">
                   <span className="text-[11px] font-bold text-zinc-300 tracking-widest">シーン一覧</span>
                   <button onClick={() => setShowScenePicker(false)} className="text-zinc-500 hover:text-white text-[14px] leading-none">×</button>
@@ -470,30 +468,53 @@ const App = () => {
 
           {!isFullscreenMode && (
             <div className={`flex flex-col items-center gap-3 ${
-              projectData?.aspectRatio === '16:9' ? 'mt-0 landscape:mt-2' : 'mt-6'
+              projectData?.aspectRatio === '16:9' ? 'mt-0 landscape:mt-0' : 'mt-6'
             }`}>
-            <div className="flex items-center gap-5 bg-white px-6 py-3 rounded-full shadow-lg border border-zinc-200">
-              <button onClick={togglePlay} className={`w-14 h-14 ${isPlaying ? 'bg-red-500' : 'bg-indigo-600'} hover:opacity-90 rounded-full flex items-center justify-center text-white shadow-lg transition-transform active:scale-90`}>
-                {isPlaying ? <Square size={24} fill="currentColor"/> : <Play size={28} fill="currentColor" className="ml-1"/>}
+            {/* ★v5.20.8★ メインバー: 縦長動画は横並び、横長動画+横画面は縦並びでコンパクト */}
+            <div className={`flex items-center bg-white rounded-full shadow-lg border border-zinc-200 ${
+              projectData?.aspectRatio === '16:9'
+                ? 'gap-3 px-3 py-2 landscape:flex-col landscape:gap-2 landscape:px-2 landscape:py-3 landscape:rounded-2xl'
+                : 'gap-5 px-6 py-3'
+            }`}>
+              <button onClick={togglePlay} className={`${
+                projectData?.aspectRatio === '16:9' ? 'w-11 h-11 landscape:w-12 landscape:h-12' : 'w-14 h-14'
+              } ${isPlaying ? 'bg-red-500' : 'bg-indigo-600'} hover:opacity-90 rounded-full flex items-center justify-center text-white shadow-lg transition-transform active:scale-90 shrink-0`}>
+                {isPlaying ? <Square size={20} fill="currentColor"/> : <Play size={22} fill="currentColor" className="ml-0.5"/>}
               </button>
-              <div className="flex flex-col items-center justify-center w-24">
-                <span className="text-zinc-800 font-mono text-2xl font-black leading-none">00:{elapsedTime.toString().padStart(2, '0')}</span>
-                <span className="text-zinc-400 font-bold text-[10px] mt-1">SCENE {currentIndex + 1} / {projectData.scripts.length}</span>
+              <div className={`flex flex-col items-center justify-center ${
+                projectData?.aspectRatio === '16:9' ? 'w-20 landscape:w-14' : 'w-24'
+              }`}>
+                <span className={`text-zinc-800 font-mono font-black leading-none ${
+                  projectData?.aspectRatio === '16:9' ? 'text-lg landscape:text-base' : 'text-2xl'
+                }`}>00:{elapsedTime.toString().padStart(2, '0')}</span>
+                <span className="text-zinc-400 font-bold text-[10px] mt-1 whitespace-nowrap">{currentIndex + 1}/{projectData.scripts.length}</span>
               </div>
-              <button onClick={reset} className="text-zinc-400 hover:text-zinc-800 bg-zinc-100 hover:bg-zinc-200 p-3 rounded-full transition">
-                <RotateCcw size={18}/>
+              <button onClick={reset} className="text-zinc-400 hover:text-zinc-800 bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full transition shrink-0" title="頭から">
+                <RotateCcw size={16}/>
               </button>
               <button
                 onClick={handleRecordVideo}
-                className={`p-3 rounded-full transition ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
+                className={`p-2.5 rounded-full transition shrink-0 ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
                 title={isRecording ? '録画停止 (自動停止します)' : '動画ダウンロード (画面共有→自動再生→自動保存)'}
               >
-                {isRecording ? <Loader2 size={18} className="animate-spin"/> : <Download size={18}/>}
+                {isRecording ? <Loader2 size={16} className="animate-spin"/> : <Download size={16}/>}
               </button>
+              {/* ★v5.20.8★ 横長動画 + 横画面の時のみアコーディオントグル表示 */}
+              {projectData?.aspectRatio === '16:9' && (
+                <button
+                  onClick={() => setControlsExpanded(v => !v)}
+                  className="hidden landscape:flex items-center justify-center text-zinc-400 hover:text-zinc-800 bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full transition shrink-0"
+                  title={controlsExpanded ? '詳細設定を閉じる' : '詳細設定を開く'}
+                >
+                  {controlsExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                </button>
+              )}
             </div>
 
-            {/* プレビューモードトグル */}
-            <div className="flex items-center gap-2 flex-wrap justify-center">
+            {/* ★v5.20.8★ プレビューモードトグル: 16:9 + 横画面で controlsExpanded == false なら隠す */}
+            <div className={`flex items-center gap-2 flex-wrap justify-center ${
+              projectData?.aspectRatio === '16:9' && !controlsExpanded ? 'landscape:hidden' : ''
+            }`}>
               <button
                 onClick={() => setIsSquareMode(v => !v)}
                 className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition flex items-center gap-1 ${isSquareMode ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-100'}`}
@@ -574,7 +595,9 @@ const App = () => {
               </button>
             </div>
 
-            <div className="text-[10px] text-zinc-500 font-bold flex items-center gap-1.5">
+            <div className={`text-[10px] text-zinc-500 font-bold flex items-center gap-1.5 ${
+              projectData?.aspectRatio === '16:9' && !controlsExpanded ? 'landscape:hidden' : ''
+            }`}>
               エンジン: <span className={ttsEngine === 'gemini' ? 'text-indigo-600' : 'text-zinc-700'}>
                 {ttsEngine === 'gemini' ? 'Gemini 3.1 Flash TTS (本番)' : 'Web Speech (下書き)'}
               </span>
