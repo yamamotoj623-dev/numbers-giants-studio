@@ -184,49 +184,52 @@ const CSS_TEXT = `
   }
   /* ヘッダー (1行: バッジ + 指標名) */
   .phone.landscape .hl-header-compact { gap: 6px; margin-bottom: 5px; flex-shrink: 0; }
-  .phone.landscape .hl-radar-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; }
+  .phone.landscape .hl-radar-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
   .phone.landscape .hl-label-group { flex-direction: row; align-items: baseline; gap: 6px; }
-  .phone.landscape .hl-label-compact { font-size: 16px; line-height: 1; letter-spacing: 0.5px; }
-  .phone.landscape .hl-kana-compact { font-size: 9px; }
+  /* ★v5.20.7★ 指標名を大きく */
+  .phone.landscape .hl-label-compact { font-size: 22px; line-height: 1; letter-spacing: 0.5px; }
+  .phone.landscape .hl-kana-compact { font-size: 10px; }
   /* 計算式 (あれば 1 行) */
   .phone.landscape .hl-formula-compact { padding: 2px 8px; margin-bottom: 4px; flex-shrink: 0; }
   .phone.landscape .hl-formula-compact .eq-label { font-size: 8px; padding-right: 5px; }
-  .phone.landscape .hl-formula-compact .eq-text { font-size: 11px; }
+  .phone.landscape .hl-formula-compact .eq-text { font-size: 12px; }
 
   /* メインボディ: 左 (値比較) + 右 (説明・基準) を flex で並べる */
   .phone.landscape .highlight-card > .hl-values { flex-shrink: 0; }
-  .phone.landscape .hl-values { gap: 8px; margin-bottom: 4px; padding: 4px 0; }
-  .phone.landscape .hl-val-main .num { font-size: 26px; letter-spacing: -0.5px; }
-  .phone.landscape .hl-val-sub .num { font-size: 19px; }
+  .phone.landscape .hl-values { gap: 10px; margin-bottom: 5px; padding: 5px 0; }
+  /* ★v5.20.7★ 指標値を大きく */
+  .phone.landscape .hl-val-main .num { font-size: 36px; letter-spacing: -0.8px; }
+  .phone.landscape .hl-val-sub .num { font-size: 25px; }
   .phone.landscape .hl-val-main .tag,
-  .phone.landscape .hl-val-sub .tag { font-size: 9px; margin-top: 2px; }
-  .phone.landscape .hl-vs { font-size: 11px; }
+  .phone.landscape .hl-val-sub .tag { font-size: 10px; margin-top: 2px; }
+  .phone.landscape .hl-vs { font-size: 12px; }
 
-  /* 下部 context: ★flex-1 で残り高さを取り、padding/font は最小限★ */
+  /* 下部 context: ★v5.20.7★ 高さ自動 (内容に合わせる)、説明は 2 行で切る */
   .phone.landscape .hl-context-row {
     gap: 5px;
-    flex: 1;
+    flex: none;             /* 残り高さを取らない、自動高さ */
     min-height: 0;
+    max-height: 36px;       /* ★2行分の高さで上限★ */
     align-items: stretch;
   }
-  .phone.landscape .hl-why-compact { padding: 4px 8px; min-width: 0; overflow: hidden; }
+  .phone.landscape .hl-why-compact { padding: 3px 8px; min-width: 0; overflow: hidden; }
   .phone.landscape .hl-why-compact .label { font-size: 8px; margin-bottom: 1px; }
   .phone.landscape .hl-why-compact .text {
-    font-size: 9.5px; line-height: 1.25;
-    /* 2行で切る (見切れ防止) */
+    font-size: 9.5px; line-height: 1.2;
+    /* 2 行で切る */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .phone.landscape .hl-criteria-side {
-    padding: 4px 8px;
+    padding: 3px 8px;
     min-width: 64px;
     max-width: 90px;
     flex-shrink: 0;
   }
   .phone.landscape .hl-criteria-side .label { font-size: 8px; white-space: nowrap; }
-  .phone.landscape .hl-criteria-side .value { font-size: 11px; white-space: nowrap; }
+  .phone.landscape .hl-criteria-side .value { font-size: 12px; white-space: nowrap; }
 
   /* ★v5.20.5★ hook (id:1) — 横長専用配置
      ベースの top: 36% + transform: translate(-50%, -50%) を活かして垂直中央寄せ

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack, Volume2, VolumeX, Download, Loader2, Save, FolderOpen } from 'lucide-react';
+import { Settings, Play, Square, ChevronDown, ChevronUp, Maximize2, RotateCcw, Monitor, Code, FileText, Mic2, Music, Layers, Radio, Shield, SquareStack, Volume2, VolumeX, Download, Loader2, Save, FolderOpen, SkipBack, SkipForward, List } from 'lucide-react';
 
 import { APP_VERSION } from './lib/config';
 import { defaultBatterData } from './data/defaultBatter';
@@ -32,6 +32,8 @@ const App = () => {
   });
   const [activeTab, setActiveTab] = useState('json');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  // ★v5.20.7★ 拡大画面でのシーン一覧表示
+  const [showScenePicker, setShowScenePicker] = useState(false);
   // ★v5.18.4★ 保存スロット管理用
   const [showSavePanel, setShowSavePanel] = useState(false);
   const [savedSlots, setSavedSlots] = useState(() => listSlots());
@@ -105,6 +107,7 @@ const App = () => {
     animationKey,
     togglePlay,
     reset,
+    jumpTo,
   } = usePlaybackEngine(projectData, { ttsEngine, speechRate, isVoiceEnabled, isSEEnabled, isBgmEnabled });
 
   // 動画録画
@@ -328,14 +331,105 @@ const App = () => {
       <div className={`flex flex-col items-center justify-start transition-all duration-500 ${isFullscreenMode ? 'w-full h-[100dvh] justify-center bg-black' : 'flex-1 pt-2 min-w-0'}`}>
 
         {isFullscreenMode && !isRecordingMode && (
-          <div className={`absolute top-4 left-4 z-[100] flex gap-2 transition-opacity duration-300 ${isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}>
-            <button onClick={() => setIsFullscreenMode(false)} className="bg-zinc-800/80 hover:bg-zinc-700 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10" title="縮小画面に戻る">
-              <Monitor size={20}/>
-            </button>
-            <button onClick={togglePlay} className={`${isPlaying ? 'bg-red-500' : 'bg-indigo-600'} text-white p-2.5 rounded-full shadow-xl transition-colors`} title="再生/停止">
-              {isPlaying ? <Square size={20}/> : <Play size={20}/>}
-            </button>
-          </div>
+          <>
+            {/* 左上: 戻る / 再生 / 頭から / 前後シーン / シーン一覧 */}
+            <div className={`absolute top-4 left-4 z-[100] flex gap-2 transition-opacity duration-300 ${isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}>
+              <button
+                onClick={() => setIsFullscreenMode(false)}
+                className="bg-zinc-800/80 hover:bg-zinc-700 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10"
+                title="縮小画面に戻る"
+              >
+                <Monitor size={18}/>
+              </button>
+              <button
+                onClick={togglePlay}
+                className={`${isPlaying ? 'bg-red-500' : 'bg-indigo-600'} text-white p-2.5 rounded-full shadow-xl transition-colors`}
+                title="再生/停止"
+              >
+                {isPlaying ? <Square size={18}/> : <Play size={18}/>}
+              </button>
+              {/* ★v5.20.7★ 頭から再生 */}
+              <button
+                onClick={() => { reset(); setTimeout(() => togglePlay(), 200); }}
+                className="bg-zinc-800/80 hover:bg-zinc-700 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10"
+                title="頭から再生"
+              >
+                <RotateCcw size={18}/>
+              </button>
+              {/* ★v5.20.7★ 前のシーン */}
+              <button
+                onClick={() => jumpTo(currentIndex - 1)}
+                disabled={currentIndex <= 0}
+                className="bg-zinc-800/80 hover:bg-zinc-700 disabled:opacity-30 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10"
+                title="前のシーン"
+              >
+                <SkipBack size={18}/>
+              </button>
+              {/* ★v5.20.7★ 次のシーン */}
+              <button
+                onClick={() => jumpTo(currentIndex + 1)}
+                disabled={!projectData?.scripts || currentIndex >= projectData.scripts.length - 1}
+                className="bg-zinc-800/80 hover:bg-zinc-700 disabled:opacity-30 text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10"
+                title="次のシーン"
+              >
+                <SkipForward size={18}/>
+              </button>
+              {/* ★v5.20.7★ シーン一覧 */}
+              <button
+                onClick={() => setShowScenePicker(s => !s)}
+                className={`${showScenePicker ? 'bg-amber-500' : 'bg-zinc-800/80 hover:bg-zinc-700'} text-white p-2.5 rounded-full backdrop-blur-md transition shadow-xl border border-white/10`}
+                title="シーン一覧"
+              >
+                <List size={18}/>
+              </button>
+            </div>
+
+            {/* ★v5.20.7★ 下部: 進捗バー + シーン番号 */}
+            <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 z-[100] bg-black/60 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-3 shadow-xl border border-white/10 transition-opacity duration-300 ${isPlaying ? 'opacity-30 hover:opacity-100' : 'opacity-100'}`}>
+              <span className="text-white text-xs font-mono font-bold whitespace-nowrap">
+                {currentIndex + 1} / {projectData?.scripts?.length || 0}
+              </span>
+              <div className="w-48 h-1 bg-zinc-700 rounded overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 transition-all duration-300"
+                  style={{ width: `${projectData?.scripts?.length ? ((currentIndex + 1) / projectData.scripts.length) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-zinc-400 text-[10px] font-mono whitespace-nowrap max-w-[200px] truncate">
+                {(currentScript?.text || '').replace(/\n/g, ' ').slice(0, 30) || '—'}
+              </span>
+            </div>
+
+            {/* ★v5.20.7★ シーンピッカー (オーバーレイ) */}
+            {showScenePicker && (
+              <div className="absolute top-20 left-4 z-[110] bg-zinc-900/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/10 max-h-[60vh] overflow-y-auto p-2"
+                   style={{ width: 280 }}>
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className="text-[11px] font-bold text-zinc-300 tracking-widest">シーン一覧</span>
+                  <button onClick={() => setShowScenePicker(false)} className="text-zinc-500 hover:text-white text-[14px] leading-none">×</button>
+                </div>
+                <div className="space-y-1">
+                  {(projectData?.scripts || []).map((script, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { jumpTo(idx); setShowScenePicker(false); }}
+                      className={`w-full text-left px-2 py-1.5 rounded text-[11px] transition flex items-center gap-2 ${
+                        idx === currentIndex
+                          ? 'bg-indigo-600 text-white font-bold'
+                          : 'bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      <span className="font-mono w-6 text-center shrink-0">{script.id ?? idx + 1}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded shrink-0 ${
+                        script.speaker === 'B' ? 'bg-rose-500/30 text-rose-200' : 'bg-amber-500/30 text-amber-200'
+                      }`}>{script.speaker || 'A'}</span>
+                      <span className="truncate">{(script.text || '').replace(/\n/g, ' ').slice(0, 30)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {isRecordingMode && recordingCountdown > 0 && (
@@ -355,21 +449,29 @@ const App = () => {
           </button>
         )}
 
-        <PreviewFrame
-          projectData={projectData}
-          currentScript={currentScript}
-          currentIndex={currentIndex}
-          isPlaying={isPlaying}
-          animationKey={animationKey}
-          isFullscreenMode={isFullscreenMode}
-          isRecordingMode={isRecordingMode}
-          isSquareMode={isSquareMode}
-          showSafeZone={showSafeZone}
-          showDurationBadge={showDurationBadge}
-        />
+        {/* ★v5.20.7★ 横長動画かつ画面が横向きの時だけ controls を右に配置 */}
+        <div className={`flex gap-4 items-start justify-center ${
+          projectData?.aspectRatio === '16:9'
+            ? 'flex-col landscape:flex-row'
+            : 'flex-col'
+        }`}>
+          <PreviewFrame
+            projectData={projectData}
+            currentScript={currentScript}
+            currentIndex={currentIndex}
+            isPlaying={isPlaying}
+            animationKey={animationKey}
+            isFullscreenMode={isFullscreenMode}
+            isRecordingMode={isRecordingMode}
+            isSquareMode={isSquareMode}
+            showSafeZone={showSafeZone}
+            showDurationBadge={showDurationBadge}
+          />
 
-        {!isFullscreenMode && (
-          <div className="mt-6 flex flex-col items-center gap-3">
+          {!isFullscreenMode && (
+            <div className={`flex flex-col items-center gap-3 ${
+              projectData?.aspectRatio === '16:9' ? 'mt-0 landscape:mt-2' : 'mt-6'
+            }`}>
             <div className="flex items-center gap-5 bg-white px-6 py-3 rounded-full shadow-lg border border-zinc-200">
               <button onClick={togglePlay} className={`w-14 h-14 ${isPlaying ? 'bg-red-500' : 'bg-indigo-600'} hover:opacity-90 rounded-full flex items-center justify-center text-white shadow-lg transition-transform active:scale-90`}>
                 {isPlaying ? <Square size={24} fill="currentColor"/> : <Play size={28} fill="currentColor" className="ml-1"/>}
@@ -479,6 +581,7 @@ const App = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* ★v5.18.4★ 保存スロット モーダル */}
