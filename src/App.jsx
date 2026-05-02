@@ -173,7 +173,7 @@ const App = () => {
   }, [recordingCountdown, isRecordingMode]);
 
   return (
-    <div className={`min-h-screen ${isFullscreenMode ? 'bg-black flex justify-center items-center' : 'bg-zinc-100 p-4 md:p-8 flex flex-col md:flex-row gap-6'} font-sans transition-colors duration-500`}>
+    <div className={`min-h-screen ${isFullscreenMode ? 'bg-black flex justify-center items-center' : 'bg-zinc-100 p-4 md:p-8 flex flex-col md:flex-row gap-6 overflow-x-auto'} font-sans transition-colors duration-500`}>
       <GlobalStyles />
 
       {/* Gemini TTS quota超過 warning */}
@@ -306,7 +306,7 @@ const App = () => {
         </div>
       )}
 
-      <div className={`flex flex-col items-center justify-start transition-all duration-500 ${isFullscreenMode ? 'w-full h-[100dvh] justify-center bg-black' : 'flex-1 pt-2 min-w-0 overflow-x-auto overflow-y-hidden'}`}>
+      <div className={`flex flex-col items-center justify-start transition-all duration-500 ${isFullscreenMode ? 'w-full h-[100dvh] justify-center bg-black' : 'flex-1 pt-2 min-w-0'}`}>
 
         {isFullscreenMode && !isRecordingMode && (
           <div className={`absolute top-4 left-4 z-[100] flex gap-2 transition-opacity duration-300 ${isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}>
