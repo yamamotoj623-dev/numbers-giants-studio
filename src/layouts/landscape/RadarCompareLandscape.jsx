@@ -40,7 +40,7 @@ export function RadarCompareLandscape({ projectData, currentScript, animationKey
       <div
         key={`radar-l-${animationKey}`}
         className="absolute z-10 flex"
-        style={{ top: 36, bottom: '45%', left: 14, right: 14, gap: 12 }}
+        style={{ top: 32, bottom: '42%', left: 14, right: 14, gap: 12 }}
       >
         {/* 左: 数値リスト (主役 vs 比較) */}
         <div className="flex flex-col justify-center" style={{ width: '38%' }}>

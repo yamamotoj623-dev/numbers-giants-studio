@@ -49,43 +49,43 @@ export function PlayerSpotlightLandscape({ projectData, currentScript, animation
       <div
         key={`spot-l-${animationKey}-${player.id || player.name || 'p'}-${mode}`}
         className="absolute z-10 flex"
-        style={{ top: 36, bottom: '45%', left: 14, right: 14, gap: 16 }}
+        style={{ top: 32, bottom: '42%', left: 14, right: 14, gap: 14 }}
       >
         {/* 左: 選手名/背番号/球団 (写真なし、テキストで主役感) */}
         <div
           className="flex flex-col justify-center relative"
           style={{
-            width: '32%',
+            width: '30%',
             background: `linear-gradient(135deg, ${teamColor}25 0%, transparent 60%)`,
-            borderLeft: `4px solid ${teamColor}`,
-            borderRadius: 10,
-            padding: '10px 12px',
+            borderLeft: `3px solid ${teamColor}`,
+            borderRadius: 8,
+            padding: '8px 10px',
             animation: 'cardBounceIn 0.55s var(--spring-bounce) both',
           }}
         >
           {/* 球団バッジ */}
           {player.team && (
-            <div className="text-[10px] font-bold tracking-widest mb-1" style={{ color: teamColor }}>
+            <div className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: teamColor }}>
               {player.team}
             </div>
           )}
-          {/* 選手名 (大、英文字対応に幅縮め) */}
-          <div className={`text-[24px] font-black leading-tight tracking-tighter ${themeClass.text}`}
-               style={{ textShadow: `0 0 18px ${themeClass.glow}80` }}>
+          {/* ★v5.20.2★ 選手名: 14px (縮小、背番号と並べる前提) */}
+          <div className={`text-[14px] font-black leading-tight tracking-tight ${themeClass.text}`}
+               style={{ textShadow: `0 0 12px ${themeClass.glow}80`, wordBreak: 'keep-all' }}>
             {player.name || '選手名'}
           </div>
           {player.number && (
-            <div className="text-[11px] font-mono text-zinc-300 mt-0.5">
+            <div className="text-[10px] font-mono text-zinc-300 mt-0.5">
               #{player.number}
             </div>
           )}
           {player.label && (
-            <div className="text-[10px] font-bold text-zinc-400 mt-1.5">
+            <div className="text-[9px] font-bold text-zinc-400 mt-1">
               {player.label}
             </div>
           )}
           {player.comment && (
-            <div className="text-[10px] text-zinc-300 italic mt-1.5 leading-snug">
+            <div className="text-[9px] text-zinc-300 italic mt-1 leading-snug">
               "{player.comment}"
             </div>
           )}

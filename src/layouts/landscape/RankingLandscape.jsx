@@ -47,7 +47,24 @@ export function RankingLandscape({ projectData, currentScript, animationKey, pha
     ? _rawData.ranking : _rawData;
 
   const data = _unwrapped && Array.isArray(_unwrapped.metrics) && _unwrapped.metrics.length > 0
-    ? _unwrapped : { mode: 'single', mood: 'neutral', metrics: [{ id: 'ops', label: 'OPS', entries: [] }] };
+    ? _unwrapped : {
+      mode: 'single', mood: 'neutral',
+      metrics: [{
+        id: 'ops', label: 'OPS', kana: 'オーピーエス', unit: '',
+        entries: [
+          { rank: 1, name: '選手A', team: 'G', value: '1.013', isMainPlayer: true },
+          { rank: 2, name: '選手B', team: 'T', value: '.945' },
+          { rank: 3, name: '選手C', team: 'D', value: '.928' },
+          { rank: 4, name: '選手D', team: 'DB', value: '.895' },
+          { rank: 5, name: '選手E', team: 'S', value: '.878' },
+          { rank: 6, name: '選手F', team: 'C', value: '.812' },
+          { rank: 7, name: '選手G', team: 'G', value: '.795' },
+          { rank: 8, name: '選手H', team: 'T', value: '.778' },
+          { rank: 9, name: '選手I', team: 'D', value: '.752' },
+          { rank: 10, name: '選手J', team: 'S', value: '.728' },
+        ],
+      }],
+    };
 
   const focusedMetricId = currentScript?.focusMetric || null;
   const activeMetric = (focusedMetricId && data.metrics.find(m => m.id === focusedMetricId)) || data.metrics[0];
@@ -70,7 +87,7 @@ export function RankingLandscape({ projectData, currentScript, animationKey, pha
     return (
       <div
         key={`${entry.rank}-${entry.name}`}
-        className={`flex items-center gap-1.5 px-2 py-1 rounded ${isFocused ? 'bg-amber-500/20 ring-1 ring-amber-400/60' : ''}`}
+        className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded ${isFocused ? 'bg-amber-500/20 ring-1 ring-amber-400/60' : ''}`}
         style={{
           animation: `rankRowIn 0.5s var(--spring-bounce) ${idxInColumn * 0.06 + (isLeftColumn ? 0 : 0.3)}s backwards`,
           ...(isFocused ? { animation: `rankRowIn 0.5s var(--spring-bounce) ${idxInColumn * 0.06}s backwards, focusRowGlow 2s ease-in-out infinite` } : {}),
@@ -103,25 +120,25 @@ export function RankingLandscape({ projectData, currentScript, animationKey, pha
       <div
         key={`rank-l-${animationKey}-${activeMetric?.id || ''}`}
         className="absolute z-10 flex flex-col"
-        style={{ top: 36, bottom: '45%', left: 14, right: 14 }}
+        style={{ top: 32, bottom: '42%', left: 14, right: 14 }}
       >
         {/* 指標見出し */}
-        <div className={`text-center mb-1.5 ${moodStyle.headColor}`}>
-          <span className="text-[11px] font-bold tracking-widest opacity-80">
+        <div className={`text-center mb-1 ${moodStyle.headColor}`}>
+          <span className="text-[10px] font-bold tracking-widest opacity-80">
             {mood === 'best' ? '🏆 ' : mood === 'worst' ? '⚠️ ' : '📊 '}
           </span>
-          <span className="text-[15px] font-impact" style={{ textShadow: `0 0 12px ${moodStyle.glow}` }}>
+          <span className="text-[14px] font-impact" style={{ textShadow: `0 0 12px ${moodStyle.glow}` }}>
             {activeMetric?.label || '指標'}
           </span>
-          <span className="text-[10px] text-zinc-400 ml-2">ランキング</span>
+          <span className="text-[9px] text-zinc-400 ml-1.5">ランキング</span>
         </div>
 
-        {/* 2 列 */}
-        <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
-          <div className="flex flex-col gap-1 justify-start">
+        {/* 2 列 — gap を詰めて 5 行確実に表示 */}
+        <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 overflow-hidden">
+          <div className="flex flex-col gap-0.5 justify-start">
             {top5.map((e, i) => renderRow(e, i, true))}
           </div>
-          <div className="flex flex-col gap-1 justify-start">
+          <div className="flex flex-col gap-0.5 justify-start">
             {next5.map((e, i) => renderRow(e, i, false))}
           </div>
         </div>

@@ -79,49 +79,64 @@ const CSS_TEXT = `
     top: 10px; left: 12px; right: auto; justify-content: flex-start;
   }
   .phone.landscape .ph-date { top: 10px; right: 12px; font-size: 11px; }
-  /* ロゴは右下 (アバター B より下、邪魔にならない位置) */
-  .phone.landscape .brand-logo-fixed { right: 10px; bottom: 4px; left: auto; transform: scale(0.85); transform-origin: bottom right; }
+  /* ★v5.20.2★ ロゴ: top を明示的に auto にして bottom に固定 (top:10px が残ってると右上に浮く) */
+  .phone.landscape .brand-logo-fixed {
+    top: auto !important;
+    bottom: 6px !important;
+    left: auto !important;
+    right: 8px !important;
+    transform: scale(0.8);
+    transform-origin: bottom right;
+    align-items: flex-end;
+  }
+  /* ★v5.20.2★ 出典 (source) が右下でロゴと重なる → 横長は左下に移動 */
+  .phone.landscape .source {
+    right: auto !important;
+    left: 10px !important;
+    bottom: 6px !important;
+  }
 
-  /* ★テロップを画面下半分の中央に大きく★ (max-width 540px で目一杯) */
+  /* ★v5.20.2★ テロップ: 横を広く使う — max-width 460→640、padding を 30px に詰める */
   .phone.landscape .telop-wrap-normal,
   .phone.landscape .telop-wrap-hl {
-    bottom: 10%;
+    bottom: 8%;
     top: auto;
     left: 0; right: 0;
     align-items: center !important;
-    padding: 0 90px !important;  /* 左右 90px はアバター用スペース */
+    padding: 0 30px !important;
     z-index: 25;
   }
   .phone.landscape .telop-wrap-outro {
-    bottom: 12%;
+    bottom: 10%;
     align-items: center !important;
-    padding: 0 90px !important;
+    padding: 0 30px !important;
   }
-  /* テロップ自体: 横長は中央配置、speaker 別の左右寄せをキャンセル */
+  /* テロップ本体: 横長は中央配置、最大幅 600 (画面幅の約 95%) */
   .phone.landscape .telop-bg {
-    max-width: 460px;
-    font-size: 1.05em;
+    max-width: 600px;
+    font-size: 1.1em;
   }
   .phone.landscape .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
   .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="a"]),
   .phone.landscape .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
   .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) {
     align-items: center !important;
-    padding-left: 90px !important;
-    padding-right: 90px !important;
+    padding-left: 30px !important;
+    padding-right: 30px !important;
   }
 
-  /* ★アバター A 左下・B 右下★ (横長専用配置、縦長より小さめ) */
+  /* ★v5.20.2★ アバター: テロップの両脇 (左下/右下) に小さく */
   .phone.landscape .avatar-wrapper {
-    bottom: 4% !important;
-    transform: scale(0.65) !important;
+    bottom: 2% !important;
+    transform: scale(0.55) !important;
   }
   .phone.landscape .avatar-wrapper.left {
-    left: -8px !important; right: auto !important;
+    left: -16px !important; right: auto !important;
     transform-origin: bottom left !important;
   }
   .phone.landscape .avatar-wrapper.right {
-    right: 32px !important; left: auto !important;
+    /* ロゴ (右下) と被らないよう右端から少し離す */
+    right: 60px !important; left: auto !important;
     transform-origin: bottom right !important;
   }
 
@@ -1343,6 +1358,18 @@ const CSS_TEXT = `
   }
   .phone.fullscreen.square {
     aspect-ratio: 9/16;
+  }
+  /* ★v5.20.2★ 横長 (16:9) フルスクリーン: 幅基準で算出 (高さは 9/16 で決まる) */
+  .phone.fullscreen.landscape {
+    width: min(95vw, calc(95vh * 16 / 9)) !important;
+    height: auto !important;
+    aspect-ratio: 16/9 !important;
+  }
+  /* ★v5.20.2★ 正方 (1:1) フルスクリーン */
+  .phone.fullscreen:not(.landscape).square[data-ar="1:1"] {
+    width: min(95vw, 95vh) !important;
+    height: auto !important;
+    aspect-ratio: 1/1 !important;
   }
 
   /* プレビュー時のベース font-family (Tailwindに上書きされないように) */

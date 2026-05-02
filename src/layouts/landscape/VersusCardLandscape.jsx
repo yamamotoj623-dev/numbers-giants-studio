@@ -45,8 +45,8 @@ export function VersusCardLandscape({ projectData, currentScript, animationKey, 
         key={`vs-l-${animationKey}`}
         className="absolute z-10 grid"
         style={{
-          top: 36,
-          bottom: '45%',
+          top: 32,
+          bottom: '42%',
           left: 14,
           right: 14,
           gridTemplateColumns: '1fr 2fr 1fr',
