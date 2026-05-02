@@ -59,78 +59,103 @@ const CSS_TEXT = `
   /* ★v5.19.7★ 横長 (16:9) 対応 — YouTube 通常動画向け */
   .phone.landscape { width: 640px; max-width: 95vw; aspect-ratio: 16/9; }
 
-  /* ★v5.19.8★ 横長レイアウトでの要素再配置
-     縦長前提だと中央のチャートが画面の半分しか使えず、両端が空きすぎる。
-     横長では「左サイド: 選手情報 / 右サイド: チャート/データ」の 2 カラム配置を基本に。 */
+  /* ★v5.20★ 横長 (16:9) レイアウト — 完全別構図
+     構図:
+       ┌─────────────────────────────────┐
+       │ ヘッダー (左上: 選手名 / 右上: 日付)│ 上 36px
+       │                                 │
+       │   主役データ (上半分、主にチャート)│ 中央 56% (高さ ~200px)
+       │                                 │
+       │ ┌──────[テロップ大]──────┐       │
+       │ │A  text                B│ 下 38% (高さ ~135px)
+       │ │ avatar               avatar    │
+       │ └────────────────────────┘       │
+       └─────────────────────────────────┘
+  */
 
-  /* ヘッダー (選手名 + 番号) は左上に */
+  /* ヘッダー */
   .phone.landscape .phase-b-header,
   .phone.landscape .phase-c-header {
-    top: 18px; left: 18px; right: auto; justify-content: flex-start;
+    top: 10px; left: 12px; right: auto; justify-content: flex-start;
   }
-  /* 日付は右上 */
-  .phone.landscape .ph-date { top: 18px; right: 18px; font-size: 11px; }
-  /* ロゴは左下に維持 */
-  .phone.landscape .brand-logo-fixed { left: 12px; bottom: 12px; }
+  .phone.landscape .ph-date { top: 10px; right: 12px; font-size: 11px; }
+  /* ロゴは右下 (アバター B より下、邪魔にならない位置) */
+  .phone.landscape .brand-logo-fixed { right: 10px; bottom: 4px; left: auto; transform: scale(0.85); transform-origin: bottom right; }
 
-  /* テロップを画面中央下に、横幅広めに */
+  /* ★テロップを画面下半分の中央に大きく★ (max-width 540px で目一杯) */
   .phone.landscape .telop-wrap-normal,
   .phone.landscape .telop-wrap-hl {
-    bottom: 8%;
+    bottom: 10%;
+    top: auto;
     left: 0; right: 0;
     align-items: center !important;
-    padding: 0 14px !important;
+    padding: 0 90px !important;  /* 左右 90px はアバター用スペース */
+    z-index: 25;
   }
   .phone.landscape .telop-wrap-outro {
-    bottom: 10%;
+    bottom: 12%;
+    align-items: center !important;
+    padding: 0 90px !important;
+  }
+  /* テロップ自体: 横長は中央配置、speaker 別の左右寄せをキャンセル */
+  .phone.landscape .telop-bg {
+    max-width: 460px;
+    font-size: 1.05em;
+  }
+  .phone.landscape .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
+  .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="a"]),
+  .phone.landscape .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
+  .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) {
+    align-items: center !important;
+    padding-left: 90px !important;
+    padding-right: 90px !important;
   }
 
-  /* ★アバターを画面右下隅に小さく配置★ (縦長は左下/右下 大きく) */
+  /* ★アバター A 左下・B 右下★ (横長専用配置、縦長より小さめ) */
   .phone.landscape .avatar-wrapper {
-    bottom: 8% !important;
-    transform: scale(0.75) !important;
-    transform-origin: bottom right !important;
+    bottom: 4% !important;
+    transform: scale(0.65) !important;
   }
   .phone.landscape .avatar-wrapper.left {
-    left: auto !important; right: auto !important;
-    bottom: 26% !important;
-    left: 2% !important;
+    left: -8px !important; right: auto !important;
     transform-origin: bottom left !important;
   }
   .phone.landscape .avatar-wrapper.right {
-    right: 2% !important;
-    bottom: 26% !important;
+    right: 32px !important; left: auto !important;
+    transform-origin: bottom right !important;
   }
 
-  /* ハイライトカードは中央配置 (縦長と同じだが横長でも収まるように max-width 縛りを緩める) */
+  /* 上半分 = 主役データ領域 (各レイアウトの inset を上半分に絞る) */
+  .phone.landscape .anim-layer .phase {
+    /* 上半分のみが主役表示エリア */
+  }
+
+  /* ハイライトカード: 横長は上半分中央 */
   .phone.landscape .highlight-card {
-    max-width: 480px; width: 78%;
+    top: 8%;
+    bottom: 45%;
+    max-width: 90%; width: 90%;
+    left: 5%; right: 5%;
   }
 
-  /* レーダーアウター: 縦長は radar 上下左右に配置だったが、横長では左半分のみで描画 */
-  .phone.landscape .radar-outer {
-    top: 50px; bottom: 12%; left: 4%; right: 50%; padding: 0 8px;
-  }
-  /* radar の隣 (右半分) にスペース確保 (将来コンテンツ用) */
-  /* レーダー以外のレイアウトは inset: 0 で全幅使う */
-
-  /* hook (id:1) は中央寄せ */
+  /* hook (id:1) — 横長専用配置 */
   .phone.landscape .hook-telop-wrap {
-    top: 38%;
+    top: 18%;
     padding: 0 8%;
   }
   .phone.landscape .hook-stats-big {
-    top: 64%;
+    top: 56%;
     left: 8%; right: 8%;
+    bottom: auto;
   }
   .phone.landscape .hook-silhouette {
-    top: 22%; width: 220px; height: 220px; opacity: 0.15;
+    top: 14%; width: 180px; height: 180px; opacity: 0.12;
+    left: 50%; transform: translateX(-50%);
   }
   .phone.landscape .hook-header {
-    top: 18px; left: 18px; right: 18px;
+    top: 10px; left: 12px; right: 12px;
   }
-
-  /* hook stats grid を 4 列横並びに (元々 2x2 だが横長は 1x4 が映える) */
+  /* hook stats を 1x4 横並びに */
   .phone.landscape .hook-stats-grid {
     grid-template-columns: repeat(4, 1fr) !important;
   }

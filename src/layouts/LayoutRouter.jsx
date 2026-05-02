@@ -26,6 +26,11 @@ import { TeamContextLayout } from './TeamContextLayout.jsx';
 import { RankingLayout } from './RankingLayout.jsx';
 import { PlayerSpotlightLayout } from './PlayerSpotlightLayout.jsx';
 import { BatterHeatmapLayout } from './BatterHeatmapLayout.jsx';
+// ★v5.20★ 横長専用レイアウト
+import { RadarCompareLandscape } from './landscape/RadarCompareLandscape.jsx';
+import { RankingLandscape } from './landscape/RankingLandscape.jsx';
+import { PlayerSpotlightLandscape } from './landscape/PlayerSpotlightLandscape.jsx';
+import { VersusCardLandscape } from './landscape/VersusCardLandscape.jsx';
 import { LayoutErrorBoundary } from '../components/LayoutErrorBoundary.jsx';
 
 const LAYOUT_COMPONENTS = {
@@ -37,6 +42,20 @@ const LAYOUT_COMPONENTS = {
   ranking: RankingLayout,
   player_spotlight: PlayerSpotlightLayout,
   batter_heatmap: BatterHeatmapLayout,
+};
+
+// ★v5.20★ 横長 (16:9) 専用バリアント — Phase 1 で 4 レイアウト実装
+// 未対応のレイアウトは縦長版にフォールバック (CSS で位置調整は効く)
+const LAYOUT_COMPONENTS_LANDSCAPE = {
+  radar_compare: RadarCompareLandscape,
+  ranking: RankingLandscape,
+  player_spotlight: PlayerSpotlightLandscape,
+  versus_card: VersusCardLandscape,
+  // 以下 Phase 2 で対応:
+  // timeline:       TimelineLandscape,
+  // pitch_arsenal:  PitchArsenalLandscape,
+  // team_context:   TeamContextLandscape,
+  // batter_heatmap: BatterHeatmapLandscape,
 };
 
 // 削除/リネーム対応
@@ -91,7 +110,13 @@ export function LayoutRouter(props) {
     }
   }, [desiredLayout]);
 
-  const Layout = LAYOUT_COMPONENTS[activeLayout] || RadarCompareLayout;
+  const Layout = (() => {
+    // ★v5.20★ 横長 (16:9) で専用バリアントが存在すればそれを使う
+    if (props.projectData?.aspectRatio === '16:9' && LAYOUT_COMPONENTS_LANDSCAPE[activeLayout]) {
+      return LAYOUT_COMPONENTS_LANDSCAPE[activeLayout];
+    }
+    return LAYOUT_COMPONENTS[activeLayout] || RadarCompareLayout;
+  })();
 
   // ★v5.18.0★ キーフレームアニメ (Gemini提言: 重要発言時のズーム/シェイク)
   //   'zoom'    - グッと寄る
