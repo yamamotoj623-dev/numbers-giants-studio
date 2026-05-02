@@ -31,6 +31,11 @@ import { RadarCompareLandscape } from './landscape/RadarCompareLandscape.jsx';
 import { RankingLandscape } from './landscape/RankingLandscape.jsx';
 import { PlayerSpotlightLandscape } from './landscape/PlayerSpotlightLandscape.jsx';
 import { VersusCardLandscape } from './landscape/VersusCardLandscape.jsx';
+// ★v5.20.3★ Phase 2 横長レイアウト
+import { TimelineLandscape } from './landscape/TimelineLandscape.jsx';
+import { PitchArsenalLandscape } from './landscape/PitchArsenalLandscape.jsx';
+import { BatterHeatmapLandscape } from './landscape/BatterHeatmapLandscape.jsx';
+import { TeamContextLandscape } from './landscape/TeamContextLandscape.jsx';
 import { LayoutErrorBoundary } from '../components/LayoutErrorBoundary.jsx';
 
 const LAYOUT_COMPONENTS = {
@@ -44,18 +49,16 @@ const LAYOUT_COMPONENTS = {
   batter_heatmap: BatterHeatmapLayout,
 };
 
-// ★v5.20★ 横長 (16:9) 専用バリアント — Phase 1 で 4 レイアウト実装
-// 未対応のレイアウトは縦長版にフォールバック (CSS で位置調整は効く)
+// ★v5.20.3★ 横長 (16:9) 専用バリアント — 全 8 レイアウト対応完了
 const LAYOUT_COMPONENTS_LANDSCAPE = {
   radar_compare: RadarCompareLandscape,
   ranking: RankingLandscape,
   player_spotlight: PlayerSpotlightLandscape,
   versus_card: VersusCardLandscape,
-  // 以下 Phase 2 で対応:
-  // timeline:       TimelineLandscape,
-  // pitch_arsenal:  PitchArsenalLandscape,
-  // team_context:   TeamContextLandscape,
-  // batter_heatmap: BatterHeatmapLandscape,
+  timeline: TimelineLandscape,
+  pitch_arsenal: PitchArsenalLandscape,
+  team_context: TeamContextLandscape,
+  batter_heatmap: BatterHeatmapLandscape,
 };
 
 // 削除/リネーム対応

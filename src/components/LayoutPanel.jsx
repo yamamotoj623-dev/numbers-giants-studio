@@ -215,12 +215,9 @@ export function LayoutPanel({ projectData, onChange }) {
         </div>
         {projectData.aspectRatio === '16:9' && (
           <div className="mt-2 text-[10px] bg-emerald-50 border border-emerald-200 rounded p-2 text-emerald-800">
-            <div className="font-bold mb-1">📺 横長 (16:9) 対応状況</div>
-            <div className="space-y-0.5">
-              <div>✅ 専用レイアウト実装済み: radar_compare / ranking / player_spotlight / versus_card</div>
-              <div className="text-amber-700">⚠️ 縦長版フォールバック: timeline / pitch_arsenal / team_context / batter_heatmap (Phase 2 で対応予定)</div>
-              <div className="text-emerald-700 mt-1">構図: 上半分=主役データ、下半分=テロップ大、A左下/B右下のアバター配置</div>
-            </div>
+            <div className="font-bold mb-1">📺 横長 (16:9) 完全対応</div>
+            <div>✅ 全 8 レイアウト専用版実装済み: radar / timeline / ranking / spotlight / versus / pitch_arsenal / team_context / batter_heatmap</div>
+            <div className="text-emerald-700 mt-1">構図: 上半分=主役データ、下半分=テロップ大、A左下/B右下のアバター配置</div>
           </div>
         )}
       </div>

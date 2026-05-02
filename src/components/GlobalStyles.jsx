@@ -111,18 +111,25 @@ const CSS_TEXT = `
     align-items: center !important;
     padding: 0 30px !important;
   }
-  /* テロップ本体: 横長は中央配置、最大幅 600 (画面幅の約 95%) */
+  /* テロップ本体: 横長は max 600px (画面幅の約 95%) */
   .phone.landscape .telop-bg {
     max-width: 600px;
     font-size: 1.1em;
   }
+  /* ★v5.20.3★ speaker 別に左右へ寄せる (中央すぎ問題対策) */
+  /* speaker-a (数原・男性): 左寄り */
   .phone.landscape .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
-  .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="a"]),
+  .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) {
+    align-items: flex-start !important;
+    padding-left: 60px !important;   /* 左アバター A の右側から始める */
+    padding-right: 100px !important;
+  }
+  /* speaker-b (もえか・女性): 右寄り */
   .phone.landscape .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
   .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) {
-    align-items: center !important;
-    padding-left: 30px !important;
-    padding-right: 30px !important;
+    align-items: flex-end !important;
+    padding-left: 100px !important;
+    padding-right: 100px !important; /* 右アバター B + ロゴを避ける */
   }
 
   /* ★v5.20.2★ アバター: テロップの両脇 (左下/右下) に小さく */
