@@ -158,15 +158,15 @@ const CSS_TEXT = `
     /* 上半分のみが主役表示エリア */
   }
 
-  /* ★v5.20.5★ ハイライトカード横長 — 横を広く使うのではなく中央寄せ、左右 2 カラム構成
-     左: 値比較 (main vs sub)
-     右: 説明 + 優秀基準 (縦並び)
-     ヘッダーは 1 行に収める */
+  /* ★v5.20.6★ ハイライトカード横長 — もっと縦に侵食、横は中央でコンパクトに
+     - bottom 46% → 28% (テロップ直前まで下に伸ばす)
+     - width 75% → 60% (横を更に絞ってコンパクト感)
+     - z-index は 20 (テロップ 25 より下層) なので衝突時は自動でテロップ優先 */
   .phone.landscape .highlight-card {
     top: 38px;
-    bottom: 46%;
-    width: 75%;
-    max-width: 520px;
+    bottom: 28%;
+    width: 60%;
+    max-width: 440px;
     left: 50%;
     right: auto;
     transform: translateX(-50%);
@@ -176,6 +176,7 @@ const CSS_TEXT = `
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    z-index: 20;
   }
   /* phase.active のアニメと translateX(-50%) を両立 */
   .phone.landscape .phase.active .highlight-card {
@@ -194,9 +195,9 @@ const CSS_TEXT = `
 
   /* メインボディ: 左 (値比較) + 右 (説明・基準) を flex で並べる */
   .phone.landscape .highlight-card > .hl-values { flex-shrink: 0; }
-  .phone.landscape .hl-values { gap: 10px; margin-bottom: 5px; padding: 4px 0; }
-  .phone.landscape .hl-val-main .num { font-size: 28px; letter-spacing: -0.5px; }
-  .phone.landscape .hl-val-sub .num { font-size: 20px; }
+  .phone.landscape .hl-values { gap: 8px; margin-bottom: 4px; padding: 4px 0; }
+  .phone.landscape .hl-val-main .num { font-size: 26px; letter-spacing: -0.5px; }
+  .phone.landscape .hl-val-sub .num { font-size: 19px; }
   .phone.landscape .hl-val-main .tag,
   .phone.landscape .hl-val-sub .tag { font-size: 9px; margin-top: 2px; }
   .phone.landscape .hl-vs { font-size: 11px; }

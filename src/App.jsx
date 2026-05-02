@@ -209,13 +209,23 @@ const App = () => {
       )}
 
       {!isFullscreenMode && (
-        <div className={`w-full md:w-[450px] lg:w-[500px] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden border border-zinc-200 shrink-0 transition-all duration-300 ${isPanelOpen ? 'h-auto md:h-[90vh]' : 'h-auto'}`}>
-          <div className="bg-zinc-800 p-4 flex items-center justify-between shadow-md z-10 cursor-pointer select-none" onClick={() => setIsPanelOpen(!isPanelOpen)}>
-            <h2 className="text-white font-bold flex items-center gap-2">
-              <Settings size={18}/> 数字で見るG党 Studio
-              <span className="text-[10px] bg-indigo-600 px-1.5 py-0.5 rounded ml-1">v{APP_VERSION}</span>
-            </h2>
-            <div className="flex items-center gap-2">
+        <div className={`bg-white rounded-xl shadow-xl flex flex-col overflow-hidden border border-zinc-200 shrink-0 transition-all duration-300 ${
+          isPanelOpen
+            ? 'w-full md:w-[450px] lg:w-[500px] h-auto md:h-[90vh]'
+            : 'w-full md:w-[44px] h-[52px] md:h-[90vh]'
+        }`}>
+          <div
+            className={`bg-zinc-800 ${isPanelOpen ? 'p-4' : 'p-2 md:p-2.5'} flex ${isPanelOpen ? 'items-center justify-between' : 'items-center justify-center md:justify-start md:flex-col md:gap-3'} shadow-md z-10 cursor-pointer select-none ${isPanelOpen ? '' : 'h-full'}`}
+            onClick={() => setIsPanelOpen(!isPanelOpen)}
+            title={isPanelOpen ? 'パネルを閉じる' : 'パネルを開く'}
+          >
+            {isPanelOpen ? (
+              <>
+                <h2 className="text-white font-bold flex items-center gap-2">
+                  <Settings size={18}/> 数字で見るG党 Studio
+                  <span className="text-[10px] bg-indigo-600 px-1.5 py-0.5 rounded ml-1">v{APP_VERSION}</span>
+                </h2>
+                <div className="flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); setIsFullscreenMode(true); }}
                 className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded flex items-center gap-1 transition shadow"
@@ -230,8 +240,17 @@ const App = () => {
               >
                 <Radio size={12}/> 録画
               </button>
-              {isPanelOpen ? <ChevronUp size={18} className="text-white"/> : <ChevronDown size={18} className="text-white"/>}
+              <ChevronUp size={18} className="text-white"/>
             </div>
+              </>
+            ) : (
+              /* ★v5.20.6★ パネル閉じた状態: アイコンのみ縦並び (横向きスマホで重なり問題解消) */
+              <>
+                <Settings size={20} className="text-white"/>
+                <span className="hidden md:inline-block text-[9px] font-bold text-zinc-400 [writing-mode:vertical-rl] tracking-widest">パネル展開</span>
+                <ChevronDown size={16} className="text-white md:hidden"/>
+              </>
+            )}
           </div>
 
           {isPanelOpen && (
