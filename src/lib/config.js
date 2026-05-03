@@ -2,7 +2,7 @@
  * アプリ全体の定数・テーマ定義
  */
 
-export const APP_VERSION = '5.20.9';
+export const APP_VERSION = '5.20.10';
 
 export const GAS_CONFIG = {
   endpoint: import.meta.env.VITE_GAS_ENDPOINT || '',

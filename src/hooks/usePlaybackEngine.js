@@ -24,6 +24,10 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     mixerRef.current = getMixer();
     return () => {
       adapterRef.current?.stop();
+      // ★v5.20.10★ unmount時に ref タイマーもクリア (リーク防止)
+      telopTimersRef.current.forEach(clearTimeout);
+      telopTimersRef.current = [];
+      if (absoluteTimerRef.current) clearTimeout(absoluteTimerRef.current);
     };
   }, [ttsEngine]);
 
@@ -77,6 +81,9 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
 
   // 現在進行中のグループ情報を ref で管理 (useEffect再実行でも音声停止されないよう)
   const currentGroupRef = useRef({ startIdx: -1, endIdx: -1 });
+  // ★v5.20.10★ グループ内テロップ進行タイマー (currentIndex 変化で消えないよう ref で保持)
+  const telopTimersRef = useRef([]);
+  const absoluteTimerRef = useRef(null);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -115,11 +122,14 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     currentGroupRef.current = { startIdx: groupStartIdx, endIdx: groupEndIdx };
 
     // === テロップ同期setTimeout配列 ===
+    // ★v5.20.10★ ref に保存して currentIndex 変化での useEffect 再実行に消されない
+    // (旧実装は cleanup で telopTimers.forEach(clearTimeout) していたため、
+    //  3 連続グループの 2->3 遷移で残りのタイマーが全消去 → テロップ反映されない真因)
+    const telopTimers = [];
     const charMs = ttsEngine === 'gemini' ? 160 : 150;
     const groupTotalChars = groupScripts.reduce((sum, s) => sum + (s.speech || s.text || '').length, 0) || 1;
     const groupTotalMs = groupTotalChars * charMs / speechRate;
 
-    const telopTimers = [];
     let cumulativeMs = 0;
     for (let i = 0; i < groupScripts.length - 1; i++) {
       const thisScript = groupScripts[i];
@@ -161,10 +171,10 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
           return cur;
         });
       }, groupTotalMs);
-      return () => {
-        telopTimers.forEach(clearTimeout);
-        clearTimeout(endTimer);
-      };
+      // ★v5.20.10★ ref に保存 (cleanup で消されないように)
+      telopTimersRef.current.forEach(clearTimeout);
+      telopTimersRef.current = [...telopTimers, endTimer];
+      return undefined;
     }
 
     // グループ全部の speech を連結して1回でTTS
@@ -201,15 +211,25 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       advanceToNextGroup('absolute timeout (' + absoluteTimeoutMs + 'ms)');
     }, absoluteTimeoutMs);
 
+    // ★v5.20.10★ 既存のタイマーがあれば一旦クリア(別グループ突入時用)、
+    //              ref に新しいセットを保存して useEffect cleanup で消えないようにする
+    telopTimersRef.current.forEach(clearTimeout);
+    telopTimersRef.current = telopTimers;
+
+    if (absoluteTimerRef.current) clearTimeout(absoluteTimerRef.current);
+    absoluteTimerRef.current = absoluteTimer;
+
     mixer?.startDucking();
     const speakPromise = adapter.speak(joinedSpeech, script.speaker || 'A', {
       rate: speechRate,
       onEnd: () => {
-        clearTimeout(absoluteTimer);
+        clearTimeout(absoluteTimerRef.current);
+        absoluteTimerRef.current = null;
         advanceToNextGroup();
       },
       onError: (err) => {
-        clearTimeout(absoluteTimer);
+        clearTimeout(absoluteTimerRef.current);
+        absoluteTimerRef.current = null;
         advanceToNextGroup('TTS onError: ' + (err?.message || err));
       },
     });
@@ -217,17 +237,16 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     // speak() が Promise の場合、catchされない rejection があっても進行保証
     if (speakPromise && typeof speakPromise.catch === 'function') {
       speakPromise.catch(err => {
-        clearTimeout(absoluteTimer);
+        clearTimeout(absoluteTimerRef.current);
+        absoluteTimerRef.current = null;
         advanceToNextGroup('speak promise rejected: ' + (err?.message || err));
       });
     }
 
-    // ★ cleanup: テロップタイマーのみ解除、adapter.stop() は呼ばない
-    //   (グループ途中の useEffect 再実行で音声が止まらないよう)
-    //   音声の本当の停止は togglePlay/reset で明示的に行う
-    return () => {
-      telopTimers.forEach(clearTimeout);
-    };
+    // ★v5.20.10★ cleanup: グループ内のタイマーは消さない (ref で持続させる)
+    //   useEffect の再実行は currentIndex の変化で起こるが、グループ進行中はタイマー継続必須
+    //   完全な停止は togglePlay/reset/jumpTo 経由で adapter.stop() + ref クリアで行う
+    return undefined;
   }, [currentIndex, isPlaying, scripts, isVoiceEnabled, isSEEnabled, speechRate, ttsEngine, getSpeakerGroupInfo]);
 
   const togglePlay = useCallback(async () => {
@@ -259,6 +278,13 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     } else {
       setIsPlaying(false);
       currentGroupRef.current = { startIdx: -1, endIdx: -1 };
+      // ★v5.20.10★ 停止時もタイマー全クリア
+      telopTimersRef.current.forEach(clearTimeout);
+      telopTimersRef.current = [];
+      if (absoluteTimerRef.current) {
+        clearTimeout(absoluteTimerRef.current);
+        absoluteTimerRef.current = null;
+      }
       adapterRef.current?.stop();
       mixerRef.current?.stopDucking();
       mixerRef.current?.stopBgm();
@@ -271,6 +297,13 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
     setElapsedTime(0);
     setAnimationKey(Date.now());
     currentGroupRef.current = { startIdx: -1, endIdx: -1 };
+    // ★v5.20.10★ ref ベースのタイマーをクリア
+    telopTimersRef.current.forEach(clearTimeout);
+    telopTimersRef.current = [];
+    if (absoluteTimerRef.current) {
+      clearTimeout(absoluteTimerRef.current);
+      absoluteTimerRef.current = null;
+    }
     adapterRef.current?.stop();
     mixerRef.current?.stopDucking();
     mixerRef.current?.stopBgm();
@@ -279,6 +312,13 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
   const jumpTo = useCallback((index) => {
     setCurrentIndex(Math.max(0, Math.min(scripts.length - 1, index)));
     currentGroupRef.current = { startIdx: -1, endIdx: -1 };
+    // ★v5.20.10★ タイマー全クリア
+    telopTimersRef.current.forEach(clearTimeout);
+    telopTimersRef.current = [];
+    if (absoluteTimerRef.current) {
+      clearTimeout(absoluteTimerRef.current);
+      absoluteTimerRef.current = null;
+    }
     adapterRef.current?.stop();
   }, [scripts.length]);
 
