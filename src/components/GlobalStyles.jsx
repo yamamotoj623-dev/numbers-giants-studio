@@ -1017,6 +1017,10 @@ const CSS_TEXT = `
     opacity: 1 !important;
     transform: translateY(0) scaleY(1) !important;
   }
+  /* ★v5.20.12★ 横長は translateX(-50%) で中央配置するため、zoom時も translateX を維持 */
+  .phone.landscape .anim-layer[data-zoom-active="true"] .highlight-card {
+    transform: translateX(-50%) translateY(0) scaleY(1) !important;
+  }
   /* テロップ吹き出し (常時 0.3s 遅延スライドアップ) */
   .anim-layer[data-zoom-active="true"] .telop-wrap-normal .telop-bg,
   .anim-layer[data-zoom-active="true"] .telop-wrap-hl .telop-bg {

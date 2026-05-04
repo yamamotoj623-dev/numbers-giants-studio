@@ -120,12 +120,29 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
   };
 
   const handlePasteAndApply = async () => {
+    // ★v5.20.12★ クリップボード読取は環境依存で失敗するため try-catch で堅牢化
+    // 失敗時は textarea にフォーカス→ユーザーに直接貼り付けを促す
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      // クリップボード API 自体が無い環境 (古い Chrome、HTTPS でない、iframe など)
+      const ta = document.querySelector('textarea[data-json-input]');
+      if (ta) { ta.focus(); ta.select(); }
+      flash('テキストエリアに直接ペースト→「反映」を押してください');
+      return;
+    }
     try {
       const text = await navigator.clipboard.readText();
+      if (!text || !text.trim()) {
+        flash('クリップボードが空です');
+        return;
+      }
       setJsonInput(text);
       if (tryApply(text)) flash('貼り付けて反映しました');
-    } catch {
-      setJsonError('クリップボードの読み取り権限がありません。下のエリアに直接ペーストしてください。');
+    } catch (err) {
+      // Permissions Policy / focus 失敗 / 拒否 etc.
+      console.warn('[Clipboard] readText failed:', err?.message || err);
+      const ta = document.querySelector('textarea[data-json-input]');
+      if (ta) { ta.focus(); ta.select(); }
+      flash('クリップボード自動読取が不可。テキストエリアに直接ペーストしてください');
     }
   };
 
@@ -231,6 +248,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
       {jsonError && <div className="text-red-500 text-[10px] font-bold mb-2 flex items-center gap-1 bg-red-50 p-2 rounded"><AlertCircle size={12}/> {jsonError}</div>}
 
       <textarea
+        data-json-input
         className="flex-1 w-full bg-[#1e1e1e] text-[#d4d4d4] font-mono text-[11px] p-3 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar shadow-inner min-h-[300px]"
         value={jsonInput}
         onChange={(e) => setJsonInput(e.target.value)}

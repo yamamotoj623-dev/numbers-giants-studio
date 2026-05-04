@@ -14,13 +14,31 @@ import { THEMES } from '../../lib/config';
 import { OutroPanel } from '../../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../../components/HighlightCard.jsx';
 
-const RADAR_DEFAULT = {
+const RADAR_DEFAULT_BATTER = {
   stats: [
     { label: '長打力',   main: 70, sub: 50 },
     { label: '選球眼',   main: 65, sub: 55 },
     { label: '三振率',   main: 70, sub: 50 },
     { label: '得点創出', main: 80, sub: 60 },
     { label: '本塁打率', main: 70, sub: 55 },
+  ],
+};
+const RADAR_DEFAULT_PITCHER = {
+  stats: [
+    { label: '奪三振',   main: 70, sub: 50 },
+    { label: '制球力',   main: 65, sub: 55 },
+    { label: '球質',     main: 70, sub: 50 },
+    { label: '安定感',   main: 80, sub: 60 },
+    { label: '空振り率', main: 70, sub: 55 },
+  ],
+};
+const RADAR_DEFAULT_TEAM = {
+  stats: [
+    { label: '得点力',   main: 70, sub: 50 },
+    { label: '失点防止', main: 65, sub: 55 },
+    { label: '機動力',   main: 70, sub: 50 },
+    { label: '長打力',   main: 80, sub: 60 },
+    { label: '守備力',   main: 70, sub: 55 },
   ],
 };
 
@@ -32,8 +50,26 @@ export function RadarCompareLandscape({ projectData, currentScript, animationKey
   const isHighlight = phase === 'highlight' && highlightComp;
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
-  const radar = projectData.layoutData?.radar || RADAR_DEFAULT;
-  const stats = Array.isArray(radar.stats) && radar.stats.length >= 3 ? radar.stats : RADAR_DEFAULT.stats;
+
+  // ★v5.20.11★ stats 解決の優先順位:
+  //   1. layoutData.radar.stats (明示指定) ← 最優先
+  //   2. projectData.radarStats を配列化 (top-level の radarStats を使う)
+  //   3. playerType ベースのデフォルト
+  let stats;
+  const radar = projectData.layoutData?.radar;
+  if (Array.isArray(radar?.stats) && radar.stats.length >= 3) {
+    stats = radar.stats;
+  } else if (projectData.radarStats && typeof projectData.radarStats === 'object') {
+    // radarStats: {csw: {label, main, sub}, ...} → 配列に変換
+    stats = Object.values(projectData.radarStats)
+      .filter(s => s && s.label && (s.main !== undefined || s.sub !== undefined))
+      .slice(0, 5)
+      .map(s => ({ label: s.label, main: Number(s.main) || 0, sub: Number(s.sub) || 0 }));
+  }
+  if (!stats || stats.length < 3) {
+    const pt = projectData.playerType;
+    stats = (pt === 'pitcher' ? RADAR_DEFAULT_PITCHER : pt === 'team' ? RADAR_DEFAULT_TEAM : RADAR_DEFAULT_BATTER).stats;
+  }
 
   return (
     <>
