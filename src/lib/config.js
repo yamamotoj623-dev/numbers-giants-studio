@@ -2,7 +2,7 @@
  * アプリ全体の定数・テーマ定義
  */
 
-export const APP_VERSION = '5.20.13';
+export const APP_VERSION = '5.20.14';
 
 export const GAS_CONFIG = {
   endpoint: import.meta.env.VITE_GAS_ENDPOINT || '',
@@ -62,32 +62,33 @@ export const DEFAULT_MIXER_LEVELS = {
 
 // ★v5.20.13: チームプリセット (リーグ/チーム/カラー)★
 // number/league/team を選択するとプレビューの選手色が自動で切り替わる
+// ★v5.20.14: 各チームの textColor は暗背景でも読める明度で統一★
 export const TEAM_PRESETS = [
   // NPB セ・リーグ
   { id: 'npb_giants',    league: 'NPB', team: 'G',     label: '巨人',       primary: '#f97316', secondary: '#c2410c', textColor: '#fb923c' },
-  { id: 'npb_tigers',    league: 'NPB', team: 'T',     label: '阪神',       primary: '#eab308', secondary: '#a16207', textColor: '#facc15' },
+  { id: 'npb_tigers',    league: 'NPB', team: 'T',     label: '阪神',       primary: '#facc15', secondary: '#a16207', textColor: '#fde047' },
   { id: 'npb_dragons',   league: 'NPB', team: 'D',     label: '中日',       primary: '#3b82f6', secondary: '#1d4ed8', textColor: '#60a5fa' },
   { id: 'npb_carp',      league: 'NPB', team: 'C',     label: '広島',       primary: '#ef4444', secondary: '#b91c1c', textColor: '#f87171' },
-  { id: 'npb_baystars',  league: 'NPB', team: 'DB',    label: '横浜DeNA',   primary: '#1e40af', secondary: '#172554', textColor: '#3b82f6' },
-  { id: 'npb_swallows',  league: 'NPB', team: 'S',     label: 'ヤクルト',   primary: '#0ea5e9', secondary: '#0c4a6e', textColor: '#38bdf8' },
+  { id: 'npb_baystars',  league: 'NPB', team: 'DB',    label: '横浜DeNA',   primary: '#3b82f6', secondary: '#1e40af', textColor: '#60a5fa' },
+  { id: 'npb_swallows',  league: 'NPB', team: 'S',     label: 'ヤクルト',   primary: '#22c55e', secondary: '#15803d', textColor: '#4ade80' },
   // NPB パ・リーグ
-  { id: 'npb_buffaloes', league: 'NPB', team: 'Bs',    label: 'オリックス', primary: '#7c2d12', secondary: '#451a03', textColor: '#a16207' },
-  { id: 'npb_marines',   league: 'NPB', team: 'M',     label: 'ロッテ',     primary: '#1e293b', secondary: '#0f172a', textColor: '#475569' },
-  { id: 'npb_eagles',    league: 'NPB', team: 'E',     label: '楽天',       primary: '#7f1d1d', secondary: '#450a0a', textColor: '#dc2626' },
-  { id: 'npb_lions',     league: 'NPB', team: 'L',     label: '西武',       primary: '#1e3a8a', secondary: '#172554', textColor: '#2563eb' },
-  { id: 'npb_hawks',     league: 'NPB', team: 'H',     label: 'ソフトバンク', primary: '#fbbf24', secondary: '#b45309', textColor: '#facc15' },
-  { id: 'npb_fighters',  league: 'NPB', team: 'F',     label: '日本ハム',   primary: '#0891b2', secondary: '#0e7490', textColor: '#22d3ee' },
+  { id: 'npb_buffaloes', league: 'NPB', team: 'Bs',    label: 'オリックス', primary: '#a16207', secondary: '#451a03', textColor: '#d4a373' },
+  { id: 'npb_marines',   league: 'NPB', team: 'M',     label: 'ロッテ',     primary: '#64748b', secondary: '#1e293b', textColor: '#cbd5e1' },
+  { id: 'npb_eagles',    league: 'NPB', team: 'E',     label: '楽天',       primary: '#dc2626', secondary: '#7f1d1d', textColor: '#f87171' },
+  { id: 'npb_lions',     league: 'NPB', team: 'L',     label: '西武',       primary: '#2563eb', secondary: '#1e3a8a', textColor: '#60a5fa' },
+  { id: 'npb_hawks',     league: 'NPB', team: 'H',     label: 'ソフトバンク', primary: '#fbbf24', secondary: '#b45309', textColor: '#fde047' },
+  { id: 'npb_fighters',  league: 'NPB', team: 'F',     label: '日本ハム',   primary: '#06b6d4', secondary: '#0e7490', textColor: '#22d3ee' },
   // MLB ナ・リーグ (主要)
-  { id: 'mlb_dodgers',   league: 'MLB', team: 'LAD',   label: 'ドジャース', primary: '#1e40af', secondary: '#0c4a6e', textColor: '#3b82f6' },
-  { id: 'mlb_padres',    league: 'MLB', team: 'SD',    label: 'パドレス',   primary: '#a16207', secondary: '#451a03', textColor: '#eab308' },
-  { id: 'mlb_cubs',      league: 'MLB', team: 'CHC',   label: 'カブス',     primary: '#1e3a8a', secondary: '#172554', textColor: '#3b82f6' },
-  { id: 'mlb_mets',      league: 'MLB', team: 'NYM',   label: 'メッツ',     primary: '#ea580c', secondary: '#7c2d12', textColor: '#fb923c' },
+  { id: 'mlb_dodgers',   league: 'MLB', team: 'LAD',   label: 'ドジャース', primary: '#3b82f6', secondary: '#1e40af', textColor: '#60a5fa' },
+  { id: 'mlb_padres',    league: 'MLB', team: 'SD',    label: 'パドレス',   primary: '#eab308', secondary: '#854d0e', textColor: '#fde047' },
+  { id: 'mlb_cubs',      league: 'MLB', team: 'CHC',   label: 'カブス',     primary: '#3b82f6', secondary: '#1e3a8a', textColor: '#60a5fa' },
+  { id: 'mlb_mets',      league: 'MLB', team: 'NYM',   label: 'メッツ',     primary: '#fb923c', secondary: '#7c2d12', textColor: '#fdba74' },
   // MLB ア・リーグ (主要)
-  { id: 'mlb_yankees',   league: 'MLB', team: 'NYY',   label: 'ヤンキース', primary: '#1e293b', secondary: '#0f172a', textColor: '#475569' },
+  { id: 'mlb_yankees',   league: 'MLB', team: 'NYY',   label: 'ヤンキース', primary: '#94a3b8', secondary: '#334155', textColor: '#cbd5e1' },
   { id: 'mlb_redsox',    league: 'MLB', team: 'BOS',   label: 'レッドソックス', primary: '#dc2626', secondary: '#7f1d1d', textColor: '#f87171' },
-  { id: 'mlb_bluejays',  league: 'MLB', team: 'TOR',   label: 'ブルージェイズ', primary: '#1e40af', secondary: '#0c4a6e', textColor: '#3b82f6' },
+  { id: 'mlb_bluejays',  league: 'MLB', team: 'TOR',   label: 'ブルージェイズ', primary: '#3b82f6', secondary: '#1e40af', textColor: '#60a5fa' },
   { id: 'mlb_angels',    league: 'MLB', team: 'LAA',   label: 'エンゼルス', primary: '#dc2626', secondary: '#7f1d1d', textColor: '#f87171' },
-  { id: 'mlb_mariners',  league: 'MLB', team: 'SEA',   label: 'マリナーズ', primary: '#0d9488', secondary: '#134e4a', textColor: '#2dd4bf' },
+  { id: 'mlb_mariners',  league: 'MLB', team: 'SEA',   label: 'マリナーズ', primary: '#14b8a6', secondary: '#134e4a', textColor: '#5eead4' },
   // カスタム (空)
   { id: 'custom',        league: '',    team: '',      label: 'カスタム',   primary: '#6b7280', secondary: '#374151', textColor: '#9ca3af' },
 ];

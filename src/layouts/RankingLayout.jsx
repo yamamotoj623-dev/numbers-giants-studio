@@ -41,14 +41,11 @@
  */
 
 import React from 'react';
-import { THEMES, TEAM_PRESETS } from '../lib/config';
+import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
 import { isEnglishMetric } from '../lib/metricUtils';
 import { useSpringNumber } from '../hooks/useSpringNumber';
-
-// ★v5.20.13★ チームプリセット高速参照用 lookup
-const TEAM_PRESETS_MAP = TEAM_PRESETS.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
 
 // ★v5.19.0★ 数値をバネ物理でカウントアップ表示
 function SpringValue({ value, unit }) {
@@ -311,12 +308,10 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       }`}>
                         {entry.isTeam && <span className="text-[10px] mr-1 opacity-70">[ チーム ]</span>}
                         {entry.name}
-                        {/* ★v5.20.13★ teamPreset.team と一致するチーム名はテーマカラー、それ以外はグレー */}
+                        {/* ★v5.18.4★ 球団略称 (G/D/T/S/E/F 等) — 球団横断ランキングで識別 */}
                         {entry.team && !entry.isTeam && (
                           <span className={`ml-1 text-[11px] font-bold ${
-                            entry.team === (projectData.teamPreset ? (TEAM_PRESETS_MAP[projectData.teamPreset]?.team || 'G') : 'G')
-                              ? themeClass.text
-                              : 'text-zinc-400'
+                            entry.team === 'G' ? 'text-orange-300' : 'text-zinc-400'
                           }`}>
                             ({entry.team})
                           </span>

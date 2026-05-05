@@ -216,7 +216,7 @@ const App = () => {
       {!isFullscreenMode && (
         <div className={`bg-white rounded-xl shadow-xl flex flex-col overflow-hidden border border-zinc-200 shrink-0 transition-all duration-300 ${
           isPanelOpen
-            ? 'w-full md:w-[450px] lg:w-[500px] h-auto md:h-[90vh]'
+            ? 'w-full md:w-[450px] lg:w-[500px] h-[calc(100vh-2rem)] md:h-[90vh]'
             : 'w-full md:w-[44px] h-[52px] md:h-[90vh]'
         }`}>
           <div

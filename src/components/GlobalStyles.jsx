@@ -1602,7 +1602,13 @@ const CSS_TEXT = `
     background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
     animation: scenePresetVignette 3s ease-in-out infinite alternate;
   }
-  #phone-root[data-scene-preset="cinematic_zoom"] .anim-layer { animation: scenePresetSlowZoom 8s ease-in-out infinite alternate !important; }
+  /* ★v5.20.14★ scenePresetSlowZoom を .anim-layer に当てると kenBurns と競合し、
+     scenePreset 切替時に animation 切り替えが発生 → 中の cardBounceIn 等の子要素が再発火する。
+     解決策: scenePresetSlowZoom は背景レイヤー (anim-layer ではない) で表現するか、
+     #phone-root 自体に当てる。ここでは #phone-root にだけ当てる方式に変更。 */
+  #phone-root[data-scene-preset="cinematic_zoom"] {
+    animation: scenePresetSlowZoom 8s ease-in-out infinite alternate;
+  }
   @keyframes scenePresetVignette {
     0% { opacity: 0.7; } 100% { opacity: 1; }
   }

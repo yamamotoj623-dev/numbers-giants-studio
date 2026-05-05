@@ -9,7 +9,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Music, Loader2, Volume2, AlertCircle, Upload, X, HardDrive, Zap } from 'lucide-react';
 import { getMixer } from '../lib/mixer';
-import { SE_PRESETS } from '../lib/config';
+import { SE_PRESETS, DEFAULT_MIXER_LEVELS } from '../lib/config';
 import { saveBgm, listBgms, getBgmBlob, deleteBgm, getBgmStats } from '../lib/bgmStorage';
 import { saveSe, listSes, getSeBlob, deleteSe, getSeStats } from '../lib/seStorage';
 
@@ -19,14 +19,37 @@ export function BGMPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [levels, setLevels] = useState(() => {
-    // ★v5.15.5★ localStorage から復元
+    // ★v5.15.5★ localStorage から復元、★v5.20.14★ 古い保存値が残ってる場合は voice の最低値を補正
     try {
       const saved = localStorage.getItem('mixer-levels');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 旧デフォルト voice=1.0 の値が残っている場合は新デフォルト 1.4 に引き上げ
+        if (typeof parsed.voice === 'number' && parsed.voice < 1.2) {
+          parsed.voice = DEFAULT_MIXER_LEVELS.voice;
+          localStorage.setItem('mixer-levels', JSON.stringify(parsed));
+        }
+        return parsed;
+      }
     } catch (e) {}
-    return { voice: 1.0, bgm: 0.15, se: 0.6, master: 1.0 };
+    return { ...DEFAULT_MIXER_LEVELS };
   });
-  const [duckingAmount, setDuckingAmount] = useState(0.25);
+  // ★v5.20.14★ duckingAmount も localStorage から復元、デフォルトは config から
+  const [duckingAmount, setDuckingAmount] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mixer-ducking');
+      if (saved !== null) {
+        const v = parseFloat(saved);
+        // 旧デフォルト 0.25 が残っている場合は新デフォルト 0.5 に引き上げ
+        if (!isNaN(v) && v < 0.4) {
+          localStorage.setItem('mixer-ducking', String(DEFAULT_MIXER_LEVELS.duckingAmount));
+          return DEFAULT_MIXER_LEVELS.duckingAmount;
+        }
+        if (!isNaN(v)) return v;
+      }
+    } catch (e) {}
+    return DEFAULT_MIXER_LEVELS.duckingAmount;
+  });
   const [isPreviewingBgm, setIsPreviewingBgm] = useState(false);
   const [stats, setStats] = useState({ count: 0, totalBytes: 0 });
   const fileInputRef = useRef(null);

@@ -253,25 +253,17 @@ export function PreviewFrame({
   ].filter(Boolean).join(' ');
 
   const arRatio = isLandscape ? '16/9' : isSquare1to1 ? '1/1' : '9/16';
-  // ★v5.20.13★ チームプリセットの色を CSS変数 --p に注入
-  // teamPreset='custom' or 未設定 → デフォルト (オレンジ) を使う
+  // ★v5.20.14★ チーム色は「右上の選手名ピル」だけに適用、グローバル --p は変えない
+  // (旧 v5.20.13 では phone 全体に --p を上書きしてハイライトカード等も染まっていた)
   const teamPreset = getTeamPreset(projectData?.teamPreset || 'npb_giants');
-  const teamCssVars = teamPreset.id === 'custom' ? {} : {
-    '--p': teamPreset.primary,
-    '--p-glow': hexToRgba(teamPreset.primary, 0.85),
-    '--p-glow-soft': hexToRgba(teamPreset.primary, 0.4),
-    '--p-bright': teamPreset.textColor,
-  };
   const phoneStyle = isFullscreenMode ? {
     width: isLandscape ? '95vw' : 'auto',
     height: isLandscape ? 'auto' : '95vh',
     maxHeight: '95vh',
     maxWidth: isLandscape ? '95vw' : undefined,
     aspectRatio: arRatio,
-    ...teamCssVars,
   } : {
     aspectRatio: arRatio,
-    ...teamCssVars,
   };
 
   // 現在フェーズのクラス (data-p + anim-pop/shake)
@@ -370,17 +362,24 @@ export function PreviewFrame({
               <span className="sub">Giants Analytics · {new Date().getFullYear().toString().slice(-2)} Season</span>
             </div>
           </div>
-          <div className="hook-player-pill">
+          {/* ★v5.20.14★ チーム色は player pill のみに inline style で適用 */}
+          <div className="hook-player-pill" style={{
+            borderColor: hexToRgba(teamPreset.primary, 0.4),
+          }}>
             {projectData?.playerType === 'team' ? (
               <div className="info">
-                <div className="pos">{teamPreset.league === 'NPB' && teamPreset.label === '巨人' ? '読売ジャイアンツ' : `${teamPreset.league} / ${teamPreset.label}`}</div>
+                <div className="pos" style={{ color: teamPreset.textColor }}>
+                  {teamPreset.league === 'NPB' && teamPreset.label === '巨人' ? '読売ジャイアンツ' : `${teamPreset.league} / ${teamPreset.label}`}
+                </div>
                 <div className="name">{projectData.mainPlayer?.name || teamPreset.label}</div>
               </div>
             ) : (
               <>
-                <div className="num">{projectData.mainPlayer?.number || ''}</div>
+                <div className="num" style={{ background: teamPreset.primary }}>{projectData.mainPlayer?.number || ''}</div>
                 <div className="info">
-                  <div className="pos">{teamPreset.league || 'NPB'} / {teamPreset.label || '巨人'}</div>
+                  <div className="pos" style={{ color: teamPreset.textColor }}>
+                    {teamPreset.league || 'NPB'} / {teamPreset.label || '巨人'}
+                  </div>
                   <div className="name">{projectData.mainPlayer?.name || ''}</div>
                 </div>
               </>
