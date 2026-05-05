@@ -39,6 +39,23 @@ export const SYNTHETIC_SE_PRESETS = {
   click_tap:       { freqs: [2000],     type: 'square',   attack: 0.001, release: 0.04, gain: 0.2 },
   radar_ping:      { freqs: [1200],     type: 'sine',     attack: 0.005, release: 0.15, gain: 0.25 },
   outro_fade:      { freqs: [440, 330, 220], type: 'sine', attack: 0.02, release: 0.6, gain: 0.3 },
+  // ★v5.20.13 追加バリエーション (★v5.20.15 で合成定義追加)
+  // sparkle_up: 高音上昇 (キラキラ)
+  sparkle_up:      { freqs: [1047, 1568, 2093], type: 'sine', attack: 0.005, release: 0.35, gain: 0.25 },
+  // drum_roll: 低音震動 (ドラムロール)
+  drum_roll:       { freqs: [60, 80, 60, 80], type: 'triangle', attack: 0.005, release: 0.5, gain: 0.4 },
+  // whoosh_in: 低→高 上昇感 (登場)
+  whoosh_in:       { freqs: [200, 1200], type: 'sawtooth', attack: 0.02, release: 0.3, gain: 0.3 },
+  // soft_pop: ポンと一発の柔らかい音
+  soft_pop:        { freqs: [600, 400], type: 'sine', attack: 0.005, release: 0.12, gain: 0.25 },
+  // heavy_thud: 重い衝撃 (悲報)
+  heavy_thud:      { freqs: [60, 30], type: 'square', attack: 0.002, release: 0.4, gain: 0.5 },
+  // ding_correct: 正解音 (高音1回チーン)
+  ding_correct:    { freqs: [1568, 2093], type: 'sine', attack: 0.001, release: 0.45, gain: 0.3 },
+  // low_buzz: 違和感の低音バズ
+  low_buzz:        { freqs: [110, 138], type: 'sawtooth', attack: 0.01, release: 0.25, gain: 0.3 },
+  // crystal_chime: 美しい複音 (支配的成績の表現)
+  crystal_chime:   { freqs: [880, 1175, 1568, 2093], type: 'sine', attack: 0.008, release: 0.55, gain: 0.28 },
 };
 
 /**
@@ -116,7 +133,9 @@ export class MixerEngine {
   }
 
   setLevel(track, value) {
-    const v = Math.max(0, Math.min(1, value));
+    // ★v5.20.15★ voice は 0-2.0 まで許可 (1.0超は WebAudio GainNode で増幅)、他は 0-1.0
+    const max = (track === 'voice') ? 2.0 : 1.0;
+    const v = Math.max(0, Math.min(max, value));
     this.levels[track] = v;
 
     if (track === 'bgm' && this.bgmAudioEl) {

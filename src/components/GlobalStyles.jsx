@@ -1596,27 +1596,19 @@ const CSS_TEXT = `
   /* ★v5.19.6★ scenePreset — 1シーン全体の演出を束ねたバリアント
      phone-root に data-scene-preset="..." が付与され、ここで上書き */
 
-  /* cinematic_zoom: 全体ズーム + 周辺暗減 */
+  /* cinematic_zoom: 周辺暗減 (vignette) のみ。
+     ★v5.20.15★ 拡大アニメは scenePreset 切替時に必ず再ペイント誘発 → 子の cardBounceIn 等が再発火するため完全撤去。
+     代替: vignette だけでも「映画のような集中効果」は十分得られる。 */
   #phone-root[data-scene-preset="cinematic_zoom"]::after {
     content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 5;
     background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
     animation: scenePresetVignette 3s ease-in-out infinite alternate;
   }
-  /* ★v5.20.14★ scenePresetSlowZoom を .anim-layer に当てると kenBurns と競合し、
-     scenePreset 切替時に animation 切り替えが発生 → 中の cardBounceIn 等の子要素が再発火する。
-     解決策: scenePresetSlowZoom は背景レイヤー (anim-layer ではない) で表現するか、
-     #phone-root 自体に当てる。ここでは #phone-root にだけ当てる方式に変更。 */
-  #phone-root[data-scene-preset="cinematic_zoom"] {
-    animation: scenePresetSlowZoom 8s ease-in-out infinite alternate;
-  }
   @keyframes scenePresetVignette {
     0% { opacity: 0.7; } 100% { opacity: 1; }
   }
-  @keyframes scenePresetSlowZoom {
-    0% { transform: scale(1); } 100% { transform: scale(1.05); }
-  }
 
-  /* neon_burst: ネオングロー + 色収差 */
+  /* neon_burst: ネオングロー (overlay のみ、.anim-layer 未影響) */
   #phone-root[data-scene-preset="neon_burst"]::before {
     content: ''; position: absolute; inset: -10%; pointer-events: none; z-index: 6;
     background: radial-gradient(circle at 30% 20%, rgba(249,115,22,0.18), transparent 50%),
@@ -1624,39 +1616,30 @@ const CSS_TEXT = `
     mix-blend-mode: screen;
     animation: scenePresetNeonShift 4s ease-in-out infinite;
   }
-  #phone-root[data-scene-preset="neon_burst"] .anim-layer {
-    filter: drop-shadow(2px 0 0 rgba(255,80,80,0.4)) drop-shadow(-2px 0 0 rgba(80,200,255,0.4));
-  }
+  /* ★v5.20.15★ filter を .anim-layer に当てると scenePreset 切替で再ペイント誘発 → 子要素のアニメ再発火。
+     filter は完全撤去、overlay の発光だけで「ネオン感」を表現 */
   @keyframes scenePresetNeonShift {
     0%, 100% { transform: translate(0, 0); }
     33% { transform: translate(8%, -5%); }
     66% { transform: translate(-6%, 4%); }
   }
 
-  /* mono_drama: モノクロ+赤強調 */
-  #phone-root[data-scene-preset="mono_drama"] .anim-layer {
-    filter: grayscale(0.85) contrast(1.15);
-  }
+  /* mono_drama: 赤グラデ overlay のみ (filter 撤去) */
   #phone-root[data-scene-preset="mono_drama"]::after {
     content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
-    background: linear-gradient(to bottom, transparent 0%, rgba(255,40,40,0.12) 100%);
+    background: linear-gradient(to bottom, rgba(20,20,20,0.35) 0%, rgba(255,40,40,0.18) 100%);
+    mix-blend-mode: multiply;
   }
 
-  /* pastel_pop: 明度+彩度上げ */
-  #phone-root[data-scene-preset="pastel_pop"] .anim-layer {
-    filter: brightness(1.08) saturate(0.85) hue-rotate(-5deg);
-  }
+  /* pastel_pop: パステル光 overlay のみ (filter 撤去) */
   #phone-root[data-scene-preset="pastel_pop"]::before {
     content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
-    background: linear-gradient(135deg, rgba(255,200,220,0.15) 0%, rgba(200,230,255,0.15) 100%);
+    background: linear-gradient(135deg, rgba(255,200,220,0.20) 0%, rgba(200,230,255,0.20) 100%);
   }
 
-  /* blackboard: 黒板テクスチャ */
+  /* blackboard: 黒板背景 + 線 overlay (filter 撤去) */
   #phone-root[data-scene-preset="blackboard"] {
     background: #1a2820 !important;
-  }
-  #phone-root[data-scene-preset="blackboard"] .anim-layer {
-    filter: sepia(0.2) contrast(1.1);
   }
   #phone-root[data-scene-preset="blackboard"]::before {
     content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 6;
