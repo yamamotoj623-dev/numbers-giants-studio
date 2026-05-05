@@ -14,6 +14,8 @@ export const defaultBatterData = {
   silhouetteType: 'batter_right',  // 選択可: batter_right / batter_left / batter_stance / runner
   presentationMode: 'dialogue',
   theme: 'orange',
+  // ★v5.20.13★ チームプリセット
+  teamPreset: 'npb_giants',
   period: '2026.04.14時点',
   // ★v5.18.0★ Gemini提言: シームレスループ
   // smartLoop: true で末尾→冒頭にシームレス遷移 (OutroPanel スキップ)

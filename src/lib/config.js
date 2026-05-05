@@ -2,7 +2,7 @@
  * アプリ全体の定数・テーマ定義
  */
 
-export const APP_VERSION = '5.20.12';
+export const APP_VERSION = '5.20.13';
 
 export const GAS_CONFIG = {
   endpoint: import.meta.env.VITE_GAS_ENDPOINT || '',
@@ -30,25 +30,71 @@ export const LAYOUT_TYPES = {
 };
 
 export const SE_PRESETS = [
-  { id: 'hook_impact',      label: '衝撃フック',   description: 'id:1 の冒頭フックに' },
-  { id: 'highlight_ping',   label: 'ハイライト',   description: '指標強調時に' },
-  { id: 'stat_reveal',      label: '数値公開',     description: 'データ初公開時' },
-  { id: 'shock_hit',        label: '驚愕',         description: 'Bの驚きピーク時' },
-  { id: 'success_chime',    label: '成功チャイム', description: 'ポジティブ結論で' },
-  { id: 'warning_alert',    label: '警告',         description: '課題指摘時' },
-  { id: 'transition_swoosh',label: '場面転換',     description: 'シーン切替時' },
-  { id: 'click_tap',        label: 'クリック',     description: '小さなアクセント' },
-  { id: 'radar_ping',       label: 'レーダー脈動', description: 'チャート更新時' },
-  { id: 'outro_fade',       label: 'アウトロ',     description: '動画終了直前に' },
+  { id: 'hook_impact',      label: '衝撃フック',     description: 'id:1 の冒頭フックに' },
+  { id: 'highlight_ping',   label: 'ハイライト',     description: '指標強調時に' },
+  { id: 'stat_reveal',      label: '数値公開',       description: 'データ初公開時' },
+  { id: 'shock_hit',        label: '驚愕',           description: 'Bの驚きピーク時' },
+  { id: 'success_chime',    label: '成功チャイム',   description: 'ポジティブ結論で' },
+  { id: 'warning_alert',    label: '警告',           description: '課題指摘時' },
+  { id: 'transition_swoosh',label: '場面転換',       description: 'シーン切替時' },
+  { id: 'click_tap',        label: 'クリック',       description: '小さなアクセント' },
+  { id: 'radar_ping',       label: 'レーダー脈動',   description: 'チャート更新時' },
+  { id: 'outro_fade',       label: 'アウトロ',       description: '動画終了直前に' },
+  // ★v5.20.13 追加バリエーション★
+  { id: 'sparkle_up',       label: 'キラキラ上昇',   description: '朗報・好調話の頂点' },
+  { id: 'drum_roll',        label: 'ドラムロール',   description: '発表前の溜め' },
+  { id: 'whoosh_in',        label: '勢い登場',       description: '新指標・選手登場時' },
+  { id: 'soft_pop',         label: 'ソフトポップ',   description: '軽い気付き・追加情報' },
+  { id: 'heavy_thud',       label: '重低音',         description: '深刻な悲報・致命傷' },
+  { id: 'ding_correct',     label: '正解音',         description: '結論の確信表明' },
+  { id: 'low_buzz',         label: '低音バズ',       description: '違和感・疑問提示' },
+  { id: 'crystal_chime',    label: 'クリスタル',     description: '美しい数字・支配的成績' },
 ];
 
 export const DEFAULT_MIXER_LEVELS = {
-  voice: 1.0,
+  // ★v5.20.13: ご要望どおり voice 1.4x / ducking 50%★
+  voice: 1.4,
   bgm: 0.15,
   se: 0.6,
   master: 1.0,
-  duckingAmount: 0.25,
+  duckingAmount: 0.5,
 };
+
+// ★v5.20.13: チームプリセット (リーグ/チーム/カラー)★
+// number/league/team を選択するとプレビューの選手色が自動で切り替わる
+export const TEAM_PRESETS = [
+  // NPB セ・リーグ
+  { id: 'npb_giants',    league: 'NPB', team: 'G',     label: '巨人',       primary: '#f97316', secondary: '#c2410c', textColor: '#fb923c' },
+  { id: 'npb_tigers',    league: 'NPB', team: 'T',     label: '阪神',       primary: '#eab308', secondary: '#a16207', textColor: '#facc15' },
+  { id: 'npb_dragons',   league: 'NPB', team: 'D',     label: '中日',       primary: '#3b82f6', secondary: '#1d4ed8', textColor: '#60a5fa' },
+  { id: 'npb_carp',      league: 'NPB', team: 'C',     label: '広島',       primary: '#ef4444', secondary: '#b91c1c', textColor: '#f87171' },
+  { id: 'npb_baystars',  league: 'NPB', team: 'DB',    label: '横浜DeNA',   primary: '#1e40af', secondary: '#172554', textColor: '#3b82f6' },
+  { id: 'npb_swallows',  league: 'NPB', team: 'S',     label: 'ヤクルト',   primary: '#0ea5e9', secondary: '#0c4a6e', textColor: '#38bdf8' },
+  // NPB パ・リーグ
+  { id: 'npb_buffaloes', league: 'NPB', team: 'Bs',    label: 'オリックス', primary: '#7c2d12', secondary: '#451a03', textColor: '#a16207' },
+  { id: 'npb_marines',   league: 'NPB', team: 'M',     label: 'ロッテ',     primary: '#1e293b', secondary: '#0f172a', textColor: '#475569' },
+  { id: 'npb_eagles',    league: 'NPB', team: 'E',     label: '楽天',       primary: '#7f1d1d', secondary: '#450a0a', textColor: '#dc2626' },
+  { id: 'npb_lions',     league: 'NPB', team: 'L',     label: '西武',       primary: '#1e3a8a', secondary: '#172554', textColor: '#2563eb' },
+  { id: 'npb_hawks',     league: 'NPB', team: 'H',     label: 'ソフトバンク', primary: '#fbbf24', secondary: '#b45309', textColor: '#facc15' },
+  { id: 'npb_fighters',  league: 'NPB', team: 'F',     label: '日本ハム',   primary: '#0891b2', secondary: '#0e7490', textColor: '#22d3ee' },
+  // MLB ナ・リーグ (主要)
+  { id: 'mlb_dodgers',   league: 'MLB', team: 'LAD',   label: 'ドジャース', primary: '#1e40af', secondary: '#0c4a6e', textColor: '#3b82f6' },
+  { id: 'mlb_padres',    league: 'MLB', team: 'SD',    label: 'パドレス',   primary: '#a16207', secondary: '#451a03', textColor: '#eab308' },
+  { id: 'mlb_cubs',      league: 'MLB', team: 'CHC',   label: 'カブス',     primary: '#1e3a8a', secondary: '#172554', textColor: '#3b82f6' },
+  { id: 'mlb_mets',      league: 'MLB', team: 'NYM',   label: 'メッツ',     primary: '#ea580c', secondary: '#7c2d12', textColor: '#fb923c' },
+  // MLB ア・リーグ (主要)
+  { id: 'mlb_yankees',   league: 'MLB', team: 'NYY',   label: 'ヤンキース', primary: '#1e293b', secondary: '#0f172a', textColor: '#475569' },
+  { id: 'mlb_redsox',    league: 'MLB', team: 'BOS',   label: 'レッドソックス', primary: '#dc2626', secondary: '#7f1d1d', textColor: '#f87171' },
+  { id: 'mlb_bluejays',  league: 'MLB', team: 'TOR',   label: 'ブルージェイズ', primary: '#1e40af', secondary: '#0c4a6e', textColor: '#3b82f6' },
+  { id: 'mlb_angels',    league: 'MLB', team: 'LAA',   label: 'エンゼルス', primary: '#dc2626', secondary: '#7f1d1d', textColor: '#f87171' },
+  { id: 'mlb_mariners',  league: 'MLB', team: 'SEA',   label: 'マリナーズ', primary: '#0d9488', secondary: '#134e4a', textColor: '#2dd4bf' },
+  // カスタム (空)
+  { id: 'custom',        league: '',    team: '',      label: 'カスタム',   primary: '#6b7280', secondary: '#374151', textColor: '#9ca3af' },
+];
+
+export function getTeamPreset(id) {
+  return TEAM_PRESETS.find(p => p.id === id) || TEAM_PRESETS[0];
+}
 
 export const VIDEO_PATTERNS = [
   { id: 'future_forecast', label: '未来予測型', desc: '好調選手・知名度高', defaultLayout: 'radar_compare' },

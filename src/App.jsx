@@ -260,7 +260,8 @@ const App = () => {
 
           {isPanelOpen && (
             <>
-              <div className="flex border-b bg-zinc-50 shrink-0 overflow-x-auto">
+              {/* ★v5.20.13★ タブを sticky にして常に上に固定表示 */}
+              <div className="flex border-b bg-zinc-50 shrink-0 overflow-x-auto sticky top-0 z-10 shadow-sm">
                 {TABS.map(tab => (
                   <button
                     key={tab.id}
@@ -294,6 +295,9 @@ const App = () => {
                       projectData={projectData}
                       currentIndex={currentIndex}
                       onChange={setProjectData}
+                      jumpTo={jumpTo}
+                      togglePlay={togglePlay}
+                      isPlaying={isPlaying}
                     />
                   </PanelErrorBoundary>
                 )}

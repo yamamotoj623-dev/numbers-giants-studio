@@ -74,35 +74,48 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
 
   // === 互換性レイヤ ===
   // 旧スキーマ points[].main / sub を新スキーマ value / compareLine に変換
+  // ★v5.20.13★ null 値を許容 (線を切る/系列入替表現用)
   const data = (() => {
     const points = (rawData.points || [])
       .map(p => {
         if (!p || typeof p !== 'object') return null;
         // 旧 main → 新 value
         const rawValue = p.value !== undefined ? p.value : p.main;
+        // ★null/undefined/空文字★ は null として保持 (線を切る)
+        if (rawValue === null || rawValue === undefined || rawValue === '') {
+          return { ...p, value: null };
+        }
         const value = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
-        // 数値変換失敗は除外
-        if (typeof value !== 'number' || isNaN(value)) return null;
+        if (typeof value !== 'number' || isNaN(value)) {
+          return { ...p, value: null };
+        }
         return { ...p, value };
       })
-      .filter(p => p !== null);
+      .filter(p => p !== null);   // 完全に nullable な要素 (オブジェクトでない) のみ除外
 
     let compareLine = rawData.compareLine;
-    // 旧 sub → compareLine 自動生成
+    // 旧 sub → compareLine 自動生成 (★null も保持★)
     if (!compareLine && (rawData.points || []).some(p => p && p.sub !== undefined)) {
       compareLine = rawData.points
         .filter(p => p && p.sub !== undefined)
-        .map(p => ({ label: p.label, value: typeof p.sub === 'string' ? parseFloat(p.sub) : p.sub }))
-        .filter(p => typeof p.value === 'number' && !isNaN(p.value));
+        .map(p => {
+          if (p.sub === null || p.sub === undefined || p.sub === '') {
+            return { label: p.label, value: null };
+          }
+          const v = typeof p.sub === 'string' ? parseFloat(p.sub) : p.sub;
+          return { label: p.label, value: (typeof v === 'number' && !isNaN(v)) ? v : null };
+        });
     }
 
     return {
       unit: rawData.unit || 'month',
       metric: rawData.metric || '',
+      mainLabel: rawData.mainLabel || '',
+      subLabel: rawData.subLabel || '',
       points: points.length > 0 ? points : [
         { label: '-', value: 0 },
         { label: '-', value: 0 },
-      ],  // 安全フォールバック (空配列を渡さない)
+      ],
       compareLine,
     };
   })();
@@ -145,11 +158,25 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
   const scaleX = (i) => padX + (i * (chartW - 2 * padX) / Math.max(1, enhancedPoints.length - 1));
   const scaleY = (v) => padY + (chartH - 2 * padY) * (1 - (v - minVal) / range);
 
-  // 比較線パス
+  // ★v5.20.13★ 比較線パス: null 値で線を切る (M/L を null 直前で打ち切る)
   const comparePath = data.compareLine
-    ? data.compareLine
-        .map((c, i) => `${i === 0 ? 'M' : 'L'}${scaleX(i)},${scaleY(c.value)}`)
-        .join(' ')
+    ? (() => {
+        const segs = [];
+        let lastIdx = -1; // 最後に有効だった点
+        data.compareLine.forEach((c, i) => {
+          if (typeof c.value !== 'number') {
+            lastIdx = -1; // 線を切る
+            return;
+          }
+          if (lastIdx === -1) {
+            segs.push(`M${scaleX(i)},${scaleY(c.value)}`);
+          } else {
+            segs.push(`L${scaleX(i)},${scaleY(c.value)}`);
+          }
+          lastIdx = i;
+        });
+        return segs.join(' ');
+      })()
     : null;
 
   // メイン線をセグメントごとに分けて色変化を表現
@@ -215,16 +242,20 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
             />
           ))}
 
-          {/* 比較線の点 */}
-          {data.compareLine?.map((c, i) => (
-            <circle
-              key={`cmp-${i}`}
-              cx={scaleX(i)}
-              cy={scaleY(c.value)}
-              r="2.5"
-              fill="rgba(212,212,216,0.7)"
-            />
-          ))}
+          {/* 比較線の点 (null は描画しない) */}
+          {data.compareLine?.filter(c => typeof c.value === 'number').map((c, i) => {
+            // null 値を含む場合、index がズレるので元 array での index を使う
+            const origIdx = data.compareLine.indexOf(c);
+            return (
+              <circle
+                key={`cmp-${origIdx}`}
+                cx={scaleX(origIdx)}
+                cy={scaleY(c.value)}
+                r="2.5"
+                fill="rgba(212,212,216,0.7)"
+              />
+            );
+          })}
 
           {/* メイン点 + ラベル */}
           {enhancedPoints.map((p, i) => {
@@ -257,6 +288,20 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
                   fill={fillColor}
                   style={p.highlight || p.isPeak ? { filter: `drop-shadow(0 0 8px ${fillColor})` } : {}}
                 />
+                {/* ★v5.20.13★ 注釈テキスト (例: 「移籍」「故障」) */}
+                {p.note && !isHighlight && (
+                  <text
+                    x={scaleX(i)}
+                    y={scaleY(p.value) - (p.highlight ? 28 : 22)}
+                    fontSize="9"
+                    fill="#fde047"
+                    textAnchor="middle"
+                    fontWeight="900"
+                    style={{ filter: `drop-shadow(0 0 4px rgba(0,0,0,1))` }}
+                  >
+                    🚩 {p.note}
+                  </text>
+                )}
                 {/* 数値ラベル (ハイライト点だけ大きく) */}
                 {!isHighlight && (
                   <text
@@ -289,6 +334,24 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
               {p.label}
             </text>
           ))}
+
+          {/* ★v5.20.13★ 系列ラベル凡例 (右上、main/sub 名) */}
+          {(data.mainLabel || data.subLabel) && (
+            <g>
+              {data.mainLabel && (
+                <>
+                  <line x1={chartW - 90} y1={padY - 16} x2={chartW - 76} y2={padY - 16} stroke={primaryColor} strokeWidth="3" />
+                  <text x={chartW - 72} y={padY - 13} fontSize="9" fill={primaryColor} fontWeight="800">{data.mainLabel}</text>
+                </>
+              )}
+              {data.subLabel && data.compareLine && (
+                <>
+                  <line x1={chartW - 90} y1={padY - 6} x2={chartW - 76} y2={padY - 6} stroke="rgba(212,212,216,0.7)" strokeWidth="1.5" strokeDasharray="3 2" />
+                  <text x={chartW - 72} y={padY - 3} fontSize="9" fill="rgba(212,212,216,0.85)" fontWeight="700">{data.subLabel}</text>
+                </>
+              )}
+            </g>
+          )}
         </svg>
       </div>
 

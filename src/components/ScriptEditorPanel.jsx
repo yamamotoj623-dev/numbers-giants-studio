@@ -12,11 +12,11 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Copy, Trash2, ArrowUp, ArrowDown, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Trash2, ArrowUp, ArrowDown, Plus, Play } from 'lucide-react';
 import { SE_PRESETS, LAYOUT_TYPES } from '../lib/config';
 import { SCENE_PRESETS } from '../lib/scenePresets';
 
-export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
+export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo, togglePlay, isPlaying }) {
   const [expandedIds, setExpandedIds] = useState(new Set());
   const containerRef = useRef(null);
   const currentRef = useRef(null);
@@ -162,6 +162,17 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange }) {
                 )}
               </div>
               <div className="flex items-center gap-0.5">
+                {/* ★v5.20.13★ ここから再生 */}
+                {jumpTo && togglePlay && (
+                  <button
+                    onClick={() => {
+                      jumpTo(idx);
+                      if (!isPlaying) togglePlay();
+                    }}
+                    className="text-emerald-500 hover:text-emerald-700 p-1"
+                    title="このシーンから再生"
+                  ><Play size={13} fill="currentColor"/></button>
+                )}
                 <button onClick={() => handleMove(idx, -1)} disabled={idx === 0} className="text-zinc-400 hover:text-zinc-700 disabled:opacity-30 p-1" title="上に移動"><ArrowUp size={12}/></button>
                 <button onClick={() => handleMove(idx, 1)} disabled={idx === projectData.scripts.length - 1} className="text-zinc-400 hover:text-zinc-700 disabled:opacity-30 p-1" title="下に移動"><ArrowDown size={12}/></button>
                 <button onClick={() => handleDuplicate(idx)} className="text-zinc-400 hover:text-indigo-600 p-1" title="複製"><Copy size={12}/></button>

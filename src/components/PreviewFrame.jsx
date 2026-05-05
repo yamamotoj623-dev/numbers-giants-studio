@@ -15,6 +15,7 @@ import { renderFormattedText } from '../lib/textRender.jsx';
 import { Silhouette } from './Silhouettes.jsx';
 import { HookMediaOverlay, getHookMedia } from './HookMediaOverlay.jsx';
 import { formatStat } from '../lib/statFormat';
+import { getTeamPreset } from '../lib/config';
 
 function getPhase(currentScript, currentIndex, scripts, projectData) {
   if (!currentScript) return 'normal';
@@ -182,6 +183,15 @@ function countChars(node) {
   return 0;
 }
 
+// ★v5.20.13★ #f97316 のような hex を rgba に変換 (CSS 変数の glow 計算用)
+function hexToRgba(hex, alpha = 1) {
+  if (!hex || typeof hex !== 'string') return `rgba(255,140,26,${alpha})`;
+  const m = hex.replace('#', '').match(/.{2}/g);
+  if (!m || m.length < 3) return `rgba(255,140,26,${alpha})`;
+  const [r, g, b] = m.map(h => parseInt(h, 16));
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 export function PreviewFrame({
   projectData,
   currentScript,
@@ -243,14 +253,25 @@ export function PreviewFrame({
   ].filter(Boolean).join(' ');
 
   const arRatio = isLandscape ? '16/9' : isSquare1to1 ? '1/1' : '9/16';
+  // ★v5.20.13★ チームプリセットの色を CSS変数 --p に注入
+  // teamPreset='custom' or 未設定 → デフォルト (オレンジ) を使う
+  const teamPreset = getTeamPreset(projectData?.teamPreset || 'npb_giants');
+  const teamCssVars = teamPreset.id === 'custom' ? {} : {
+    '--p': teamPreset.primary,
+    '--p-glow': hexToRgba(teamPreset.primary, 0.85),
+    '--p-glow-soft': hexToRgba(teamPreset.primary, 0.4),
+    '--p-bright': teamPreset.textColor,
+  };
   const phoneStyle = isFullscreenMode ? {
     width: isLandscape ? '95vw' : 'auto',
     height: isLandscape ? 'auto' : '95vh',
     maxHeight: '95vh',
     maxWidth: isLandscape ? '95vw' : undefined,
     aspectRatio: arRatio,
+    ...teamCssVars,
   } : {
     aspectRatio: arRatio,
+    ...teamCssVars,
   };
 
   // 現在フェーズのクラス (data-p + anim-pop/shake)
@@ -352,14 +373,14 @@ export function PreviewFrame({
           <div className="hook-player-pill">
             {projectData?.playerType === 'team' ? (
               <div className="info">
-                <div className="pos">読売ジャイアンツ</div>
-                <div className="name">{projectData.mainPlayer?.name || '巨人'}</div>
+                <div className="pos">{teamPreset.league === 'NPB' && teamPreset.label === '巨人' ? '読売ジャイアンツ' : `${teamPreset.league} / ${teamPreset.label}`}</div>
+                <div className="name">{projectData.mainPlayer?.name || teamPreset.label}</div>
               </div>
             ) : (
               <>
                 <div className="num">{projectData.mainPlayer?.number || ''}</div>
                 <div className="info">
-                  <div className="pos">NPB / 巨人</div>
+                  <div className="pos">{teamPreset.league || 'NPB'} / {teamPreset.label || '巨人'}</div>
                   <div className="name">{projectData.mainPlayer?.name || ''}</div>
                 </div>
               </>

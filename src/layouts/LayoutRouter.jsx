@@ -140,10 +140,16 @@ export function LayoutRouter(props) {
                   : zoomBoost === 'shake' ? 'anim-impact-shake'
                   : zoomBoost === 'zoomShake' ? 'anim-zoom-shake'
                   : '';
-  // zoomBoost がある時だけ inner key 更新 (animation 再発火用)、外側は常に固定
+  // ★v5.20.13★ zoomBoost がある id だけ key を ID込みで更新 (発火)、
+  // 無い id はずっと 'stable' で固定 → 継承シーンでアニメ再発火しない
+  // 旧仕様 (v5.18.4): 無い時は 'stable' 一律 → zoomBoost あり id を抜けた直後は確かに stable に変わるため、
+  //   そのタイミングで「key が変わった」と React が認識 → 子要素 remount → アニメ再発火
+  // 新仕様: zoomBoost あり id ↔ なし id 切替時の key は完全に独立した値にする (引きずらない)
+  //   zoomBoost あり: `${animClass}-${currentIndex}` (id 込みで毎回ユニーク)
+  //   zoomBoost なし: 'stable-resting' 固定 → 継承中も同じ key、アニメ再発火しない
   const innerAnimKey = animClass
     ? `${animClass}-${currentIndex}`
-    : 'stable';
+    : 'stable-resting';
 
   return (
     <div className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'}`}>

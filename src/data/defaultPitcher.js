@@ -12,6 +12,8 @@ export const defaultPitcherData = {
   silhouetteType: 'pitcher_right',  // 選択可: pitcher_right / pitcher_left / pitcher_set / catcher
   presentationMode: 'dialogue',
   theme: 'orange',
+  // ★v5.20.13★ チームプリセット (リーグ・チーム・カラー) — UI から切替可能
+  teamPreset: 'npb_giants',
   period: '2026.04.13時点',
   // ★v5.18.0★ Gemini提言: シームレスループ
   smartLoop: true,

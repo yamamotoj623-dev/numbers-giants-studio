@@ -120,17 +120,21 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
   };
 
   const handlePasteAndApply = async () => {
-    // ★v5.20.12★ クリップボード読取は環境依存で失敗するため try-catch で堅牢化
-    // 失敗時は textarea にフォーカス→ユーザーに直接貼り付けを促す
+    // ★v5.20.13★ Firefox 互換性向上 — 大きい JSON では readText がタイムアウト/失敗する事例あり
+    //   クリップボード API が使えない/失敗時は textarea にフォーカス→Cmd+V (Ctrl+V) を促す
     if (!navigator.clipboard || !navigator.clipboard.readText) {
-      // クリップボード API 自体が無い環境 (古い Chrome、HTTPS でない、iframe など)
       const ta = document.querySelector('textarea[data-json-input]');
       if (ta) { ta.focus(); ta.select(); }
-      flash('テキストエリアに直接ペースト→「反映」を押してください');
+      flash('テキストエリアにペースト → 「反映」を押してください');
       return;
     }
+    // 5秒タイムアウト付き readText (Firefox の長文ハング対策)
+    const readWithTimeout = () => Promise.race([
+      navigator.clipboard.readText(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('clipboard read timeout (5s)')), 5000)),
+    ]);
     try {
-      const text = await navigator.clipboard.readText();
+      const text = await readWithTimeout();
       if (!text || !text.trim()) {
         flash('クリップボードが空です');
         return;
@@ -138,11 +142,14 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
       setJsonInput(text);
       if (tryApply(text)) flash('貼り付けて反映しました');
     } catch (err) {
-      // Permissions Policy / focus 失敗 / 拒否 etc.
       console.warn('[Clipboard] readText failed:', err?.message || err);
       const ta = document.querySelector('textarea[data-json-input]');
-      if (ta) { ta.focus(); ta.select(); }
-      flash('クリップボード自動読取が不可。テキストエリアに直接ペーストしてください');
+      if (ta) {
+        ta.focus(); ta.select();
+        flash('テキストエリアにペースト (Cmd+V または Ctrl+V) → 「反映」');
+      } else {
+        flash('クリップボード読取不可。テキストエリアにペーストしてください');
+      }
     }
   };
 

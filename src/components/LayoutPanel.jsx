@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { Layers, AlertCircle } from 'lucide-react';
-import { LAYOUT_TYPES } from '../lib/config';
+import { LAYOUT_TYPES, TEAM_PRESETS } from '../lib/config';
 
 export function LayoutPanel({ projectData, onChange }) {
   const setField = (path, value) => {
@@ -136,6 +136,46 @@ export function LayoutPanel({ projectData, onChange }) {
         </div>
       </div>
 
+      {/* ★v5.20.13★ チーム/リーグプリセット (NPB/MLB) - 選手バッジ・色を切替 */}
+      <div className="bg-white p-3 rounded-lg border border-zinc-200">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-bold text-sm text-zinc-700">リーグ・チーム</span>
+          {(() => {
+            const cur = TEAM_PRESETS.find(p => p.id === projectData.teamPreset) || TEAM_PRESETS[0];
+            return (
+              <span className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded" style={{ background: cur.primary }}>
+                {cur.league}/{cur.team || '?'}
+              </span>
+            );
+          })()}
+        </div>
+        <div className="text-[10px] text-zinc-500 mb-1.5">主役選手の所属チームを選択 (色とバッジに反映)</div>
+        <select
+          value={projectData.teamPreset || 'npb_giants'}
+          onChange={(e) => setField('teamPreset', e.target.value)}
+          className="w-full text-xs border border-zinc-300 rounded px-2 py-1.5 bg-white"
+        >
+          <optgroup label="NPB セ・リーグ">
+            {TEAM_PRESETS.filter(p => p.league === 'NPB' && ['G','T','D','C','DB','S'].includes(p.team)).map(p => (
+              <option key={p.id} value={p.id}>{p.label} ({p.team})</option>
+            ))}
+          </optgroup>
+          <optgroup label="NPB パ・リーグ">
+            {TEAM_PRESETS.filter(p => p.league === 'NPB' && ['Bs','M','E','L','H','F'].includes(p.team)).map(p => (
+              <option key={p.id} value={p.id}>{p.label} ({p.team})</option>
+            ))}
+          </optgroup>
+          <optgroup label="MLB">
+            {TEAM_PRESETS.filter(p => p.league === 'MLB').map(p => (
+              <option key={p.id} value={p.id}>{p.label} ({p.team})</option>
+            ))}
+          </optgroup>
+          <optgroup label="その他">
+            <option value="custom">カスタム (色のみ)</option>
+          </optgroup>
+        </select>
+      </div>
+
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-sm text-zinc-700">画面比率</span>
@@ -255,12 +295,13 @@ export function LayoutPanel({ projectData, onChange }) {
 }
 
 function TimelineDataEditor({ projectData, onChange }) {
-  // ★v5.18.8★ 部分的に layoutData.timeline が存在するが points が undefined のケースで .map が爆発するバグを修正
-  // points も含めて完全な fallback を保証
+  // ★v5.20.13★ 拡張: 系列ラベル / 強調 / 注釈 / 空値 (null) サポート
   const tlRaw = projectData.layoutData?.timeline || {};
   const timeline = {
     unit: tlRaw.unit || 'month',
     metric: tlRaw.metric || 'OPS',
+    mainLabel: tlRaw.mainLabel || '今季',
+    subLabel: tlRaw.subLabel || '昨季',
     points: Array.isArray(tlRaw.points) ? tlRaw.points : [
       { label: '4月', main: 0.724, sub: 0.598 },
       { label: '5月', main: 0.810, sub: 0.621 },
@@ -274,18 +315,41 @@ function TimelineDataEditor({ projectData, onChange }) {
     });
   };
 
+  // ★null/空の許容★: input が空文字のとき null を保存 (0 とは区別)
   const updatePoint = (index, field, value) => {
     const points = [...(timeline.points || [])];
-    points[index] = { ...points[index], [field]: field === 'label' ? value : parseFloat(value) || 0 };
+    let newValue;
+    if (field === 'label' || field === 'note') {
+      newValue = value;
+    } else if (field === 'highlight' || field === 'isPeak' || field === 'isBottom') {
+      newValue = value;  // boolean
+    } else {
+      // main/sub: 空文字なら null、それ以外は parseFloat
+      newValue = (value === '' || value === null) ? null : (parseFloat(value) || 0);
+    }
+    points[index] = { ...points[index], [field]: newValue };
     update({ ...timeline, points });
   };
 
-  const addPoint = () => update({ ...timeline, points: [...(timeline.points || []), { label: '', main: 0, sub: 0 }] });
+  const addPoint = () => update({ ...timeline, points: [...(timeline.points || []), { label: '', main: null, sub: null }] });
   const removePoint = (i) => update({ ...timeline, points: (timeline.points || []).filter((_, idx) => idx !== i) });
+  // ★v5.20.13★ 系列入替 (main ↔ sub)
+  const swapSeries = () => {
+    const swapped = (timeline.points || []).map(p => ({ ...p, main: p.sub, sub: p.main }));
+    update({ ...timeline, mainLabel: timeline.subLabel, subLabel: timeline.mainLabel, points: swapped });
+  };
+
+  // 数値フィールドの表示値: null は空文字、それ以外は数値
+  const dispVal = (v) => (v === null || v === undefined ? '' : v);
 
   return (
     <div className="bg-white p-3 rounded-lg border border-zinc-200">
-      <div className="font-bold text-sm text-zinc-700 mb-2">時系列データ</div>
+      <div className="font-bold text-sm text-zinc-700 mb-2 flex items-center justify-between">
+        <span>時系列データ</span>
+        <button onClick={swapSeries} className="text-[10px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded font-bold">
+          系列入替 ⇅
+        </button>
+      </div>
       <div className="grid grid-cols-2 gap-2 mb-2">
         <label className="text-[10px] text-zinc-600">
           単位
@@ -294,8 +358,10 @@ function TimelineDataEditor({ projectData, onChange }) {
             onChange={(e) => update({ ...timeline, unit: e.target.value })}
             className="w-full mt-0.5 text-xs border border-zinc-200 rounded px-2 py-1"
           >
+            <option value="year">年別</option>
             <option value="month">月別</option>
             <option value="week">週別</option>
+            <option value="day">日別</option>
           </select>
         </label>
         <label className="text-[10px] text-zinc-600">
@@ -308,17 +374,88 @@ function TimelineDataEditor({ projectData, onChange }) {
           />
         </label>
       </div>
-      <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
+      {/* ★v5.20.13★ 系列ラベル: 例「MLB」「NPB」「今季」「昨季」 */}
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <label className="text-[10px] text-zinc-600">
+          主系列ラベル
+          <input
+            type="text"
+            value={timeline.mainLabel}
+            onChange={(e) => update({ ...timeline, mainLabel: e.target.value })}
+            className="w-full mt-0.5 text-xs border border-zinc-200 rounded px-2 py-1"
+            placeholder="今季 / MLB"
+          />
+        </label>
+        <label className="text-[10px] text-zinc-600">
+          副系列ラベル
+          <input
+            type="text"
+            value={timeline.subLabel}
+            onChange={(e) => update({ ...timeline, subLabel: e.target.value })}
+            className="w-full mt-0.5 text-xs border border-zinc-200 rounded px-2 py-1"
+            placeholder="昨季 / NPB"
+          />
+        </label>
+      </div>
+      {/* ヘッダー行 */}
+      <div className="flex gap-1.5 items-center mb-1 text-[9px] text-zinc-500 font-bold">
+        <span className="w-12 text-center">ラベル</span>
+        <span className="flex-1 text-center">{timeline.mainLabel}</span>
+        <span className="flex-1 text-center">{timeline.subLabel}</span>
+        <span className="w-8 text-center">注</span>
+        <span className="w-8 text-center">強調</span>
+        <span className="w-4"></span>
+      </div>
+      <div className="space-y-1.5 max-h-72 overflow-y-auto custom-scrollbar">
         {(Array.isArray(timeline.points) ? timeline.points : []).map((p, i) => (
-          <div key={i} className="flex gap-1.5 items-center">
-            <input type="text" value={p.label} onChange={(e) => updatePoint(i, 'label', e.target.value)} className="w-12 text-[11px] border border-zinc-200 rounded px-1.5 py-1" placeholder="月" />
-            <input type="number" step="0.001" value={p.main} onChange={(e) => updatePoint(i, 'main', e.target.value)} className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1" />
-            <input type="number" step="0.001" value={p.sub} onChange={(e) => updatePoint(i, 'sub', e.target.value)} className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1" />
-            <button onClick={() => removePoint(i)} className="text-red-500 text-xs font-bold px-1">×</button>
+          <div key={i} className="space-y-1">
+            <div className="flex gap-1.5 items-center">
+              <input
+                type="text"
+                value={p.label || ''}
+                onChange={(e) => updatePoint(i, 'label', e.target.value)}
+                className="w-12 text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+                placeholder={timeline.unit === 'year' ? '24年' : '4月'}
+              />
+              <input
+                type="number" step="0.001"
+                value={dispVal(p.main)}
+                onChange={(e) => updatePoint(i, 'main', e.target.value)}
+                className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+                placeholder="(空=表示なし)"
+              />
+              <input
+                type="number" step="0.001"
+                value={dispVal(p.sub)}
+                onChange={(e) => updatePoint(i, 'sub', e.target.value)}
+                className="flex-1 text-[11px] border border-zinc-200 rounded px-1.5 py-1"
+                placeholder="(空=表示なし)"
+              />
+              <input
+                type="text"
+                value={p.note || ''}
+                onChange={(e) => updatePoint(i, 'note', e.target.value)}
+                className="w-12 text-[10px] border border-zinc-200 rounded px-1 py-1"
+                placeholder="—"
+                title="点の上に出す注釈テキスト (例: 移籍)"
+              />
+              <button
+                onClick={() => updatePoint(i, 'highlight', !p.highlight)}
+                className={`w-8 text-[10px] py-1 rounded font-bold ${
+                  p.highlight ? 'bg-amber-400 text-white' : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'
+                }`}
+                title="この点を強調 (ピーク表示)"
+              >★</button>
+              <button onClick={() => removePoint(i)} className="text-red-500 text-xs font-bold px-1">×</button>
+            </div>
           </div>
         ))}
       </div>
       <button onClick={addPoint} className="mt-2 w-full text-xs bg-zinc-100 hover:bg-zinc-200 py-1.5 rounded font-bold text-zinc-600">＋ データ点を追加</button>
+      <div className="mt-1 text-[9px] text-zinc-400 leading-relaxed">
+        💡 値を空にすると線が途切れる (例: id:1 で main 空 → MLB→NPB 切替表現)
+        <br/>★ で強調点 (ターニングポイント)、注に「移籍」等を入れると点上にラベル表示
+      </div>
     </div>
   );
 }
