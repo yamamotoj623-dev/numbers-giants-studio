@@ -22,7 +22,7 @@ export const defaultBatterData = {
   // 視聴維持率向上のため。詳細結果見せたい場合は false に。
   smartLoop: true,
   audio: { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.0, seVolume: 0.6 },
-  // アウトロの問いかけ(シンプル・具体的に)
+  // アウトロの問いかけ(シンプル・具体的に
   outroCta: {
     title: '増田陸の',
     big: 'HR',
