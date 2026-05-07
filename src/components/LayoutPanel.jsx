@@ -176,6 +176,29 @@ export function LayoutPanel({ projectData, onChange }) {
         </select>
       </div>
 
+      {/* ★v5.21.0★ キャラ表示モード (絵文字 ↔ オリジナル SVG キャラ) */}
+      <div className="bg-white p-3 rounded-lg border border-zinc-200">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-bold text-sm text-zinc-700">キャラ表示</span>
+          <span className="text-[10px] text-amber-600 font-bold">★ 収益化対策</span>
+        </div>
+        <div className="text-[10px] text-zinc-500 mb-1.5">絵文字 → オリジナルキャラに切替えてブランド性を強化</div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setField('charMode', 'emoji')}
+            className={`py-2 text-xs font-bold rounded border transition ${(projectData.charMode || 'emoji') === 'emoji' ? 'bg-indigo-50 border-indigo-400 text-indigo-700 ring-1 ring-indigo-400' : 'bg-white border-zinc-200 text-zinc-600'}`}
+          >
+            😀 絵文字<br/><span className="text-[9px] font-normal">シンプル</span>
+          </button>
+          <button
+            onClick={() => setField('charMode', 'svg')}
+            className={`py-2 text-xs font-bold rounded border transition ${projectData.charMode === 'svg' ? 'bg-indigo-50 border-indigo-400 text-indigo-700 ring-1 ring-indigo-400' : 'bg-white border-zinc-200 text-zinc-600'}`}
+          >
+            👤 SVGキャラ<br/><span className="text-[9px] font-normal">数原 + もえか</span>
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-sm text-zinc-700">画面比率</span>

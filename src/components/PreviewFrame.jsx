@@ -16,6 +16,7 @@ import { Silhouette } from './Silhouettes.jsx';
 import { HookMediaOverlay, getHookMedia } from './HookMediaOverlay.jsx';
 import { formatStat } from '../lib/statFormat';
 import { getTeamPreset } from '../lib/config';
+import { Kazuhara, Moeka, getExpressionForCharacter } from './Characters.jsx';
 
 function getPhase(currentScript, currentIndex, scripts, projectData) {
   if (!currentScript) return 'normal';
@@ -480,7 +481,18 @@ export function PreviewFrame({
                 data-anim={currentScript?.speaker === 'A' ? (currentScript?.animation || getAnimFromEmoji(currentEmojiA)) : undefined}
                 key={`avatar-a-${currentIndex}`}
               >
-                <div className="circle"><span className="emoji">{currentEmojiA}</span></div>
+                {/* ★v5.21.0★ projectData.charMode === 'svg' でキャラSVG、デフォルトは絵文字 */}
+                {projectData?.charMode === 'svg' ? (
+                  <div className="char-wrap">
+                    <Kazuhara
+                      expression={getExpressionForCharacter('A', currentEmojiA)}
+                      mouthOpen={currentScript?.speaker === 'A' && isPlaying}
+                      size={92}
+                    />
+                  </div>
+                ) : (
+                  <div className="circle"><span className="emoji">{currentEmojiA}</span></div>
+                )}
                 <div className="avatar-name">数原</div>
               </div>
               <div
@@ -488,7 +500,17 @@ export function PreviewFrame({
                 data-anim={currentScript?.speaker === 'B' ? (currentScript?.animation || getAnimFromEmoji(currentEmojiB)) : undefined}
                 key={`avatar-b-${currentIndex}`}
               >
-                <div className="circle"><span className="emoji">{currentEmojiB}</span></div>
+                {projectData?.charMode === 'svg' ? (
+                  <div className="char-wrap">
+                    <Moeka
+                      expression={getExpressionForCharacter('B', currentEmojiB)}
+                      mouthOpen={currentScript?.speaker === 'B' && isPlaying}
+                      size={92}
+                    />
+                  </div>
+                ) : (
+                  <div className="circle"><span className="emoji">{currentEmojiB}</span></div>
+                )}
                 <div className="avatar-name">もえか</div>
               </div>
             </>

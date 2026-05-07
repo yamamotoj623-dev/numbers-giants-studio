@@ -317,6 +317,38 @@ const CSS_TEXT = `
     75%  { transform: scale(1.025) translate(0.3%, -0.3%); }
     100% { transform: scale(1.0)  translate(0, 0); }
   }
+  /* ★v5.21.0★ キャラの頭の小揺れ (常時) と瞬き */
+  @keyframes charHeadBob {
+    0%, 100% { transform: rotate(0deg) translateY(0); }
+    25%      { transform: rotate(-1.2deg) translateY(-1px); }
+    50%      { transform: rotate(0deg) translateY(0); }
+    75%      { transform: rotate(1.2deg) translateY(-1px); }
+  }
+  @keyframes charBlink {
+    0%, 92%, 96%, 100% { transform: scaleY(1); }
+    93%, 95%           { transform: scaleY(0.1); }
+  }
+  .char-eyes { animation: charBlink 5s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+  /* ★v5.21.0★ キャラSVGラッパー (絵文字 circle 代替) */
+  .avatar-hl .char-wrap {
+    width: 92px; height: 138px;
+    display: flex; align-items: flex-end; justify-content: center;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .avatar-hl .char-wrap svg {
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+    transition: opacity 0.3s, filter 0.3s;
+  }
+  .avatar-hl.passive .char-wrap svg {
+    opacity: 0.55;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)) saturate(0.6);
+  }
+  .avatar-hl.active .char-wrap svg {
+    opacity: 1;
+    filter: drop-shadow(0 0 12px rgba(255,140,26,0.4)) drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+  }
+
   /* anim-layer に kenBurns を常時適用 (zoomBoost と被らない範囲で) */
   .anim-layer {
     animation: kenBurns 14s ease-in-out infinite;
@@ -1322,6 +1354,9 @@ const CSS_TEXT = `
   .avatar-hl.b { right: 72px; }
   .avatar-hl.active { transform: scale(1.1); animation: avatarTalk 0.6s ease-in-out infinite; }
   .avatar-hl.passive { transform: scale(0.88); opacity: 0.4; }
+  /* ★v5.21.0★ SVG キャラモード時は内部 svg で個別 opacity 制御するため、外側の opacity 上書きは無効化 */
+  .avatar-hl.passive:has(.char-wrap) { opacity: 1; transform: scale(0.92); }
+  .avatar-hl.active:has(.char-wrap) { transform: scale(1.05); animation: none; }
   .avatar-hl .circle { width: 46px; height: 46px; border-radius: 50%; background: #18181b; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 2px solid #52525b; position: relative; }
   .avatar-hl.a.active .circle { border-color: var(--p); box-shadow: 0 0 16px var(--p-glow); }
   .avatar-hl.b.active .circle { border-color: var(--rose); box-shadow: 0 0 16px rgba(251,113,133,0.6); }
