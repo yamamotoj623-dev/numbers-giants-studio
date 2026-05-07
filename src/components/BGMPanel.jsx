@@ -393,7 +393,7 @@ export function BGMPanel() {
           <span className="font-bold text-sm text-zinc-700">音量ミキサー (リアルタイム反映)</span>
         </div>
 
-        <VolumeSlider label="ボイス"       value={levels.voice}  onChange={v => updateLevel('voice', v)}  accent="bg-indigo-500" max={2}/>
+        <VolumeSlider label="ボイス"       value={levels.voice}  onChange={v => updateLevel('voice', v)}  accent="bg-indigo-500"/>
         <VolumeSlider label="BGM"          value={levels.bgm}    onChange={v => updateLevel('bgm', v)}    accent="bg-purple-500"/>
         <VolumeSlider label="SE"           value={levels.se}     onChange={v => updateLevel('se', v)}     accent="bg-amber-500"/>
         <VolumeSlider label="マスター"     value={levels.master} onChange={v => updateLevel('master', v)} accent="bg-zinc-700"/>
@@ -483,17 +483,17 @@ export function BGMPanel() {
   );
 }
 
-function VolumeSlider({ label, value, onChange, accent, max = 1 }) {
+function VolumeSlider({ label, value, onChange, accent }) {
   return (
     <div className="mb-2">
       <div className="flex items-center justify-between text-[11px] font-bold text-zinc-600 mb-1">
         <span>{label}</span>
-        <span className="font-mono">{Math.round(value * 100)}%{max > 1 && value > 1 ? ' (増幅)' : ''}</span>
+        <span className="font-mono">{Math.round(value * 100)}%</span>
       </div>
       <input
         type="range"
         min="0"
-        max={max}
+        max="1"
         step="0.01"
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}

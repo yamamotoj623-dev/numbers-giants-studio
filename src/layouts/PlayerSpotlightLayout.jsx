@@ -174,9 +174,11 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   return (
     <>
       {/* ★v5.19.2★ focusQuoteIndex も key に含めて quote 切替時にアニメ再発火 */}
-      {/* ★v5.19.4★ player/mode が変わった時のみ全体再発火。focusQuoteIndex のみの変化では再発火しない
-          (quote の text/source 自体に下で個別 key を付けて部分remount) */}
-      <div key={`spot-${animationKey}-${player.id || player.name || 'p'}-${mode}`}
+      {/* ★v5.20.16★ key を player のみベースに固定 (mode 切替で remount しない)
+         spotlightMode の切替 (#4 default → #5 cinematic_zoom → #6 default 等) で
+         spot 全体が remount → cardBounceIn 全発火していたバグを修正。
+         mode による表示違いは内部の条件分岐で対応 (key には含めない) */}
+      <div key={`spot-${animationKey}-${player.id || player.name || 'p'}`}
            className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* スポットライト感の背景 */}

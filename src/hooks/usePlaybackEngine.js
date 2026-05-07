@@ -135,9 +135,7 @@ export function usePlaybackEngine(projectData, { ttsEngine = 'web_speech', speec
       const thisScript = groupScripts[i];
       const thisChars = (thisScript.speech || thisScript.text || '').length;
       cumulativeMs += (thisChars / groupTotalChars) * groupTotalMs;
-      // ★v5.20.15★ 最低 800ms → 350ms に緩和 (短テロップの遅延感を解消)
-      // 旧 800ms は 5文字テロップで実際の発話400msの倍待たされた
-      const delay = Math.max(350, cumulativeMs);
+      const delay = Math.max(200, cumulativeMs);
       const targetIdx = groupStartIdx + i + 1;
       telopTimers.push(setTimeout(() => {
         setCurrentIndex(cur => {

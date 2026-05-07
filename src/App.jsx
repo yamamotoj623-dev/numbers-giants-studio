@@ -77,7 +77,17 @@ const App = () => {
   }, []);
 
   const [ttsEngine, setTtsEngine] = useState('web_speech');
-  const [speechRate, setSpeechRate] = useState(1.6);
+  // ★v5.20.16★ デフォルト再生速度 1.4x (1.6→1.4)、localStorage で永続化
+  const [speechRate, setSpeechRate] = useState(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('speech-rate'));
+      if (!isNaN(v) && v >= 0.5 && v <= 2.5) return v;
+    } catch (e) {}
+    return 1.4;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('speech-rate', String(speechRate)); } catch (e) {}
+  }, [speechRate]);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isSEEnabled, setIsSEEnabled] = useState(true);
   const [isBgmEnabled, setIsBgmEnabled] = useState(true);

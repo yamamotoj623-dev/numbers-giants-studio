@@ -133,9 +133,7 @@ export class MixerEngine {
   }
 
   setLevel(track, value) {
-    // ★v5.20.15★ voice は 0-2.0 まで許可 (1.0超は WebAudio GainNode で増幅)、他は 0-1.0
-    const max = (track === 'voice') ? 2.0 : 1.0;
-    const v = Math.max(0, Math.min(max, value));
+    const v = Math.max(0, Math.min(1, value));
     this.levels[track] = v;
 
     if (track === 'bgm' && this.bgmAudioEl) {

@@ -466,35 +466,11 @@ export class GeminiAdapter {
 
         audio.src = dataUrl;
 
-        // ★v5.20.15★ 音量取得 + 1.0 超は WebAudio GainNode で増幅
+        // 音量取得
         try {
           const { getMixer } = await import('./mixer.js');
           const mixer = getMixer();
-          const target = mixer._effectiveVoiceVolume();  // 0.0-2.0
-          if (target <= 1.0) {
-            // 1.0 以下は HTMLAudioElement.volume で OK
-            audio.volume = target;
-          } else {
-            // 1.0 超: HTMLAudioElement は 1.0 にクランプ → 残りを GainNode で増幅
-            audio.volume = 1.0;
-            try {
-              // WebAudio で増幅 (録画は HTMLAudioElement の音を拾うので、ctx.destination 経由でも OK)
-              const ctx = mixer._synthCtx || new (window.AudioContext || window.webkitAudioContext)();
-              if (!mixer._synthCtx) mixer._synthCtx = ctx;
-              if (ctx.state === 'suspended') ctx.resume();
-              // MediaElementSource は1要素1回まで → cache
-              if (!audio._mediaSourceNode) {
-                audio._mediaSourceNode = ctx.createMediaElementSource(audio);
-                audio._gainNode = ctx.createGain();
-                audio._mediaSourceNode.connect(audio._gainNode);
-                audio._gainNode.connect(ctx.destination);
-              }
-              audio._gainNode.gain.value = target;  // 1.0-2.0
-            } catch (e) {
-              console.warn('[TTS] WebAudio gain boost failed:', e);
-              audio.volume = 1.0;  // fallback
-            }
-          }
+          audio.volume = mixer._effectiveVoiceVolume();
         } catch (e) {
           audio.volume = 1.0;
         }

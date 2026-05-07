@@ -279,6 +279,7 @@ export function PreviewFrame({
          style={phoneStyle}
          id="phone-root"
          data-scene-preset={currentScript?.scenePreset || projectData?.defaultScenePreset || 'default'}
+         data-current-id={currentScript?.id ?? -1}
          key={`phone-${animationKey}`}>
 
       {/* ★v5.19.0★ 浮遊ボケ光パーティクル — 常にぬるっと動いて視覚退屈を防ぐ */}

@@ -288,17 +288,20 @@ function buildAIPrompt(currentData, templateData) {
     currentData.playerType === 'pitcher' ? '投手' :
     'チーム';
 
-  // 動的な数値読みルール (playerType 別)
+  // ★v10.2★ 動的な数値読みルール (playerType 別)
   const numericRules = currentData.playerType === 'batter'
-    ? '・打率/出塁率/長打率 (.250, .350): 「にわり・ごぶ」のように【割・分・厘】で記述\n'
-    + '・OPSやIsoPなど (.850, .172): 「てんはちごーぜろ」「てんいちななに」\n'
-    + '・指標名: IsoP→アイソピー、BB/K→ビービーケー、RC27→アールシーにじゅうなな'
+    ? '・★打率系は .333 形式★ 打率/出塁率/長打率/OPS/被打率/IsoP\n'
+    + '・打率 .333 → 「さんわりさんぶさんりん」、.305 → 「さんわりれいぶごりん」\n'
+    + '・OPS .945 → 「れいてんきゅうよんご」、.207 → 「にわりれいぶしちりん」\n'
+    + '・指標名カタカナ: IsoP→アイソピー、BB/K→ビービーケー、RC27→アールシーにじゅうなな'
     : currentData.playerType === 'pitcher'
-    ? '・防御率やFIP (2.15, 3.50): 「にてんいちご」「さんてんごぜろ」\n'
-    + '・K/BBやK/9など (7.00, 10.80): 「ななてんぜろぜろ」「じゅってんはちぜろ」\n'
-    + '・指標名: FIP→フィップ、K/BB→ケービービー、WHIP→ウィップ、HR/9→エイチアールナイン'
-    : '・打率/防御率/勝率の混合: 各指標ごとに上記2分類を参照\n'
-    + '・順位/勝敗: 「いちい」「にい」「さんい」、勝率「ろくわりごぶ」';
+    ? '・★防御率系は 0.97 形式★ ERA/WHIP/FIP/K/9/BB/9\n'
+    + '・防御率 1.90 → 「いってんきゅうれい」、0.97 → 「れいてんきゅうなな」\n'
+    + '・WHIP 0.97 → 「ダブリュエイチアイピー、れいてんきゅうなな」\n'
+    + '・K/9 9.51 → 「ケーナイン、きゅうてんごいち」、1.00 → 「いってんれい」\n'
+    + '・指標名カタカナ: FIP→フィップ、K/BB→ケービービー、WHIP→ダブリュエイチアイピー、HR/9→エイチアールナイン'
+    : '・打率系 (.333 形式) と防御率系 (0.97 形式) の両方を使用\n'
+    + '・順位/勝敗: 「いちい」「にい」「さんい」、勝率 .655 → 「ろくわりごぶごりん」';
 
   // レイアウト一覧 (動的)
   const layoutList = Object.entries(LAYOUT_TYPES)
@@ -588,6 +591,45 @@ function buildScriptJsonPrompt(currentData, templateData) {
 - 動画パターン: ${currentData.pattern || '(未指定)'}
 - テーマ: ${currentData.theme || '(未指定)'}
 
+## ★必須ルール (v10.2)★
+
+### キャラ口調
+- A=数原さん (男性40-50代、★必ず敬語★、「〜なんですよ」「〜ですね」「〜と言えますね」)
+  ❌ NG: 「〜だよ」「〜だね」「〜だぞ」
+- B=もえかちゃん (女性20代、基本敬語+感情で崩す、「〜ですね」「すごすぎませんか?」)
+
+### 数値読み (speech)
+- 打率系 (.333 形式): 打率/OPS/出塁率/被打率 → 「さんわりさんぶさんりん」
+- 防御率系 (0.97 形式): ERA/WHIP/K/9/BB/9 → 「れいてんきゅうなな」/「いってんきゅうれい」
+- 指標名はカタカナ: WHIP→ダブリュエイチアイピー, OPS→オーピーエス
+- 選手名・チーム名はひらがな: 井上温大→いのうえはると
+- 「実は」→「じつは」(誤読対策)
+
+### emoji
+- A は必ず "👨‍🏫" 固定
+- B は 😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅 から1つ
+- ❌ "A"/"B"/空文字/絵文字以外 NG
+
+### 配分 (★30個前後、配分必須★)
+- textSize: xl=1 (id:1のみ) / l=5-7 / m=18-22 / s=2-4
+- scenePreset: default 12個以上、連続 4 ID 以上 NG
+- se: 12-15 箇所、id:1=hook_impact 必須、id:30=outro_fade 必須
+- zoomBoost: 2-3 箇所のみ、id:1 不要、文字列 "zoom"/"shake"
+
+### id:1 (フック)
+- 必ず主語 (選手名/チーム名)
+- isCatchy: true、textSize: "xl"、se: "hook_impact"、zoomBoost なし
+- 強調記号 【】「」『』 を 2 箇所以上
+- 1ID あたり 3-12 字 × 3-4 行
+
+### id:2-5 で A↔B 呼び合い両方向必須
+- B → A: 「数原さん」呼び 1 回以上
+- A → B: 「もえかちゃん」呼び 1 回以上
+
+### text (テロップ)
+- 句点「。」禁止
+- 数値は【.305】、指標名は「OPS」、衝撃ワードは『覚醒』で囲う
+
 ## ★1動画内でデータを使い分け★
 1動画内で複数の選手にフォーカスしたり、同じ選手の複数の quote を使い分けたりするのが想定。
 - script.layoutType で **シーンごとにレイアウト切替** (radar_compare → player_spotlight → ranking 等)
@@ -596,7 +638,11 @@ function buildScriptJsonPrompt(currentData, templateData) {
 - script.focusEntry で **シーンごとに別の player.id** を指定 (★player.id と完全一致させること★)
 - script.focusQuoteIndex で **同じ player の中で別の quote** を指定 (player.quotes[idx])
 - script.focusMetric で **ranking の metric をシーンごとに切替** (ranking.metrics[].id)
-- script.highlight で **シーンごとに別の comparison.id** を指定
+- script.highlight で **シーンごとに別の comparison.id** を指定 (★3-5 ID 連続で同じ id を使う、id:1-3 と id:26-30 は省略★)
+
+## ★ハイライト紐付け重要★
+comparisons には台本で言及する全指標を含めること (5-7 個推奨)。
+例: 台本で「援護率」を言及するなら comparisons に run_support を必ず入れる。
 
 ## 出力する JSON 構造
 \`\`\`json
