@@ -60,6 +60,39 @@ export function TTSPanel({
 
   React.useEffect(() => { refreshCacheStats(); }, []);
 
+  // ★v5.21.3★ adapter (singleton) の進捗 state を subscribe → タブ切替で TTSPanel が
+  // アンマウントされても、内部の Promise.all は走り続けキャッシュは IndexedDB に保存される。
+  // 再マウント時、ここで adapter._pregenState を読み取って progress/pregenStatus を復元する。
+  React.useEffect(() => {
+    let unsubscribe = null;
+    try {
+      const adapter = getAdapter('gemini');
+      if (adapter && typeof adapter.subscribePregenState === 'function') {
+        unsubscribe = adapter.subscribePregenState((state) => {
+          // 進行中なら progress を反映
+          if (state.isGenerating) {
+            setPregenStatus('loading');
+            setProgress(state.progress);
+            if (state.progress?.fallbackCount !== undefined) {
+              setFallbackInfo({ count: state.progress.fallbackCount, ids: state.progress.fallbackIds || [] });
+            }
+          } else if (state.lastResult) {
+            // 完了済み (タブ切替で離れている間に終わったケース含む)
+            setPregenStatus(state.lastResult.errors > 0 ? 'partial' : 'done');
+            setProgress(state.progress);
+            setFallbackInfo({
+              count: state.lastResult.fallbackCount || 0,
+              ids: state.lastResult.fallbackIds || [],
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('subscribePregenState failed:', e);
+    }
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, []);
+
   // ★scripts が変わったら、不足リストをリセット★
   React.useEffect(() => {
     setMissingList([]);

@@ -2,6 +2,49 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.3] - 2026-05-10 - 視聴データ実証反映 v10.3 + 5件バグ修正
+
+**Gem 指示更新:**
+- ★Gem 指示 v10.2 → v10.3★ 60本動画視聴データ実証ベース改修
+  - id:1 (タイトル/フック) 設計再定義: 1選手フォーカス必須・具体数値必須・物語キーワード活用 (Top 4 維持率動画 83.7%/79.7%/77.1%/70.4% 共通要素から逆算)
+  - NG ワード大幅拡充: 飽和パワーワード (致命的/絶望/衝撃 等 +0.8pt の効果ゼロを実証)、阿部監督批判型 (-3.2pt 逆効果)、他球団選手比較型 (維持率 17-18% で最低層)
+  - もえか口調を「鋭い感想を言うコアファン枠」に転換 — Knowledge File `moeka-voice-samples.md` 新規追加 (40 サンプル + 「ヤバい」運用ルール)
+  - タイトル長 25-32 字推奨、35 字以上は維持率低下と実証
+  - 「現在地」を id:1 タイトル限定で解禁 (speech/text 内は引き続き NG)
+
+**バグ修正 (6件):**
+- ★① TTS 進捗 state を adapter 移管 (タブ切替で生成が止まる問題)★ (`lib/ttsAdapter.js`, `components/TTSPanel.jsx`)
+  - TTSPanel は `{activeTab === 'tts' && <TTSPanel/>}` で条件レンダリングのため、別タブに切替えた瞬間にコンポーネントがアンマウントされ、React state (progress / pregenStatus / fallbackInfo) が破棄されていた
+  - getAdapter('gemini') は singleton で、内部の `Promise.all` (2並列 fetch) は走り続け IndexedDB へのキャッシュ保存も継続するが、TTSPanel 再マウント時に進捗を復元する手段がなく「止まった」ように見えていた
+  - 修正: GeminiAdapter インスタンスに `_pregenState` (isGenerating / progress / lastResult / startedAt) を保持。`subscribePregenState(listener)` で購読 API を提供。TTSPanel は再マウント時に useEffect で subscribe して進捗を復元
+  - 効果: タブ切替後も生成は継続し、TTS パネルに戻った時点で進捗が正しく表示される。完了時は「完了済み」状態が復元される
+- ★② voiceVolume 1.4 → 1.0★ (`data/defaultBatter.js`, `data/defaultPitcher.js`)
+  - 初期音声音量が 140% で固定されていた問題を修正 (JsonPanel フォールバックは正しく 1.0 だったが defaults だけ 1.4 残存)
+- ★③ 横長/正方形でセーフゾーンガイドを非表示★ (`components/PreviewFrame.jsx`)
+  - YouTube ショート用UI(上下14% + 右12%)を可視化する `safe-zone-guide` が aspectRatio 16:9 / 1:1 でも表示され、もえか配置位置と干渉していた問題を修正
+  - 9:16 (ショート) でのみ表示する条件に変更
+- ★④ Firefox: 停止→再開で TTS が無音 + SE のみ鳴る問題を修正★ (`lib/ttsAdapter.js`)
+  - `pause()` 後に同じ audio 要素へ同一 src (キャッシュデータURL) を再設定すると、Firefox では readyState がリセットされず `currentTime` が再生終了点のまま `startPlayback` に入って即 `onended` 発火 → 無音化していた
+  - `audio.src = dataUrl` の直後に `audio.load()` を明示呼び出し、readyState を 0 に戻して canplay 待ちパスに乗せる
+- ★⑤ グローバル layoutType 切替時の個別シーン上書き保持★ (`components/LayoutPanel.jsx`)
+  - v5.15.5 で導入した「グローバル layoutType 変更時に scripts[i].layoutType を一括クリア」する挙動が、ScriptEditor で個別シーン上書きを設定したケースでも消去してしまい、ユーザーの意図しない default 化を起こしていた
+  - 仕様変更: scripts.layoutType は明示クリアボタン経由のみで消す (デフォルトは保持)
+  - 個別上書きが残っている時は警告UI を表示 (`⚠️ 個別シーン上書き N 個あり (該当シーンはグローバル切替の影響を受けません)` + `[全クリア]` ボタン + 確認ダイアログ)
+- ★⑨ UI ラベル「理由」→「指標の意味」★ (`layouts/RadarCompareLayout.jsx`)
+  - v5.20.4 で一度修正したが、何らかのリグレッションで `<div className="label">理由</div>` が戻っていた問題を再修正
+  - `comp.desc` は指標の説明 (「1試合得点貢献」「純粋な長打力」等) であり、「理由」というラベルは文脈的に不適切
+
+**docs 追加:**
+- `docs/moeka-voice-samples.md` (新規、約 24K) — もえか「鋭い感想を言うコアファン枠」40 サンプル + ヤバい運用ルール
+- `gemini-custom-gem-instruction-v10.3.md` (新規、17K) — Gem 指示 v10.3
+
+**ペンディング (継続):**
+- ① TTS 生成中の真のバックグラウンド継続 (Android Firefox でアプリしまっても継続) — Wake Lock または Service Worker 化が必要 (今回はタブ切替時の進捗 state 破棄問題を修正、OS レベルのバックグラウンド継続は別タスク)
+- ⑥ id:1 スワイプ対策の追加戦略 (画像 C 既実装上で他にどう刺すか)
+- ⑦ Phase 2 ranking 拡張 (順位変動アニメ / TOP3 拡大 / フィルタ)
+- ⑧ Gem 分離 (構成専用 / JSON 専用)
+- ⑩ RadarCompare / TeamContext の LayoutPanel エディタ未実装
+
 ## [5.20.4] - 2026-05-02 - 横長Phase2仕上げ + ハイライトカード横長対応
 
 **横長 (16:9) の最終仕上げ:**

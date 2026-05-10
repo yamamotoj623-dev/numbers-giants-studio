@@ -22,20 +22,30 @@ export function LayoutPanel({ projectData, onChange }) {
     onChange(updated);
   };
 
-  // ★v5.15.5★ layoutType を変更する時は、scripts 各要素の layoutType を一括クリア
-  // (LayoutRouter は scripts[i].layoutType を優先するため、UI 側で変えるだけでは反映されない)
+  // ★v5.21.3★ グローバル layoutType 切替時は scripts[i].layoutType の上書きを保持する。
+  // 旧 v5.15.5 では「グローバル変更しても画面が変わらない(scripts[0].layoutType が残るため)」
+  // を回避するため scripts.layoutType を一括クリアしていたが、
+  // ScriptEditor で個別シーン上書き(継承からの離脱)を設定したケースでも消えてしまい、
+  // ユーザーの意図しない default 化を引き起こしていた。
+  //
+  // 新仕様: scripts.layoutType は明示クリアボタン(下記 hasScriptLayoutOverrides 警告)経由でのみ消す。
   const setLayoutType = (newType) => {
-    const updated = {
+    onChange({
       ...projectData,
       layoutType: newType,
+    });
+  };
+
+  // ★v5.21.3★ 個別シーン上書きを一括クリアするヘルパ(警告UIから呼び出す)
+  const clearAllScriptLayoutOverrides = () => {
+    onChange({
+      ...projectData,
       scripts: (projectData.scripts || []).map(s => {
         if (!s.layoutType) return s;
-        // 既存の script.layoutType を削除 (削除すると projectData.layoutType に従う)
         const { layoutType, ...rest } = s;
         return rest;
       }),
-    };
-    onChange(updated);
+    });
   };
 
   // scripts に layoutType 上書きが含まれているか
@@ -81,6 +91,28 @@ export function LayoutPanel({ projectData, onChange }) {
             <span className="ml-1">{LAYOUT_TYPES[projectData.layoutType].desc}</span>
           </div>
         )}
+        {/* ★v5.21.3★ 個別シーン上書き警告 — ScriptEditor で layoutType を「継承」以外にした script がある時の表示 */}
+        {hasScriptLayoutOverrides && (() => {
+          const overrideCount = (projectData.scripts || []).filter(s => s.layoutType).length;
+          return (
+            <div className="mt-2 px-2 py-1.5 bg-amber-50 border border-amber-200 rounded text-[10px] text-amber-800 flex items-center justify-between gap-2">
+              <div>
+                <span className="font-bold">⚠️ 個別シーン上書き {overrideCount} 個</span>
+                <span className="ml-1 text-amber-700">あり (該当シーンはグローバル切替の影響を受けません)</span>
+              </div>
+              <button
+                onClick={() => {
+                  if (window.confirm(`個別シーンに設定した ${overrideCount} 個のレイアウト上書きを全てクリアしますか?\n(全シーンが「継承」状態になり、グローバル設定に従います)`)) {
+                    clearAllScriptLayoutOverrides();
+                  }
+                }}
+                className="shrink-0 px-2 py-0.5 bg-white border border-amber-300 rounded text-[10px] font-bold text-amber-700 hover:bg-amber-100"
+              >
+                全クリア
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="bg-white p-3 rounded-lg border border-zinc-200">

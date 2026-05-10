@@ -209,6 +209,34 @@ export class GeminiAdapter {
     // 動的に new Audio() で作って即削除すると Pixel 画面録画でキャプチャされないため、
     // 1つの audio 要素を最初に DOM に attach し、src を切り替えて再利用する。
     this._sharedAudio = null;
+
+    // ★v5.21.3★ pregenerate の進捗 state を adapter インスタンス (singleton) に保持。
+    // TTSPanel は条件レンダリング ({activeTab === 'tts' && <TTSPanel/>}) でタブ切替時に完全アンマウントされ、
+    // React state が破棄されるが、pregenerate 内の Promise.all は走り続け、IndexedDB へのキャッシュ保存も継続する。
+    // しかし TTSPanel 再マウント時に進捗を復元する手段がないため、ユーザーには「止まった」ように見えていた。
+    // この state を持つことで、TTSPanel が再マウント時に初期値として読み取り、進捗バー・ステータスを復元できる。
+    this._pregenState = {
+      isGenerating: false,
+      progress: { current: 0, total: 0, generated: 0, cached: 0, errors: 0, costUsd: 0, fallbackCount: 0, fallbackIds: [], failedIds: [] },
+      lastResult: null,    // 完了時の最終結果 (null = 未完了 or 未実行)
+      startedAt: null,
+    };
+    // 進捗購読リスナー (TTSPanel が再マウント時に subscribe → unmount 時に unsubscribe)
+    this._pregenListeners = new Set();
+  }
+
+  // ★v5.21.3★ 進捗購読 API — TTSPanel が useEffect で subscribe / unsubscribe する
+  subscribePregenState(listener) {
+    this._pregenListeners.add(listener);
+    // 即時に現状を渡す (再マウント時の復元用)
+    listener(this._pregenState);
+    return () => this._pregenListeners.delete(listener);
+  }
+
+  _emitPregenState() {
+    for (const l of this._pregenListeners) {
+      try { l(this._pregenState); } catch (e) { /* 個別 listener のエラーは伝搬させない */ }
+    }
   }
 
   /**
@@ -465,6 +493,11 @@ export class GeminiAdapter {
         audio.onerror = null;
 
         audio.src = dataUrl;
+        // ★v5.21.3★ Firefox 対策: 同じ audio 要素に同一 src(キャッシュデータURL)を再設定した際、
+        // pause() 後の状態(currentTime が再生終了点)と readyState がリセットされず、
+        // l531 の `readyState >= 3` 判定で即 startPlayback に入って onended が即発火 → 無音化する。
+        // 明示的に load() を呼び readyState を 0 に戻して、canplay 待ちパスに乗せる。
+        try { audio.load(); } catch (e) {}
 
         // 音量取得
         try {
@@ -621,6 +654,15 @@ export class GeminiAdapter {
     const groups = groupBySpeaker(scripts);
     const totalGroups = groups.length;
 
+    // ★v5.21.3★ adapter インスタンスに進捗 state を持たせる (TTSPanel 再マウント時に復元するため)
+    this._pregenState = {
+      isGenerating: true,
+      progress: { current: 0, total: totalGroups, generated: 0, cached: 0, errors: 0, costUsd: 0, fallbackCount: 0, fallbackIds: [], failedIds: [] },
+      lastResult: null,
+      startedAt: Date.now(),
+    };
+    this._emitPregenState();
+
     // 1グループ処理 (並列ワーカー)
     const processGroup = async (g) => {
       const text = applyYomigana(g.joinedSpeech);
@@ -645,14 +687,19 @@ export class GeminiAdapter {
         for (const s of g.scripts) failedIds.push(s.id);
       } finally {
         completed++;
-        onProgress?.({
+        const progressSnapshot = {
           current: completed,
           total: totalGroups,
           generated, cached, errors, costUsd,
           failedIds: [...failedIds],
           fallbackCount,
           fallbackIds: [...fallbackIds],
-        });
+        };
+        // ★v5.21.3★ adapter state も更新 → 全 subscriber に通知
+        this._pregenState = { ...this._pregenState, progress: progressSnapshot };
+        this._emitPregenState();
+        // 既存の onProgress callback (アンマウント済み TTSPanel の setState は React が discard するが、生成は止まらない)
+        onProgress?.(progressSnapshot);
       }
     };
 
@@ -662,7 +709,17 @@ export class GeminiAdapter {
       await Promise.all(chunk.map(processGroup));
     }
 
-    return { generated, cached, errors, costUsd, failedIds, fallbackCount, fallbackIds };
+    const finalResult = { generated, cached, errors, costUsd, failedIds, fallbackCount, fallbackIds };
+    // ★v5.21.3★ 完了時の最終結果も保持 (再マウント時に「完了済み」として表示するため)
+    this._pregenState = {
+      isGenerating: false,
+      progress: this._pregenState.progress,
+      lastResult: finalResult,
+      startedAt: this._pregenState.startedAt,
+    };
+    this._emitPregenState();
+
+    return finalResult;
   }
 
   /**

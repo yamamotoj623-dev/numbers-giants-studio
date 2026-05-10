@@ -21,7 +21,7 @@ export const defaultBatterData = {
   // smartLoop: true で末尾→冒頭にシームレス遷移 (OutroPanel スキップ)
   // 視聴維持率向上のため。詳細結果見せたい場合は false に。
   smartLoop: true,
-  audio: { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.4, seVolume: 0.6, duckingAmount: 0.5 },
+  audio: { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.0, seVolume: 0.6, duckingAmount: 0.5 },
   // アウトロの問いかけ(シンプル・具体的に)
   outroCta: {
     title: '増田陸の',

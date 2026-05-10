@@ -243,7 +243,9 @@ export function PreviewFrame({
   const isSquare1to1 = aspectRatio === '1:1';
 
   const effectiveSquare = isSquareMode || isRecordingMode || isSquare1to1;
-  const effectiveShowSafe = showSafeZone && !isRecordingMode;
+  // ★v5.21.3★ セーフゾーンガイドはショート(9:16) 専用 — YouTubeショートUI(上下バー+右アクション)
+  // が被る領域を可視化する目的のため、横長(16:9) や正方形(1:1) では非表示にする。
+  const effectiveShowSafe = showSafeZone && !isRecordingMode && !isLandscape && !isSquare1to1;
 
   const phoneClasses = [
     'phone',

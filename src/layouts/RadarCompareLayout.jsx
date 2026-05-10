@@ -163,7 +163,7 @@ function HighlightView({ projectData, comp }) {
         <div className="hl-context-row">
           {comp.desc && (
             <div className="hl-why-compact">
-              <div className="label">理由</div>
+              <div className="label">指標の意味</div>
               <div className="text">{renderWhyText(comp.desc)}</div>
             </div>
           )}

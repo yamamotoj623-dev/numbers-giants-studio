@@ -17,7 +17,7 @@ export const defaultPitcherData = {
   period: '2026.04.13時点',
   // ★v5.18.0★ Gemini提言: シームレスループ
   smartLoop: true,
-  audio: { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.4, seVolume: 0.6, duckingAmount: 0.5 },
+  audio: { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.0, seVolume: 0.6, duckingAmount: 0.5 },
   outroCta: {
     title: '則本の今季',
     big: '何勝',
