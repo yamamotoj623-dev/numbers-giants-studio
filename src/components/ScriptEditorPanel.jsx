@@ -316,6 +316,68 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   </div>
                 )}
 
+                {/* ★v5.21.4★ アウトロ (最後の id) 専用: 画像/動画インサート
+                    smartLoop の設定に関わらず currentIndex が最後の id の時に全画面表示する */}
+                {idx === (projectData.scripts?.length || 0) - 1 && !script.isCatchy && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 mb-2">
+                    <label className="text-[10px] font-bold text-emerald-800 block mb-1">
+                      🎬 アウトロ画像/動画 (最後のシーンで全画面表示)
+                    </label>
+                    <div className="flex gap-1.5 items-center">
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        className="text-[10px] flex-1"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const { saveOutroMedia } = await import('./HookMediaOverlay.jsx');
+                            const type = file.type.startsWith('video') ? 'video' : 'image';
+                            await saveOutroMedia(file, type);
+                            alert(`✅ アウトロ${type === 'video' ? '動画' : '画像'}を登録しました。再読み込みで反映されます。`);
+                          } catch (err) {
+                            alert('保存に失敗しました: ' + err.message);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={async () => {
+                          try {
+                            const { clearOutroMedia } = await import('./HookMediaOverlay.jsx');
+                            await clearOutroMedia();
+                            alert('アウトロメディアを削除しました');
+                          } catch (err) {
+                            alert('削除に失敗: ' + err.message);
+                          }
+                        }}
+                        className="text-[9px] bg-zinc-200 hover:bg-red-100 text-zinc-600 hover:text-red-600 px-2 py-1 rounded"
+                      >
+                        削除
+                      </button>
+                    </div>
+                    <div className="text-[9px] text-emerald-700 mt-1">
+                      PNG/JPG/WebP/MP4 対応。
+                      <span className="text-emerald-900 font-bold"> 最後の id のシーン中ずっと全画面表示</span> (登録誘導・次回予告向け)。
+                    </div>
+                    {/* 切替アニメーションパターン選択 */}
+                    <div className="mt-1.5">
+                      <label className="text-[9px] text-emerald-700 font-bold">切替パターン:</label>
+                      <select
+                        value={projectData.outroMediaPattern || 'flash'}
+                        onChange={(e) => onChange({ ...projectData, outroMediaPattern: e.target.value })}
+                        className="ml-1 text-[10px] bg-white px-1.5 py-0.5 border border-emerald-200 rounded outline-none"
+                      >
+                        <option value="flash">⚡ flash (フラッシュ→ガタガタ揺れ持続)</option>
+                        <option value="zoom">🔍 zoom (ズームイン→大胆 Ken Burns)</option>
+                        <option value="slide">➡️ slide (スライドイン→揺れ持続)</option>
+                        <option value="glitch">🔥 glitch (グリッチ→ノイズ走り続け)</option>
+                        <option value="zoom_pulse">💥 zoom_pulse (ドンドン拡縮し続け)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold flex items-center gap-1 mb-0.5">🔊 読み上げ用テキスト</label>
                   <input

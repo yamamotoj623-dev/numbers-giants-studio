@@ -2,6 +2,44 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.4] - 2026-05-10 - アウトロメディア機能 + Gem 3分業設計
+
+**新機能:**
+- ★最後の id への画像/動画表示機能★ (`components/HookMediaOverlay.jsx`, `components/PreviewFrame.jsx`, `components/ScriptEditorPanel.jsx`)
+  - 既存の hook (id:1) 画像/動画機能と同じ仕組みで、**最後の id (currentIndex === scripts.length - 1)** に全画面オーバーレイ表示
+  - `saveOutroMedia` / `getOutroMedia` / `clearOutroMedia` API を `HookMediaOverlay.jsx` に追加 (IndexedDB の同じ DB の 'outro' キーで分離保存)
+  - phase 非依存判定のため、smartLoop=true/false のどちらでも動作
+  - `projectData.outroMediaPattern` (flash/zoom/slide/glitch/zoom_pulse) で切替アニメ選択
+  - ScriptEditorPanel: 最後の id を編集時のみ緑色の outro アップロード UI を表示 (id:1 isCatchy と排他、UI混在を避ける)
+  - `outroMediaPattern` を PRESERVE_KEYS に追加 (JsonPanel.jsx) — AI 出力に含めず、UI 設定を保持
+  - 用途: 登録誘導 / 次回予告 / チャンネルブランディング
+
+**外部 docs (Gem 指示書 3 分業設計):**
+- `grok-agent-v2.md` (新規、約 8.5K) — Grok カスタムエージェント (リサーチ + X ファン感情分析専門、JSON 出力一切なし)
+  - 旧 grok-1-researcher / grok-2-critic / grok-3-trend / grok-agent-master を統合・置換
+  - 3 モード `[DATA]` `[FAN]` `[TREND]` — id:1 文字数 / 禁止文字 / textSize / scenePreset 等のフォーマット監査を完全廃止
+- `gem-composition-v1.0.md` (新規、約 12.8K) — 構成 Gem (台本構成設計 + もえか口調 + id:1 戦略選定)
+  - 半構造化テキスト出力、JSON 一切なし → JSON Gem に渡す
+- `gem-json-v1.0.md` (新規、約 12.2K) — JSON Gem (スキーマ厳守 JSON 変換のみ、追加創作なし)
+- 旧 `gemini-custom-gem-instruction-v10.3.1.md` (約 20K で上限超過していた) を 3 Gem に分業、各 17K 以下を実現
+
+**ワークフロー変更:**
+```
+旧: Gemini (データJSON) → Grok (ファクトチェック) → Gemini (本番JSON)
+新: Grok v2 [DATA] (リサーチ) → 構成 Gem → JSON Gem → アプリ
+```
+- 旧フローの「Gemini でデータ JSON を作らせる」工程は廃止 — Grok v2 が直接ソース付きで出力するためファクトチェック不要
+
+**id:1 戦略 4 タイプ運用 (構成 Gem に明文化):**
+- A: 派手型 / B: 数字主役型 / C: 静物写真型 / **D: ぬるっと型 (本命候補)**
+- 「数字+矛盾」型を id:1 タイトル設計の原則 [4] に追加 (Top 維持率動画の最強パターン)
+
+**ペンディング (継続):**
+- ① TTS 真のバックグラウンド継続 (Android Firefox でアプリしまっても継続) — Wake Lock または Service Worker 化が必要
+- ⑥ ぬるっと型 (戦略 D) の実機台本テスト (Grok v2 → 構成 Gem → JSON Gem の流れで 1 本作成して検証)
+- ⑦ Phase 2 ranking 拡張 (順位変動アニメ / TOP3 拡大 / フィルタ)
+- ⑩ RadarCompare / TeamContext の LayoutPanel エディタ未実装
+
 ## [5.21.3] - 2026-05-10 - 視聴データ実証反映 v10.3 + 5件バグ修正
 
 **Gem 指示更新:**

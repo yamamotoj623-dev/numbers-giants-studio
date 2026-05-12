@@ -13,7 +13,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { LayoutRouter } from '../layouts/LayoutRouter.jsx';
 import { renderFormattedText } from '../lib/textRender.jsx';
 import { Silhouette } from './Silhouettes.jsx';
-import { HookMediaOverlay, getHookMedia } from './HookMediaOverlay.jsx';
+import { HookMediaOverlay, getHookMedia, getOutroMedia } from './HookMediaOverlay.jsx';
 import { formatStat } from '../lib/statFormat';
 import { getTeamPreset } from '../lib/config';
 import { Kazuhara, Moeka, getExpressionForCharacter } from './Characters.jsx';
@@ -218,6 +218,20 @@ export function PreviewFrame({
     getHookMedia().then(m => {
       if (!cancelled && m?.blob) {
         setHookMedia({ url: URL.createObjectURL(m.blob), type: m.type });
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // ★v5.21.4★ Outro メディア (最後の id の画像/動画) のロード
+  // 既存の hookMedia と同じ仕組みで、IndexedDB の 'outro' キーから取得。
+  // 最後の id (scripts.length - 1) の時に HookMediaOverlay 経由で全画面表示する。
+  const [outroMedia, setOutroMedia] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    getOutroMedia().then(m => {
+      if (!cancelled && m?.blob) {
+        setOutroMedia({ url: URL.createObjectURL(m.blob), type: m.type });
       }
     }).catch(() => {});
     return () => { cancelled = true; };
@@ -461,6 +475,19 @@ export function PreviewFrame({
                 kind="hl"
               />
             </div>
+          )}
+
+          {/* ★v5.21.4★ Outro メディア (最後の id の画像/動画) — phase 非依存
+              smartLoop が true/false どちらでも、currentIndex が最後の id の時に表示。
+              hook の HookMediaOverlay と同じコンポーネントを再利用、IndexedDB の 'outro' キーから読み込み。
+              z-50 で背景画像、その後にテロップ・アバターが描画されるので前面に乗る。 */}
+          {outroMedia && (scripts?.length || 0) > 0 && currentIndex === (scripts.length - 1) && (
+            <HookMediaOverlay
+              mediaUrl={outroMedia.url}
+              mediaType={outroMedia.type}
+              pattern={projectData?.outroMediaPattern || 'flash'}
+              isVisible={true}
+            />
           )}
 
           {/* アウトロのテロップ */}

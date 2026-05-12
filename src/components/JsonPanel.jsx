@@ -86,6 +86,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
         'hookMediaPattern',
         'hookMediaDurationMs',
         'hookAnimation',     // フックの揺れ方は AI には触らせない (UI で選ぶ)
+        'outroMediaPattern', // ★v5.21.4★ アウトロメディアの揺れ方も AI に触らせない
         'silhouetteType',    // シルエット種類
         'theme',             // テーマカラー
         'smartLoop',
@@ -546,7 +547,7 @@ function buildDataJsonPrompt(currentData, templateData) {
 | layoutData.heatmap.zones (single) または vsRight/vsLeft (vs_handedness) | 9 値の打率配列 | batter_heatmap 使うなら必須 |
 
 ## ★出力に含めない項目★ (UIで設定済、出力すると上書きで消える)
-- hookMediaPattern / hookMediaDurationMs / hookAnimation / hookStats
+- hookMediaPattern / hookMediaDurationMs / hookAnimation / hookStats / outroMediaPattern
 - silhouetteType / theme / smartLoop / audio / aspectRatio / pattern
 - scripts (台本は別工程)
 - defaultScenePreset
