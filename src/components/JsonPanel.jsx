@@ -16,9 +16,9 @@ import { LAYOUT_TYPES, VIDEO_PATTERNS } from '../lib/config';
 import { defaultBatterData } from '../data/defaultBatter';
 import { defaultPitcherData } from '../data/defaultPitcher';
 import { splitProjectData, mergeProjectData, normalizeProjectInput } from '../lib/projectSplit';
-// ★v5.21.4★ docs/layout-templates.md (旧 gemini-custom-prompt.md) を Vite ?raw で読み込み
-// 旧 V7 Gem 指示書部分は削除済、8 レイアウトのフルテンプレート + scripts 実例のみ
-import customPromptRaw from '../../docs/layout-templates.md?raw';
+// ★v5.21.7★ customPromptRaw の import 廃止
+// 旧版は docs/layout-templates.md を素 Gemini 向けプロンプトに埋め込んでいたが、
+// 新版は JSON Gem の Knowledge Files として運用するため、アプリ側で埋め込む必要なし。
 
 export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
   // ★v5.18.12★ 「全体 / データ / 台本」の3モード切替
@@ -326,20 +326,15 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
 
 
 /**
- * AI プロンプトを構築 (v5.10.1 で一本化)
+ * ★v5.21.7★ JSON Gem 全体モード用プロンプト (whole)
  *
- * docs/gemini-custom-prompt.md を Vite ?raw でインポートし、その末尾に
- * - 動画パターン一覧 (VIDEO_PATTERNS から)
- * - レイアウト一覧 (LAYOUT_TYPES から)
- * - 動的な playerType 別の数値読みルール
- * - スキーマテンプレート (templateData)
- * を付加する。
+ * JSON Gem の Knowledge Files(json-schema-rules.md / layout-templates.md 等)を前提とした、
+ * 初回ベース作成用の全体 JSON 生成プロンプト。構成 Gem からのプロンプトを上に貼り付ける運用。
  *
- * これにより、Gemini Custom Gem に Knowledge File として渡す版と
- * このコピーボタンで生成される版が完全に同一の主要ルールを共有する。
- *
- * 推奨運用: docs/gemini-custom-prompt.md を Custom Gem に Knowledge File としてアップロード。
- * 単発の素 Gemini に貼り付ける時のみ、このコピーボタンを使う。
+ * 推奨運用:
+ * 1. 構成 Gem で STEP 1-3 を完了し「JSON Gem 用プロンプト一式」を取得
+ * 2. このボタンで生成したプロンプトの【上】にそれを貼り付け
+ * 3. JSON Gem に渡す
  */
 function buildAIPrompt(currentData, templateData) {
   const playerTypeLabel =
@@ -347,286 +342,121 @@ function buildAIPrompt(currentData, templateData) {
     currentData.playerType === 'pitcher' ? '投手' :
     'チーム';
 
-  // ★v10.3.1★ 動的な数値読みルール (playerType 別) - 構成 Gem / JSON Gem の Knowledge Files と完全整合
-  const numericRules = currentData.playerType === 'batter'
-    ? '・★打率系は .333 形式★ 打率/出塁率/長打率/OPS/被打率/IsoP\n'
-    + '・打率 .333 → 「さんわりさんぶさんりん」、.305 → 「さんわりれいぶごりん」\n'
-    + '・OPS .945 → 「れいてんきゅうよんご」、.207 → 「にわりれいぶしちりん」\n'
-    + '・指標名カタカナ: IsoP→アイソピー、BB/K→ビービーケー、RC27→アールシーにじゅうなな'
-    : currentData.playerType === 'pitcher'
-    ? '・★防御率系は 0.97 形式★ ERA/WHIP/FIP/K/9/BB/9\n'
-    + '・防御率 1.90 → 「いってんきゅうれい」、0.97 → 「れいてんきゅうなな」\n'
-    + '・WHIP 0.97 → 「ダブリュエイチアイピー、れいてんきゅうなな」\n'
-    + '・K/9 9.51 → 「ケーナイン、きゅうてんごいち」、1.00 → 「いってんれい」\n'
-    + '・指標名カタカナ: FIP→フィップ、K/BB→ケービービー、WHIP→ダブリュエイチアイピー、HR/9→エイチアールナイン'
-    : '・打率系 (.333 形式) と防御率系 (0.97 形式) の両方を使用\n'
-    + '・順位/勝敗: 「いちい」「にい」「さんい」、勝率 .655 → 「ろくわりごぶごりん」';
+  return `# JSON Gem 用タスク
 
-  // レイアウト一覧 (動的)
-  const layoutList = Object.entries(LAYOUT_TYPES)
-    .map(([key, info]) => `  ・${key}: ${info.label} (${info.desc})`)
-    .join('\n');
+★モード: 全体(初回ベース作成 = projectData + scripts 一括出力)★
 
-  // 動画パターン一覧 (動的)
-  const patternList = VIDEO_PATTERNS
-    .map(p => `  ・${p.id} / ${p.label}: ${p.desc}`)
-    .join('\n');
+★この上に構成 Gem からの「JSON Gem 用プロンプト一式」を貼り付けてから JSON Gem に送ること★
 
-  return `${customPromptRaw}
+---
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【今回の生成タスク】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-playerType: "${currentData.playerType}" (${playerTypeLabel})
-silhouetteType: "${currentData.silhouetteType || '未指定'}"
-theme: "${currentData.theme || 'orange'}"
+## 動画基本情報
+- aspectRatio: ${currentData.aspectRatio || '9:16'} (出力 JSON には含めない、設計判断のみに使用)
+- playerType: "${currentData.playerType}" (${playerTypeLabel})
+- silhouetteType: "${currentData.silhouetteType || '未指定'}" (出力には含めない)
+- theme: "${currentData.theme || 'orange'}" (出力には含めない)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【利用可能な動画パターン】(1つ選択)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${patternList}
+## 出力形式
+\`\`\`json
+{
+  "projectData": { mainPlayer, subPlayer, radarStats, comparisons, layoutData, ... },
+  "scripts": [ ... ]
+}
+\`\`\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【利用可能なレイアウト】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${layoutList}
+## ★絶対遵守(json-schema-rules.md と整合)
+- ルートキー: \`"scripts"\` (複数形)、\`"script"\` は NG
+- projectData に \`theme\` \`layouts\` \`aspectRatio\` を含めない
+- comparisons は \`label\` \`valMain\` \`valSub\` \`winner\` キー使用(\`name\` \`targetA\` \`valueA\` は NG)
+- \`mainPlayer\` 必須、絶対省略しない
+- \`layoutType\` は単一文字列、\`layouts\` 配列は存在しないキー
+- se は定義 18 種から(\`title_call\` \`pop_up\` \`action\` \`analytical\` \`emotional\` は NG)
+- emoji: A 固定 \`👨‍🏫\` / B は 15 種(😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅)から
+- zoomBoost: 文字列 \`"zoom"\`/\`"shake"\` のみ(boolean NG)
+- criteria: 数値表現のみ(\`lower_is_better\` 等 NG)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【数値の読みルール (今回は${playerTypeLabel}用)】
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${numericRules}
+## ★text と speech のルール
+- 文章内容は完全一致(表記のみ違い OK: text \`75%\` ⇄ speech \`ななじゅうごぱーせんと\`)
+- 改行 \`\\n\` は text のみ / 句点「。」は text 省略
+- ★speech 内「、」は極力削る — 間は全角スペース「　」代用★
+- 1 ID あたり: ${currentData.aspectRatio === '16:9' ? '横長 text 8-20 字×1-2 行' : '縦長 text 3-12 字×3-4 行(合計 12-30 字)'}
+- 超える場合は ID 分割
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【${playerTypeLabel}用スキーマテンプレート】(これを型として出力)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## ${playerTypeLabel}用スキーマテンプレート(これを型として出力)
+\`\`\`json
 ${JSON.stringify(templateData, null, 2)}
+\`\`\`
+
+## 出力前チェック(必須セルフチェック)
+json-schema-rules.md §出力前チェックを全項目確認。違反時は **完全再生成**(部分修正禁止)。
 `;
 }
 
 /**
- * ★v5.18.12★ データJSON生成プロンプト (Grok 推奨 — リサーチ重視)
+ * ★v5.21.7★ JSON Gem データ単体モード用プロンプト (data)
  *
- * Grok にリサーチを依頼してデータJSONを生成させるためのプロンプト。
- * - mainPlayer/subPlayer の正確な数字
- * - layoutData (timeline / versus / spotlight / ranking) の中身を充実
- * - comparisons の指標を 5-10 種類用意
- * - 1動画内で使い回せるよう、選手は3-5人入れる
+ * 既存データ JSON を入力として渡し、レイアウト/ハイライト/表現の調整を依頼。
+ * 出力は projectData のみ(scripts は出力しない)。
  */
 function buildDataJsonPrompt(currentData, templateData) {
   const playerTypeLabel = currentData.playerType === 'batter' ? '野手' : currentData.playerType === 'pitcher' ? '投手' : 'チーム';
   const { data: existingData } = splitProjectData(currentData);
 
-  return `# データJSON生成タスク (Grok 推奨)
+  return `# JSON Gem 用タスク
 
-## 役割
-プロ野球データのリサーチ担当として、動画用「データJSON」を生成する。
-台本(scripts)は別工程なので **出力に含めない**。
+★モード: データ単体(projectData のみ出力、scripts は出力しない)★
 
-## 動画ストーリー
-- タイトル: ${currentData.title || '(未指定)'}
-- テーマ: ${currentData.theme || '(未指定)'}
-- 期間: ${currentData.period || '(未指定)'}
-- 選手タイプ: ${playerTypeLabel}
+★この上に構成 Gem からの「JSON Gem 用プロンプト一式」を貼り付けてから JSON Gem に送ること★
 
-## 数値表記ルール (★絶対守る★)
-- 打率 / 出塁率 / 長打率 / OPS / IsoP / IsoD / 防御率 / WHIP : 先頭の0を省略 → 例: \`0.305\` ではなく \`".305"\`、\`0.000\` ではなく \`"-"\`
-- データが0または不明 → \`"-"\` (アプリ側で「データなし」表現)
-- 打席数 / 本塁打 / 打点 / 三振 等の整数 → そのまま整数 (例: 152)
-- 全ての数値は **文字列で出力** (例: \`"value": ".305"\`)。アプリで再フォーマットしない。
+---
 
-## 出力 JSON (フルテンプレート)
-以下の **すべての項目** を埋めて出力してください。
-データが取れない指標は省略可、ただし comparisons は最低 5 種、spotlight.players は最低 3 人。
+## 重点チェック項目(データ単体モードの肝)
+1. **layoutType がデータに最適か検証** — timeline 向きデータなら timeline、レーダー向きなら radar_compare 等を提案
+2. **comparisons 5-10 個** — radarMatch=true は 1-5 個
+3. **variants[] 活用** — 対左/対右/通季/対○○のスコープ切替がある指標は variants 化
+4. **「-」項目を可能なら埋める** — web 検索で最新値を取得、無理なら "-" 明示
+5. **radarStats** — NPB 平均 50 ベースの偏差値(優秀 70+ / 突出 85+)
+6. **criteria は数値表現** — \`"0.97以下が優秀"\` 等(lower_is_better 等は NG)
 
+## 動画基本情報
+- aspectRatio: ${currentData.aspectRatio || '9:16'} (出力 JSON には含めない)
+- playerType: "${currentData.playerType}" (${playerTypeLabel})
+
+## 出力形式
 \`\`\`json
 {
-  "schemaVersion": "5.0.0",
-  "playerType": "${currentData.playerType || 'batter'}",
-  "period": "${currentData.period || '2026.04時点'}",
-
-  "mainPlayer": {
-    "name": "選手名",
-    "number": "背番号 (文字列)",
-    "label": "今季",
-    "stats": {
-      ${currentData.playerType === 'pitcher'
-        ? '"era": "2.45", "whip": "1.05", "so": 156, "win": 12, "ip": "120.0", "sv": 0'
-        : currentData.playerType === 'team'
-        ? '"rank": 1, "winRate": ".615", "runs": 412, "runsAllowed": 305, "games": 60, "hr": 78'
-        : '"pa": 245, "ab": 220, "avg": ".305", "hr": 18, "rbi": 52, "ops": ".945"'}
-    }
-  },
-  "subPlayer": {
-    "name": "比較対象 (昨季の同選手 or ライバル)",
-    "label": "昨季",
-    "stats": { /* mainPlayer と同じ stats キーを揃える */ }
-  },
-
-  "radarStats": {
-    /* 5 軸のレーダーチャート用、各 main/sub は 0-100 の偏差値 */
-    "isop":  { "main": 75, "sub": 60, "label": "長打力" },
-    "isod":  { "main": 65, "sub": 55, "label": "選球眼" },
-    "bb_k":  { "main": 70, "sub": 50, "label": "三振率" },
-    "rc27":  { "main": 80, "sub": 65, "label": "得点創出" },
-    "ab_hr": { "main": 72, "sub": 58, "label": "本塁打率" }
-  },
-
-  "comparisons": [
-    /* ハイライト指標。台本 script.highlight で id 参照。最低 5 種類入れる。
-       同じ指標で **対左/対右/通季** を変えたい場合は variants[] を使う。
-       単純な比較しかしない指標は variants なしで valMain/valSub 直書き OK。 */
-    {
-      "id": "avg",
-      "label": "打率",
-      "kana": "だりつ",
-      "desc": "打席で安打を打つ確率。野球の最も基本的な指標。",
-      "criteria": "優秀: .300以上",
-      "radarMatch": "打撃力",
-      "unit": "",
-      "variants": [
-        { "id": "overall",  "label": "通季",     "valMain": ".305", "valSub": ".278", "mainLabel": "今季", "subLabel": "昨季", "winner": "main" },
-        { "id": "vs_left",  "label": "対左投手", "valMain": ".201", "valSub": ".245", "mainLabel": "今季", "subLabel": "昨季", "winner": "sub" },
-        { "id": "vs_right", "label": "対右投手", "valMain": ".342", "valSub": ".289", "mainLabel": "今季", "subLabel": "昨季", "winner": "main" }
-      ]
-    },
-    {
-      "id": "isop",
-      "label": "ISO+",
-      "kana": "アイソピー",
-      "desc": "長打率と打率の差。純粋な長打力。",
-      "formula": "長打率 - 打率",
-      "criteria": "優秀: .200以上",
-      "radarMatch": "長打力",
-      "unit": "",
-      "valMain": ".172",
-      "valSub": ".095",
-      "winner": "main"
-    }
-    /* 残り 3-8 種類: ISO-D, BB/K, OPS, OPS+, RC27, 出塁率, 長打率 等を網羅 */
-  ],
-
-  "layoutData": {
-    /* 各レイアウト用のデータ。使わないレイアウトは省略可 */
-
-    "timeline": {
-      "unit": "month",
-      "metric": "OPS",
-      "points": [
-        { "label": "4月", "main": ".724", "sub": ".598" },
-        { "label": "5月", "main": ".810", "sub": ".621" }
-      ]
-    },
-
-    "versus": {
-      "categoryScores": [
-        /* 各 category は label/main/sub。winner はアプリで自動判定 */
-        { "label": "打率",   "kana": "だりつ", "main": ".305", "sub": ".278", "rawMain": ".305", "rawSub": ".278" },
-        { "label": "本塁打", "main": 18, "sub": 12 },
-        { "label": "OPS",    "main": ".945", "sub": ".812" }
-      ]
-    },
-
-    "spotlight": {
-      "players": [
-        {
-          "id": "okamoto",
-          "name": "岡本和真",
-          "team": "G",
-          "label": "26年 (今季)",
-          "primaryStat": { "label": "OPS", "value": ".945", "compareValue": { "label": "リーグ平均", "value": ".712" } },
-          "stats": [
-            { "label": "打率",   "value": ".305" },
-            { "label": "本塁打", "value": 18 },
-            { "label": "打点",   "value": 52 },
-            { "label": "出塁率", "value": ".385" }
-          ],
-          "quotes": [
-            /* 1選手 2-4 個の発言。台本 focusQuoteIndex で切替 */
-            { "text": "もっと長打を打ちたい", "source": "2026/4 取材" },
-            { "text": "守備位置はどこでも", "source": "2026/3 春季練習" },
-            { "text": "監督の信頼に応えたい", "source": "2026/4 ヒーローインタビュー" }
-          ]
-        }
-        /* 残り 2-4 人 (シーン毎に focusEntry で別選手にフォーカス) */
-      ]
-    },
-
-    "ranking": {
-      "metrics": [
-        {
-          "id": "ops",
-          "label": "OPS",
-          "kana": "オーピーエス",
-          "unit": "",
-          "entries": [
-            { "rank": 1, "name": "選手名", "team": "G", "value": "1.013" },
-            { "rank": 2, "name": "選手名", "team": "T", "value": ".945" }
-            /* 5-10 人。team は球団略称 (G/T/D/S/B/E/L/F/H/M) */
-          ]
-        }
-        /* 動画内で切替えたい metric を 2-3 個 */
-      ]
-    },
-
-    "arsenal": {
-      /* pitch_arsenal レイアウト用。投手データのみ */
-      "mode": "single",
-      "pitches": [
-        { "name": "ストレート", "pct": 48, "avg": ".205", "velocity": 152, "color": "#ef4444" },
-        { "name": "スプリット", "pct": 22, "avg": ".150", "velocity": 138, "color": "#3b82f6" },
-        { "name": "スライダー", "pct": 18, "avg": ".180", "velocity": 132, "color": "#10b981" },
-        { "name": "カーブ",     "pct": 8,  "avg": ".250", "velocity": 118, "color": "#f59e0b" }
-      ]
-    },
-
-    "heatmap": {
-      /* batter_heatmap レイアウト用。打者データのみ */
-      "mode": "vs_handedness",
-      "vsRight": [".180", ".240", ".290",   ".220", ".310", ".340",   ".150", ".220", ".260"],
-      "vsLeft":  [".200", ".260", ".280",   ".210", ".280", ".320",   ".170", ".230", ".240"]
-      /* 9 値 = 上段3 (内角・真中・外角) + 中段3 + 下段3 */
-    }
+  "projectData": {
+    "layoutType": "<8 種から選定>",
+    "playerType": "${currentData.playerType}",
+    "teamPreset": "<選定>",
+    "mainPlayer": { ... },
+    "subPlayer": { ... },
+    "radarStats": { key1: {label, main, sub}, ... 5 個 },
+    "comparisons": [ ... 5-10 個 ... ],
+    "layoutData": { ... 選んだ layoutType のデータ ... }
   }
 }
 \`\`\`
+※ scripts は含めない。
 
-## ★各項目の入力ガイド★
-| 項目 | 内容 | 必須 |
-|---|---|---|
-| mainPlayer.name | 選手名 (例: "岡本和真") | ✅ |
-| mainPlayer.stats | playerType 別キー (上記参照) | ✅ |
-| comparisons | 5-10 種類の指標。各 id 一意、kana 必須 (TTS用) | ✅ |
-| comparisons[].variants | 同指標で対左/対右/通季を持ちたい時のみ。なければ valMain/valSub 直書き | 任意 |
-| layoutData.spotlight.players | 3-5 人、各 id 一意。quotes 2-4 個、stats 4-6 個 | spotlight 使うなら必須 |
-| layoutData.ranking.metrics | 動画内で切替えたい metric。各 entries 5-10 人 | ranking 使うなら必須 |
-| layoutData.timeline.points | 月別 or 試合別の推移 | timeline 使うなら必須 |
-| layoutData.versus.categoryScores | 比較カテゴリ 5-7 個 | versus_card 使うなら必須 |
-| layoutData.arsenal.pitches | 球種 4-6 種類 | pitch_arsenal 使うなら必須 |
-| layoutData.heatmap.zones (single) または vsRight/vsLeft (vs_handedness) | 9 値の打率配列 | batter_heatmap 使うなら必須 |
+## ★絶対遵守(json-schema-rules.md と整合)
+- comparisons は \`label\` / \`valMain\` / \`valSub\` / \`winner\` キー使用(\`name\` / \`targetA\` / \`valueA\` は NG)
+- \`mainPlayer\` 必須、絶対省略しない
+- \`layouts\` 配列は存在しないキー、\`layoutType\` 単一文字列のみ
+- projectData に \`theme\` \`aspectRatio\` を含めない
+- criteria は数値表現のみ(\`lower_is_better\` 等 NG)
+- 打率系は \`.345\` 形式 / 防御率系は \`0.97\` 形式 / すべて文字列
 
-## ★出力に含めない項目★ (UIで設定済、出力すると上書きで消える)
-- hookMediaPattern / hookMediaDurationMs / hookAnimation / hookStats / outroMediaPattern
-- silhouetteType / theme / smartLoop / audio / aspectRatio / pattern
-- scripts (台本は別工程)
-- defaultScenePreset
-
-## 既存データ (参考、フィールド名と形式を揃える)
+## 既存データ(参考、フィールド名と形式を揃える)
 \`\`\`json
 ${JSON.stringify(existingData, null, 2).slice(0, 3500)}
 \`\`\`
 
-## リサーチ
-- web 検索で一次ソース (NPB 公式 > 球団公式 > 大手紙) を優先
-- 数値は ${currentData.period || '直近'} 時点
-- 推測でなく実数値を出す
+## 出力前チェック
+json-schema-rules.md §出力前チェックを全項目確認。違反時は **完全再生成**。
 `;
 }
 
-/**
- * ★v5.18.12★ 台本JSON生成プロンプト (Gemini 推奨 — 脚本重視)
- *
- * 既に存在するデータJSON を読み込み、シーン構成と台本だけを生成させる。
- */
 function buildScriptJsonPrompt(currentData, templateData) {
   const { data: existingData } = splitProjectData(currentData);
   const playerTypeLabel = currentData.playerType === 'batter' ? '野手' : currentData.playerType === 'pitcher' ? '投手' : 'チーム';
@@ -637,110 +467,67 @@ function buildScriptJsonPrompt(currentData, templateData) {
     .map(p => `${p.id || p.name} (${p.name}${p.team ? `, ${p.team}` : ''})`)
     .join(', ') || '(未定義)';
 
-  return `# ★台本JSON生成タスク★
+  return `# JSON Gem 用タスク
 
-## 役割
-あなたは脚本担当。データJSON は既に存在しているので、**scripts 配列だけ**を生成してください。
+★モード: 台本単体(scripts 配列のみ出力、projectData は出力しない)★
 
-## データJSON の概要 (既に存在)
+★この上に構成 Gem からの「JSON Gem 用プロンプト一式」を貼り付けてから JSON Gem に送ること★
+
+---
+
+## 重点チェック項目(台本単体モードの肝)
+1. **既存 projectData を完全に尊重** — mainPlayer / subPlayer / comparisons / layoutData は変えない、参照のみ
+2. **script.highlight** には既存 comparisons の id を指定(参照ズレ NG)
+3. **キャラ役割厳守** — A 数原は絶対敬語 / B もえかは敬語ベース+感情で崩す
+4. **id ルール厳守** — 同 speaker 連続最大 4 回 / 同 scenePreset 連続最大 4 ID / 同 se 連続最大 4 ID
+5. **id:2-5 で A↔B 呼び合い両方向必須** (A→B「もえかちゃん」/ B→A「数原さん」)
+6. **id:1 は動画タイトル(分割しない)** — text = タイトル / speech は短くフックの 1-2 秒
+7. **「ヤバい」運用** — B のみ、1 動画 1-2 回、疑問形+敬語、直前に冷静観察文
+
+## 動画基本情報
+- aspectRatio: ${currentData.aspectRatio || '9:16'} (出力 JSON には含めない)
+- playerType: "${currentData.playerType}" (${playerTypeLabel})
 - mainPlayer: ${existingData.mainPlayer?.name || '(未指定)'}
 - subPlayer: ${existingData.subPlayer?.name || '(未指定)'}
 - 利用可能な比較指標 (script.highlight に指定): ${compIds}
 - 利用可能なフォーカス選手 (script.focusEntry に指定): ${playerIds}
-- 動画パターン: ${currentData.pattern || '(未指定)'}
-- テーマ: ${currentData.theme || '(未指定)'}
 
-## ★必須ルール (v10.3.1)★
-
-### キャラ口調
-- A=数原さん (男性40-50代、★必ず敬語★、「〜なんですよ」「〜ですね」「〜と言えますね」)
-  ❌ NG: 「〜だよ」「〜だね」「〜だぞ」
-- B=もえかちゃん (女性20代、基本敬語+感情で崩す、「〜ですね」「すごすぎませんか?」)
-
-### 数値読み (speech)
-- 打率系 (.333 形式): 打率/OPS/出塁率/被打率 → 「さんわりさんぶさんりん」
-- 防御率系 (0.97 形式): ERA/WHIP/K/9/BB/9 → 「れいてんきゅうなな」/「いってんきゅうれい」
-- 指標名はカタカナ: WHIP→ダブリュエイチアイピー, OPS→オーピーエス
-- 選手名・チーム名はひらがな: 井上温大→いのうえはると
-- 「実は」→「じつは」(誤読対策)
-
-### emoji
-- A は必ず "👨‍🏫" 固定
-- B は 😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅 から1つ
-- ❌ "A"/"B"/空文字/絵文字以外 NG
-
-### 配分 (★30個前後、配分必須★)
-- textSize: xl=1 (id:1のみ) / l=5-7 / m=18-22 / s=2-4
-- scenePreset: default 12個以上、連続 4 ID 以上 NG
-- se: 12-15 箇所、id:1=hook_impact 必須、id:30=outro_fade 必須
-- zoomBoost: 2-3 箇所のみ、id:1 不要、文字列 "zoom"/"shake"
-
-### id:1 (フック)
-- 必ず主語 (選手名/チーム名)
-- isCatchy: true、textSize: "xl"、se: "hook_impact"、zoomBoost なし
-- 強調記号 【】「」『』 を 2 箇所以上
-- 1ID あたり 3-12 字 × 3-4 行
-
-### id:2-5 で A↔B 呼び合い両方向必須
-- B → A: 「数原さん」呼び 1 回以上
-- A → B: 「もえかちゃん」呼び 1 回以上
-
-### text (テロップ)
-- 句点「。」禁止
-- 数値は【.305】、指標名は「OPS」、衝撃ワードは『覚醒』で囲う
-
-## ★1動画内でデータを使い分け★
-1動画内で複数の選手にフォーカスしたり、同じ選手の複数の quote を使い分けたりするのが想定。
-- script.layoutType で **シーンごとにレイアウト切替** (radar_compare → player_spotlight → ranking 等)
-- script.spotlightMode で **選手スポットの表示パターンをシーンごとに切替** (default/quote/stats_grid/single_metric)
-  ★重要★ quote モードにしたいシーンには必ず spotlightMode: "quote" を明記。省略するとグローバル設定 (通常 default) が使われる
-- script.focusEntry で **シーンごとに別の player.id** を指定 (★player.id と完全一致させること★)
-- script.focusQuoteIndex で **同じ player の中で別の quote** を指定 (player.quotes[idx])
-- script.focusMetric で **ranking の metric をシーンごとに切替** (ranking.metrics[].id)
-- script.highlight で **シーンごとに別の comparison.id** を指定 (★3-5 ID 連続で同じ id を使う、id:1-3 と id:26-30 は省略★)
-
-## ★ハイライト紐付け重要★
-comparisons には台本で言及する全指標を含めること (5-7 個推奨)。
-例: 台本で「援護率」を言及するなら comparisons に run_support を必ず入れる。
-
-## 出力する JSON 構造
+## 出力形式
 \`\`\`json
 {
-  "scripts": [
-    {
-      "id": 0,
-      "speaker": "A",
-      "speech": "...",
-      "layoutType": "radar_compare",  // データ側の利用可能レイアウト
-      "spotlightMode": "default",     // (任意) 選手スポット表示時のモード切替: default/quote/stats_grid/single_metric
-      "scenePreset": "cinematic_zoom",// (任意) ★v5.19.6新★ シーン全体の演出: default/cinematic_zoom/neon_burst/mono_drama/pastel_pop/blackboard/breaking_news ※同じ動画内で 3-5 種類使い分けると紙芝居脱却
-      "highlight": "isop",            // 上記の comparisons.id から
-      "highlightScope": "vs_left",    // (任意) ★v5.19.6新★ 指標が variants[] を持つ場合のスコープ id (例: overall/vs_left/vs_right/last_year)
-      "focusEntry": "okamoto",        // 上記の players.id から (★player.id と完全一致させること★)
-      "focusQuoteIndex": 0,           // (任意) quote ピック切替 (player.quotes[idx])
-      "focusMetric": "ops",           // (任意) ranking 用 metric 切替 (ranking.metrics[].id)
-      "zoomBoost": "shake",           // 重要発言時のみ (1動画 2-3 箇所まで)
-      "se": "shock_hit"               // 任意
-    },
-    ...
-  ]
+  "scripts": [ ... 動画長 60 秒以内(目安 20-30 個)、内容に応じて柔軟に ... ]
 }
 \`\`\`
+※ projectData は出力に **含めない**(既存データを保持するため)。
 
-## 注意
-- **scripts 配列だけ出力**: \`{"scripts": [...]}\` の形式
-- **データ部分 (mainPlayer / layoutData / comparisons / hookMediaPattern / hookAnimation / theme 等) は一切含めない** — それらは既に存在し、AI出力に含まれると上書きされて消える
-- 動画長は ${currentData.aspectRatio === '9:16' ? '60-90秒' : '90秒程度'} を目安
-- 話者交代を活用 (A=数原さん男性、B=もえかちゃん女性)
-- データJSON の comparisons / players に存在しない id は使わない (参照ズレ防止)
+## ★絶対遵守(json-schema-rules.md と整合)
+- ルートキー: \`"scripts"\` (複数形)、\`"script"\` は NG
+- se は定義 18 種から(\`title_call\` \`pop_up\` \`action\` \`analytical\` \`emotional\` は NG)
+- emoji: A 固定 \`👨‍🏫\` / B は 15 種(😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅)から
+- zoomBoost: 文字列 \`"zoom"\`/\`"shake"\` のみ(boolean NG)
+- 列挙値: textSize=xl/l/m/s、scenePreset=指定 7 種
 
-## 既存の scripts (参考)
+## ★text と speech のルール
+- 文章内容は完全一致(表記のみ違い OK: text \`75%\` ⇄ speech \`ななじゅうごぱーせんと\`)
+- 改行 \`\\n\` は text のみ / 句点「。」は text 省略
+- ★speech 内「、」は極力削る — 間は全角スペース「　」代用★
+- 1 ID あたり: ${currentData.aspectRatio === '16:9' ? '横長 text 8-20 字×1-2 行' : '縦長 text 3-12 字×3-4 行(合計 12-30 字)'}
+- 超える場合は ID 分割
+
+## 配分(scripts 数に応じて調整)
+- textSize: xl=1 (id:1) / l 5-7 / m 18-22 / s 2-4
+- scenePreset: default を半数以上、連続最大 4 ID
+- se: 12-15 箇所、id:1 必須(hook_impact / stat_reveal 等)、id 最終に outro_fade
+
+## 既存データ JSON(参照のみ、変更しない)
 \`\`\`json
-${JSON.stringify(currentData.scripts || [], null, 2).slice(0, 3000)}
+${JSON.stringify(existingData, null, 2).slice(0, 4000)}
 \`\`\`
+
+## 出力前チェック
+json-schema-rules.md §出力前チェックを全項目確認。違反時は **完全再生成**(部分修正禁止)。
 `;
 }
-
 // ============================================================================
 // ★v5.21.5★ AI チェック系プロンプト (4 種)
 // 新運用の 3 分業フロー (Grok v2 → 構成 Gem → JSON Gem) の各段階で
@@ -907,29 +694,42 @@ function buildScriptReviewPrompt(currentData) {
 - A (数原さん) が **全部敬語**か、タメ口が混入してないか
 - B (もえか) が「鋭い感想を言うコアファン枠」として動いているか(萌え寄りではない)
 - 「ヤバい」は B のみ、1 動画 1-2 回まで、疑問形 + 敬語、直前に冷静観察文
-- 同 speaker 連続最大 2 回まで
+- 同 speaker 連続最大 4 回まで(5 回以上 NG)
+- 同 scenePreset / se も連続最大 4 ID まで
 - id:2-5 で **A↔B 呼び合い両方向**(A→B「もえかちゃん」、B→A「数原さん」)
-- emoji: A は \`👨‍🏫\`、B は感情に応じた絵文字 1 文字
+- emoji: A は \`👨‍🏫\`、B は指定 15 種(😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅)から 1 つ。指定外(💦🔥👇📺💪🎯📈⚾❓💡⚠️ 等)は NG
 
 ### 6. 文字数とテンポ(text プロパティ)
-- 1 ID あたり **3-12 字 × 3-4 行(合計 12-30 字)**
+- 1 ID あたり: 縦長 **3-12 字 × 3-4 行(合計 12-30 字)** / 横長 **8-20 字 × 1-2 行**
 - 句点「。」が text に入ってないか
 - 数値は【】、指標名は「」、衝撃ワードは『』で囲ってあるか
 - 長すぎ・短すぎの ID 一覧
+- ★text と speech の文章内容が完全一致しているか(表記のみ違いは OK: \`75%\` ⇄ \`ななじゅうごぱーせんと\`)★
+- ★speech 内の「、」が極力削られているか(全角スペース「　」で代用)★
+- ★id:1 が分割されず動画タイトルとして独立しているか(text = タイトル / speech = 1-2 秒フック)★
 
 ### 7. SE / scenePreset / textSize 配分(★ベスト配置か★)
-- **textSize**: xl=1 (id:1 のみ) / l=5-7 / m=18-22 / s=2-4
-- **scenePreset**: default 12 個以上、連続 4 ID 以上 NG
+- **textSize**: xl=1 (id:1 のみ、戦略 A/B のみ) / l=5-7 / m=18-22 / s=2-4
+- **scenePreset**: default を半数以上、連続最大 4 ID まで(5 ID 以上 NG)
 - **SE**: 12-15 箇所、hook_impact (or stat_reveal) 必須 (id:1)、outro_fade 必須 (id 最終)
 - **shock_hit を 3 回以上使ってないか**(過剰演出)
-- **同 SE が 3 ID 連続してないか**
-- **連続 4 ID 以上 SE 無しになってないか**
-- **zoomBoost** が 2-3 箇所のみ使われているか
+- **同 SE が 5 ID 連続してないか**(連続最大 4 ID)
+- **連続 5 ID 以上 SE 無しになってないか**
+- **zoomBoost** が 2-3 箇所のみ使われているか、★文字列 \`"zoom"\`/\`"shake"\` か★(boolean NG)
+- ★se の値が定義 18 種から選ばれているか★(\`title_call\` \`pop_up\` \`action\` \`analytical\` \`emotional\` は列挙値違反)
 
 ### 8. NG ワード混入
 - 願望系(期待 / 応援 / 頑張れ / 信じる)
 - 誇張系(本当の / 可能性 / 驚愕 / コメントで教えて)
 - 飽和パワーワード(致命的 / 絶望 / 衝撃 / 異常事態 / 完全崩壊 / 暴く)
+
+### 9. ★JSON スキーマ違反検出★(構造レベル)
+- ルートキー: \`"scripts"\`(複数)になっているか(\`"script"\` 単数 NG)
+- comparisons のキー: \`label\` / \`valMain\` / \`valSub\` / \`winner\`(\`name\` / \`targetA\` / \`valueA\` NG)
+- \`mainPlayer\` が projectData 内に存在するか
+- \`layoutType\` が単一文字列か(\`layouts\` 配列 NG)
+- projectData に \`theme\` \`aspectRatio\` \`hookStats\` 等の「出力に含めない項目」が混入してないか
+- criteria が数値表現か(\`lower_is_better\` 等 NG)
 
 ## data JSON (抜粋)
 \`\`\`json

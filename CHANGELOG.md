@@ -2,6 +2,74 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.7] - 2026-05-13 - Gem 役割大幅再設計 + JSON Gem 3 モード対応
+
+**Gem 役割の根本的再設計(添付サンプルの問題に対応):**
+- 旧設計の問題: 構成 Gem が JSON 相当の台本を作っており、JSON Gem への引き継ぎで情報劣化、スキーマ違反多発(`"script"` 単数、`name`/`targetA`/`valueA`、`💦` 等 emoji 列挙外、`layouts` 配列、`mainPlayer` 欠落 等)
+- 新設計:
+  - **構成 Gem**: 方針合意専用(角度 → 戦略 → タイトル 3 STEP)+ JSON Gem 用プロンプト出力 + ★YouTube 投稿情報生成(STEP 5、オプション)★ — 縦横兼用 1 つの Gem
+  - **JSON Gem**: 3 モード切替(★全体 whole / データ単体 data / 台本単体 script★)で生成主体に変更
+
+**JSON Gem の徹底強化:**
+- スキーマ違反の典型例を instruction 本体に直書き(Knowledge 依存削減)
+- text/speech 整合性ルール明文化(文章内容完全一致、表記のみ違い OK、改行は text のみ、speech の「、」は全角スペース「　」で代用)
+- id:1 は分割しない(動画タイトル独立、text = タイトル、speech = 1-2 秒フック)
+- 1 ID 文字量: 縦長 3-12 字×3-4 行 / 横長 8-20 字×1-2 行、超える場合は ID 分割
+- 出力前チェック違反時は **完全再生成**(部分修正禁止)
+
+**Knowledge Files 新規/再構成:**
+- 新規 `youtube-template.md` — 構成 Gem STEP 5 用、6 項目(動画タイトル/概要欄/ハッシュタグ/タグ/サムネ案/固定コメント)テンプレート集
+- composition-landscape-rules.md 復元(横長動画用ルール)
+
+**JsonPanel.jsx の 3 モードプロンプト最新化:**
+- ★`buildAIPrompt` (whole)★ → 「モード: 全体(初回ベース作成)」明記、スキーマ違反例警告、text/speech ルール、Knowledge Files 前提に簡素化
+- ★`buildDataJsonPrompt` (data)★ → 「モード: データ単体」、レイアウト適合性検証 + ハイライト指標選定 + variants 活用 + 「-」欠損埋め + radarStats NPB 平均 50 ベース指示
+- ★`buildScriptJsonPrompt` (script)★ → 「モード: 台本単体」、既存 projectData 尊重、キャラ役割厳守、id ルール、呼び合い両方向、ヤバい運用、文字数配分指示
+- 不要な `customPromptRaw` import 削除(Knowledge Files として運用するためアプリ埋め込み不要に)
+
+**AI チェック系プロンプト 4 種の更新:**
+- buildScriptReviewPrompt: 連続最大 4 回(2 回から緩和)、横長対応(8-20 字×1-2 行)、text/speech 一致チェック、speech「、」削除チェック、id:1 分割禁止チェック、scenePreset/se 連続 4 ID ルール、★JSON スキーマ違反検出セクション(§9)追加★(`script` 単数、`name/targetA/valueA`、`layouts` 配列、`mainPlayer` 欠落、`lower_is_better` 等の検出)
+- buildLayoutAdvisorPrompt / buildDataFactCheckPrompt / buildDataGapFillPrompt は維持(Grok 向け継続)
+
+**ペンディング(継続):**
+- ⑥ ぬるっと型(戦略 D)の実機台本テスト ← ★最優先(本来の本筋)★
+- ① TTS バックグラウンド継続(Android Firefox)
+- ⑦ Phase 2 ranking 拡張
+- ⑩ RadarCompare / TeamContext エディタ未実装
+
+## [5.21.6] - 2026-05-13 - 構成 Gem 対話化 + 連続 4 緩和 + 横長 Gem 新規 + docs 重複整理
+
+**構成 Gem の根本的設計変更:**
+- **対話的(キャッチボール)設計に変更** — 一度に全部出さず、7 STEP(角度合意 → id:1 戦略選定 → タイトル 3 案 → ファクト確認 → ハイライト指標 → ストーリー骨子 → 台詞下書きを数 ID ずつ分割提示)で段階的に合意形成
+- ユーザーが「全部一気に出して」と明示した場合のみ一括出力
+- 各 STEP の終わりで「これで進めて良いか」をユーザーに確認
+
+**ルール緩和:**
+- 同 speaker 連続 2 回 → **4 回まで**(5 回以上 NG)
+- 同 scenePreset 連続 「4 ID 以上 NG」→ **「4 ID まで OK、5 以上 NG」**
+- 同 se 連続も同様に最大 4 ID まで
+- scripts 数 **「28-30 個必須」→「60 秒以内に収まる範囲(目安 20-30 個)、無理な水増し禁止」**
+
+**横長動画(16:9)用 新規 Gem 作成:**
+- `gem-composition-landscape-instruction.md`(2,000 字)— 横長専用、章立て構造、対話的設計
+- `composition-landscape-rules.md`(4,400 字)— 横長専用ルール(章立て / テロップ仕様 / レイアウト推奨 / 横長 id:1 設計)
+- ショート用 Gem との根本的違い: スワイプ概念なし / 60 秒超 / id 40-100 個 / 章立て型 / テロップ 8-20 字×1-2 行
+
+**docs/ 重複削除:**
+- `audience-and-language.md`: 古い 33 本データ → 60 本実証(composition-rules.md §3 参照)に更新
+- 「ヤバい」運用詳細は `moeka-voice-samples.md §2` に一元化(他 6 ファイルからは詳細削除、参照のみに)
+
+**全 Gem instruction が公式推奨 500-2,000 字以内に収まることを再確認:**
+- 構成 Gem(縦長): 1,913 字 ✅
+- 構成 Gem(横長): 2,000 字 ✅
+- JSON Gem: 1,689 字 ✅
+
+**ペンディング(継続):**
+- ① TTS 真のバックグラウンド継続(Android Firefox)— Wake Lock または Service Worker 化が必要
+- ⑥ ぬるっと型(戦略 D)の実機台本テスト ← ★最優先(本来の本筋)★
+- ⑦ Phase 2 ranking 拡張
+- ⑩ RadarCompare / TeamContext の LayoutPanel エディタ未実装
+
 ## [5.21.5] - 2026-05-13 - docs/ 整理 + AI チェック系プロンプト 4 種追加
 
 **docs/ 大規模整理:**

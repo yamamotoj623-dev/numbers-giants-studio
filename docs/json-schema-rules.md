@@ -23,7 +23,7 @@
     {"id","label","kana","desc","formula","criteria","radarMatch","unit","valMain","valSub","winner","variants?"}
   ],
   "layoutData": { spotlight/ranking/timeline/versus/radar/arsenal/context/heatmap },
-  "scripts": [ ... 28-30個 ... ]
+  "scripts": [ ... 動画長 60 秒に収まる範囲(目安 20-30 個) ... ]
 }
 ```
 
@@ -93,10 +93,56 @@
 | aspectRatio | `9:16\|16:9\|1:1` (UI 設定保持) |
 | se(18種) | `hook_impact\|highlight_ping\|stat_reveal\|shock_hit\|success_chime\|warning_alert\|transition_swoosh\|outro_fade\|click_tap\|radar_ping\|sparkle_up\|drum_roll\|whoosh_in\|soft_pop\|heavy_thud\|ding_correct\|low_buzz\|crystal_chime` |
 
-### emoji
-- A は **必ず `"👨‍🏫"`**
-- B は感情に応じて **`😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅`** から 1 つ
-- ❌ NG: `"emoji": "A"` / `"B"` / 空文字 / 絵文字以外
+### emoji ★絶対遵守★
+**指定リスト以外の絵文字は絶対に出力しない。** 構成 Gem の入力に指定リスト外の絵文字があっても、JSON Gem は指定リスト内に置き換える(下記マッピング参照)。
+
+#### A (数原さん) は必ず `"👨‍🏫"`
+他の絵文字は使わない。固定。
+
+#### B (もえか) は感情に応じて以下 15 種から 1 つだけ選ぶ
+```
+😲 (驚き・衝撃)
+🤔 (疑問・考え込み)
+🤯 (大衝撃・想定外)
+😨 (不安・恐れ)
+😯 (軽い驚き・気づき)
+🧐 (観察・分析)
+😆 (痛快・嬉しい)
+🥹 (感極まる)
+🥰 (温かい・愛おしい)
+😌 (納得・安堵)
+🤩 (興奮・憧れ)
+🥺 (切ない・お願い)
+😭 (大泣き・大絶望)
+😤 (闘志・憤り)
+😅 (苦笑い・冷や汗)
+```
+
+#### ★絶対 NG な絵文字★(構成 Gem の入力にあっても置換すること)
+- ❌ `💦` (汗) → 感情に応じて 😅 (苦笑) or 😨 (不安) に置換
+- ❌ `🔥` (炎) → 😤 (闘志) or 🤩 (興奮) に置換
+- ❌ `👇` (下指差し) → 削除 or 🤔 (問いかけ) に置換
+- ❌ `📺` (テレビ) → 削除 or 😌 (案内) に置換
+- ❌ `💪` (筋肉) → 😤 (闘志) に置換
+- ❌ `🎯` (的) → 🧐 (観察) に置換
+- ❌ `📈📉📊` (グラフ) → 🧐 or 😯 (気づき) に置換
+- ❌ `⚾` (野球ボール) → 🤔 or 😆 に置換(野球テーマだから絵文字も野球は冗長)
+- ❌ `❓❗` → 🤔 (疑問) or 😲 (驚き) に置換
+- ❌ `💡` (電球) → 😯 (気づき) or 🤩 (発見) に置換
+- ❌ `⚠️` (警告) → 😨 (不安) に置換
+- ❌ `🔑` (鍵) → 🧐 or 😯 に置換
+- ❌ `🗣️` (発話) → 削除 or 🤔 に置換
+- ❌ `🏢` (ビル) → 削除
+- ❌ `📱` (スマホ) → 削除
+- ❌ `👑` (王冠) → 🤩 (憧れ) に置換
+- ❌ `✨💎🎉🎊` などの装飾系 → 削除 or 感情系に置換
+- ❌ アルファベット `"A"`, `"B"`, 数字, 記号 (`?`, `!`, `*`) → 必ず絵文字に置換
+- ❌ 空文字 `""` → 文脈から感情系を 1 つ選ぶ
+- ❌ 複数絵文字 `"😨💦"` → 1 つ目を選ぶ、または感情に最も近い 1 つに置換
+
+#### 構成 Gem からの入力対応
+構成 Gem の出力に `emotion: "困惑"` `emotion: "驚き"` のような感情指示があれば、対応する emoji を選ぶ。
+構成 Gem の出力に **指定リスト外の emoji** が直接書かれていれば、上記 NG リストに従って置換する。
 
 ### teamPreset
 - NPB セ: `npb_giants` / `npb_tigers` / `npb_dragons` / `npb_carp` / `npb_baystars` / `npb_swallows`
@@ -196,7 +242,68 @@
 
 ## 6. scripts 配分ルール(構成 Gem の指示 + 本書で補完)
 
-### 個数: 必ず 28-30 個
+### ★ 構成 Gem ヒント → JSON 実装値 変換テーブル ★
+
+構成 Gem は **コンテンツ(内容)のみ**を渡す。視覚値は JSON Gem が以下の変換で導出する。
+
+#### emotion → emoji(B もえか専用、A 数原は固定 `"👨‍🏫"`)
+| emotion | emoji |
+|---|---|
+| 驚き | 😲 |
+| 疑問・困惑 | 🤔 |
+| 大衝撃 | 🤯 |
+| 不安・恐れ | 😨 |
+| 気づき | 😯 |
+| 観察・分析 | 🧐 |
+| 痛快 | 😆 |
+| 感極まる | 🥹 |
+| 温かい | 🥰 |
+| 納得・安堵 | 😌 |
+| 興奮・憧れ | 🤩 |
+| 切ない | 🥺 |
+| 大絶望 | 😭 |
+| 闘志・憤り | 😤 |
+| 苦笑・冷や汗 | 😅 |
+
+#### scene_intent → scenePreset
+| scene_intent | scenePreset(推奨) |
+|---|---|
+| intro | default(戦略 D)/ cinematic_zoom(戦略 A)/ mono_drama(戦略 B)/ blackboard(戦略 C) |
+| numerical_shock | mono_drama |
+| numerical_normal | default |
+| deep_dive | cinematic_zoom |
+| aha_moment | pastel_pop / blackboard |
+| good_news | pastel_pop |
+| bad_news | mono_drama |
+| breaking_news | breaking_news |
+| outro_active | neon_burst |
+| outro_calm | default |
+
+#### emphasis → textSize
+| emphasis | textSize |
+|---|---|
+| high | l(id:1 戦略 A/B では xl) |
+| mid | m |
+| low | s |
+
+#### impact_level → se
+| impact_level | se(推奨) |
+|---|---|
+| 0(無音) | (記載しない) |
+| 1(軽) | soft_pop / highlight_ping / radar_ping / click_tap |
+| 2(中) | stat_reveal / success_chime / warning_alert / transition_swoosh |
+| 3(強) | shock_hit / hook_impact / heavy_thud |
+
+#### 変換時の優先順位
+構成 Gem の指示と本テーブルの推奨が食い違う場合:
+1. **構成 Gem が明示的に指定した値が無効(指定リスト外)** → 本テーブルで置換
+2. 構成 Gem の指示と本テーブルが整合 → そのまま採用
+3. 構成 Gem が無指定 → 本テーブルで判断
+
+★例外★: id:1 戦略(A/B/C/D)が申し送りに指定されている場合、構成 Gem ヒントより **戦略表(§1)** を優先する。
+
+---
+
 
 ### id:1(タイトル/フック)— 戦略 A/B/C/D の選択に応じて設定
 
@@ -225,7 +332,7 @@
 - blackboard 2-3
 - pastel_pop 1-2
 - breaking_news 0-1
-- ★同 scenePreset 連続 4 ID 以上 NG
+- ★同 scenePreset 連続最大 4 ID まで(5 ID 以上 NG)
 
 ### se 配分(12-15 箇所)
 
@@ -240,7 +347,7 @@
 | `transition_swoosh` | 話題切替 | 2-3 |
 | `outro_fade` | id:最終 ★必須★ | 1 |
 
-★NG: 同じ se を 3 ID 連続 / shock_hit を 3 回以上 / 連続 4 ID 以上 se 無し
+★NG: 同 se 連続最大 4 ID まで(5 ID 以上 NG)/ shock_hit を 3 回以上 / 連続 5 ID 以上 se 無し
 
 ### zoomBoost(2-3 箇所のみ)
 衝撃数値で使用、`"zoom"` または `"shake"` 文字列。id:1 は戦略 A/C/D では入れない(B は zoom 1 箇所可)。
@@ -256,7 +363,7 @@
 - A → B: 「もえかちゃん」呼び 1 回以上
 - id:2-5 で両方向必須
 
-### 同 speaker 連続最大 2 回まで
+### 同 speaker 連続最大 4 回まで(5 回以上 NG)
 
 ---
 
@@ -296,20 +403,24 @@
 □ 選手名・チーム名はひらがな、一般野球用語は漢字維持、誤読しやすい語(実は等)はひらがな
 
 【scripts 構造】
-□ scripts 数 = 28-30 個
+□ scripts 数 = 動画長 60 秒(または指定時間)に収まる範囲(目安 20-30 個)
 □ id:1: 構成 Gem 指定戦略の textSize/scenePreset/se で設定済み
 □ id:2-5 で A↔B 呼び合い両方向
-□ 同 speaker 連続最大 2 回 / scripts.text に句点 NG
+□ 同 speaker 連続最大 4 回 / 同 scenePreset 連続最大 4 ID / 同 se 連続最大 4 ID / scripts.text に句点 NG
 □ 数原(A)語尾全部敬語
 
 【配分】
 □ textSize: xl=1 / l=5-7 / m=18-22 / s=2-4(戦略 D 採用時は調整)
-□ scenePreset: default 12 個以上、連続 4 ID 以上 NG
+□ scenePreset: default 半数以上、連続最大 4 ID まで(5 ID 以上 NG)
 □ se 12-15 箇所、★使い所表★に従って配置
 □ zoomBoost 2-3 箇所、id:1 は戦略 A/C/D で不要
 
-【emoji】
-□ 全 scripts の emoji が絵文字 1 文字 / A は "👨‍🏫" / B は指定リストから
+【emoji】★絶対遵守★
+□ 全 scripts の emoji が絵文字 1 文字
+□ A は **必ず "👨‍🏫"**(他の絵文字 NG)
+□ B は **指定リスト 15 種(😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅)から 1 つだけ**
+□ 構成 Gem 入力に 💦🔥👇📺💪🎯📈📉📊⚾❓❗💡⚠️🔑🗣️🏢📱👑✨ 等の指定リスト外があれば、対応する感情系に **置換済み**
+□ アルファベット / 数字 / 記号 / 空文字 / 複数絵文字 は **すべて置換済み**
 
 【ハイライト】
 □ comparisons に台本言及全指標(5-7 個推奨)
