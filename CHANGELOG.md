@@ -2,6 +2,39 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.5] - 2026-05-13 - docs/ 整理 + AI チェック系プロンプト 4 種追加
+
+**docs/ 大規模整理:**
+- 旧 5 ファイル削除: `grok-1-researcher.md` / `grok-2-critic.md` / `grok-3-trend.md` / `grok-agent-master.md` / `grok-project-instructions.md`(新版は別途 `grok-v2/` で運用)
+- 新規追加: `composition-rules.md`(構成 Gem 必読、id:1 戦略 4 タイプ + チェック)/ `json-schema-rules.md`(JSON Gem 必読、スキーマ詳細 + 配分 + チェック)
+- リネーム + 整理: `gemini-custom-prompt.md` → `layout-templates.md`(旧 V7 Gem 指示書部分削除、8 レイアウトのフルテンプレート + scripts 実例のみ)
+- 重複セクション削除:
+  - `hook-design.md`: §2 絶対要件 5 つ / §3 正解テンプレ 3 種 / §5 自己チェック(composition-rules.md と重複)
+  - `structure-playbook.md`: §2 連続ルール / §6 強調 / §7 textSize / §8 SE / §8b zoomBoost / §9 自己チェック
+  - `channel-strategy.md`: §4 古い 33 本分析 / §10 古い Grok 運用構成
+  - `audience-and-language.md`: §4 NG ワード / §6 自己チェック
+- 残存独自情報は保持: hook-design.md(インサイト vs 願望、speech 短縮、ギャップ作り、stats 一致)、structure-playbook.md(アウトロ二択、ミステリー型、テロップテンポ)等
+
+**新 Gem 分業設計(別途運用):**
+- 構成 Gem: `gem-composition-instruction.md` (1,992 字) + 8 Knowledge Files
+- JSON Gem: `gem-json-instruction.md` (1,697 字) + 4 Knowledge Files
+- 公式推奨「Gem instruction 500-2,000 字 / Knowledge Files 最大 10 / 100MB」に準拠
+
+**JsonPanel.jsx の AI プロンプト機能拡張:**
+- ★① JsonPanel の import 修正: `gemini-custom-prompt.md` → `layout-templates.md`(削除済ファイル参照によるビルドエラー回避)
+- ★② v10.2 → v10.3.1 ベースに最新化(構成 Gem / JSON Gem の Knowledge Files と完全整合)
+- ★③ **新「🔍 AI でチェック」セクション追加**(4 ボタン、新運用 = Grok v2 → 構成 Gem → JSON Gem の各段階レビュー機能):
+  1. **🎯 レイアウト適合チェック** — 現在のデータでこのレイアウトがベストか判定、代替候補を提案(timeline/versus/radar 等の見落とし発見)
+  2. **📋 台本 JSON 整合チェック** — 8 観点でレビュー(データ整合 / id:1 4 戦略 / 初見理解 / スワイプ対策 / キャラ役割 / 文字数テンポ / SE-scenePreset-textSize 配分 / NG ワード)
+  3. **🔍 データ JSON ファクトチェック**(Grok 向け) — 数字を最新公式情報で検証、出典 URL + 取得日明示、異常値発見
+  4. **🧩 データ JSON 欠損埋めリサーチ**(Grok 向け) — 「-」項目を Grok のリアルタイム情報で補完
+
+**ペンディング(継続):**
+- ① TTS 真のバックグラウンド継続(Android Firefox)— Wake Lock または Service Worker 化が必要
+- ⑥ ぬるっと型(戦略 D)の実機台本テスト
+- ⑦ Phase 2 ranking 拡張
+- ⑩ RadarCompare / TeamContext の LayoutPanel エディタ未実装
+
 ## [5.21.4] - 2026-05-10 - アウトロメディア機能 + Gem 3分業設計
 
 **新機能:**

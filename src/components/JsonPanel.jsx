@@ -16,9 +16,9 @@ import { LAYOUT_TYPES, VIDEO_PATTERNS } from '../lib/config';
 import { defaultBatterData } from '../data/defaultBatter';
 import { defaultPitcherData } from '../data/defaultPitcher';
 import { splitProjectData, mergeProjectData, normalizeProjectInput } from '../lib/projectSplit';
-// ★ docs/gemini-custom-prompt.md を Vite ?raw で読み込み (一本化、v5.10.1)
-// これにより、コピーボタンでも docs と同一の内容が出力される
-import customPromptRaw from '../../docs/gemini-custom-prompt.md?raw';
+// ★v5.21.4★ docs/layout-templates.md (旧 gemini-custom-prompt.md) を Vite ?raw で読み込み
+// 旧 V7 Gem 指示書部分は削除済、8 レイアウトのフルテンプレート + scripts 実例のみ
+import customPromptRaw from '../../docs/layout-templates.md?raw';
 
 export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
   // ★v5.18.12★ 「全体 / データ / 台本」の3モード切替
@@ -173,9 +173,13 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
       prompt = buildAIPrompt(projectData, template);
       flashMsg = 'AIプロンプトをコピーしました! Geminiに貼り付けてください';
     }
+    copyToClipboard(prompt, flashMsg);
+  };
 
+  // ★v5.21.5★ チェック系プロンプトのコピー(汎用ヘルパー)
+  const copyToClipboard = (text, flashMsg) => {
     const textArea = document.createElement('textarea');
-    textArea.value = prompt;
+    textArea.value = text;
     textArea.style.position = 'fixed';
     textArea.style.top = '0';
     textArea.style.left = '0';
@@ -189,6 +193,20 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
       setJsonError('クリップボードへのコピーに失敗しました');
     }
     document.body.removeChild(textArea);
+  };
+
+  // ★v5.21.5★ 各チェック系プロンプトのハンドラ
+  const handleCopyLayoutAdvisor = () => {
+    copyToClipboard(buildLayoutAdvisorPrompt(projectData), '🎯 レイアウト適合チェックをコピーしました! AI に貼り付けてください');
+  };
+  const handleCopyDataFactCheck = () => {
+    copyToClipboard(buildDataFactCheckPrompt(projectData), '🔍 データファクトチェックをコピーしました! Grok に貼り付けてください');
+  };
+  const handleCopyDataGapFill = () => {
+    copyToClipboard(buildDataGapFillPrompt(projectData), '🧩 データ欠損埋めリサーチをコピーしました! Grok に貼り付けてください');
+  };
+  const handleCopyScriptReview = () => {
+    copyToClipboard(buildScriptReviewPrompt(projectData), '📋 台本整合チェックをコピーしました! AI に貼り付けてください');
   };
 
   return (
@@ -240,6 +258,46 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
         <Sparkles size={16}/> 🤖 AIプロンプトを作成＆コピー
       </button>
 
+      {/* ★v5.21.5★ AI でチェック系プロンプト(新運用 = Grok v2 → 構成 Gem → JSON Gem の各段階でのレビュー機能) */}
+      <details className="mb-3 bg-amber-50 border border-amber-200 rounded-lg overflow-hidden" open={false}>
+        <summary className="text-[11px] font-bold text-amber-900 px-3 py-2 cursor-pointer hover:bg-amber-100 select-none flex items-center gap-1">
+          🔍 AI でチェック (Grok v2 / 構成 Gem / JSON Gem の出力をレビュー)
+        </summary>
+        <div className="p-2 grid grid-cols-2 gap-1.5">
+          <button
+            onClick={handleCopyLayoutAdvisor}
+            title="現在のデータで、このレイアウトがベストか?他に適したレイアウト候補がないか判定"
+            className="text-[10px] font-bold py-2 px-2 bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-800 rounded shadow-sm transition flex items-center justify-center gap-1 text-left leading-tight"
+          >
+            🎯 レイアウト<br/>適合チェック
+          </button>
+          <button
+            onClick={handleCopyScriptReview}
+            title="台本JSON を 8 観点でレビュー: 文字数・初見理解・スワイプ対策・キャラ役割・SE/レイアウト配置・NGワード"
+            className="text-[10px] font-bold py-2 px-2 bg-white hover:bg-violet-50 border border-violet-200 text-violet-800 rounded shadow-sm transition flex items-center justify-center gap-1 text-left leading-tight"
+          >
+            📋 台本JSON<br/>整合チェック
+          </button>
+          <button
+            onClick={handleCopyDataFactCheck}
+            title="Grok で データJSON の数字を最新公式情報で検証(ファクトチェック + ソース明示)"
+            className="text-[10px] font-bold py-2 px-2 bg-white hover:bg-sky-50 border border-sky-200 text-sky-800 rounded shadow-sm transition flex items-center justify-center gap-1 text-left leading-tight"
+          >
+            🔍 データ<br/>ファクトチェック
+          </button>
+          <button
+            onClick={handleCopyDataGapFill}
+            title="Grok でデータJSON の「-」項目をリサーチで埋める"
+            className="text-[10px] font-bold py-2 px-2 bg-white hover:bg-cyan-50 border border-cyan-200 text-cyan-800 rounded shadow-sm transition flex items-center justify-center gap-1 text-left leading-tight"
+          >
+            🧩 データ欠損<br/>埋めリサーチ
+          </button>
+        </div>
+        <div className="px-3 pb-2 text-[9px] text-amber-700">
+          ★レイアウト/台本チェックは Gemini や Claude が向く / ファクトチェック・欠損埋めは Grok 向け
+        </div>
+      </details>
+
       <div className="flex gap-2 mb-2">
         <button onClick={handleClear} className="flex-[0.5] bg-zinc-200 hover:bg-zinc-300 text-zinc-700 text-xs font-bold py-2 rounded shadow-sm flex items-center justify-center gap-1 transition">
           <Trash2 size={14}/> クリア
@@ -289,7 +347,7 @@ function buildAIPrompt(currentData, templateData) {
     currentData.playerType === 'pitcher' ? '投手' :
     'チーム';
 
-  // ★v10.2★ 動的な数値読みルール (playerType 別)
+  // ★v10.3.1★ 動的な数値読みルール (playerType 別) - 構成 Gem / JSON Gem の Knowledge Files と完全整合
   const numericRules = currentData.playerType === 'batter'
     ? '・★打率系は .333 形式★ 打率/出塁率/長打率/OPS/被打率/IsoP\n'
     + '・打率 .333 → 「さんわりさんぶさんりん」、.305 → 「さんわりれいぶごりん」\n'
@@ -592,7 +650,7 @@ function buildScriptJsonPrompt(currentData, templateData) {
 - 動画パターン: ${currentData.pattern || '(未指定)'}
 - テーマ: ${currentData.theme || '(未指定)'}
 
-## ★必須ルール (v10.2)★
+## ★必須ルール (v10.3.1)★
 
 ### キャラ口調
 - A=数原さん (男性40-50代、★必ず敬語★、「〜なんですよ」「〜ですね」「〜と言えますね」)
@@ -682,3 +740,219 @@ ${JSON.stringify(currentData.scripts || [], null, 2).slice(0, 3000)}
 \`\`\`
 `;
 }
+
+// ============================================================================
+// ★v5.21.5★ AI チェック系プロンプト (4 種)
+// 新運用の 3 分業フロー (Grok v2 → 構成 Gem → JSON Gem) の各段階で
+// 「見落とし発見」「ファクトチェック」「整合確認」をするためのプロンプト集。
+// ============================================================================
+
+/**
+ * ★v5.21.5★ ① データレイアウト適合チェック
+ * 現在の data + layoutType を見て、最適なレイアウトを使えているか判定。
+ * 「このデータならレーダー使った方がいいよね」的な見落とし発見が目的。
+ */
+function buildLayoutAdvisorPrompt(currentData) {
+  const { data: dataPart } = splitProjectData(currentData);
+  const currentLayout = currentData.layoutType || '(未指定)';
+  const layoutCatalog = Object.entries(LAYOUT_TYPES)
+    .map(([key, info]) => `  - ${key}: ${info.label} — ${info.desc}`)
+    .join('\n');
+
+  return `# データレイアウト適合チェック
+
+以下の data JSON と現在の layoutType を見て、最適なレイアウトを使えているか判定してください。
+
+## 現在の layoutType: \`${currentLayout}\`
+
+## 使える 8 種のレイアウト
+${layoutCatalog}
+
+## 判定してほしいこと
+1. **現在の layoutType が、このデータの強みを最大限活かせているか?**
+2. **より適したレイアウト候補があれば、どれか + なぜそちらが良いか?**
+3. **データに対して「このレイアウトじゃないと活きない指標」の見落としがないか?**
+   - 例: 月別推移データがあるのに timeline を使っていない
+   - 例: 対左/対右の variants があるのに versus_card を使っていない
+   - 例: 5 軸の偏差値が radarStats にあるのに radar_compare を使っていない
+   - 例: 複数選手の player_spotlight 用データがあるのに ranking を使っている
+
+## data JSON
+\`\`\`json
+${JSON.stringify(dataPart, null, 2).slice(0, 6000)}
+\`\`\`
+
+## 出力形式 (Markdown)
+- ★判定結果★: 適切 / 改善余地あり / 不適切
+- ★推奨レイアウト★: <現在維持 or 別レイアウト>
+- ★根拠★: データのどの部分が、なぜそのレイアウトに最も合うか
+- ★他の選択肢★: 2 番目に良いレイアウト + 短所
+- ★アクション★: layoutType を変える場合の追加データ補完項目
+`;
+}
+
+/**
+ * ★v5.21.5★ ② データ JSON ファクトチェック (Grok 向け)
+ * 数字の正確性を Grok のリアルタイム情報で検証。
+ */
+function buildDataFactCheckPrompt(currentData) {
+  const { data: dataPart } = splitProjectData(currentData);
+
+  return `# データ JSON ファクトチェック (Grok 向け)
+
+以下の data JSON の **すべての数字** を最新の公式情報で検証してください。
+
+## 検証してほしいこと
+1. **各数字の正確性** — NPB 公式 / スポナビ / 1.02 / 球団公式で最新値と一致するか
+2. **出典 URL と取得日を明示** — 数字ごとにソースを示す
+3. **異常値・矛盾値の発見**
+   - 例: 防御率 0.50 だが WHIP 1.40 → 整合性疑問
+   - 例: 打率 .500 だが OPS .800 → 数値ズレ可能性
+4. **「-」になっている項目** — 取得可能なら値とソースを提案
+5. **古い数字** — 2-3 試合分の古いスナップショットになっていないか
+
+## data JSON
+\`\`\`json
+${JSON.stringify(dataPart, null, 2).slice(0, 8000)}
+\`\`\`
+
+## 出力形式 (Markdown)
+- ★全体判定★: 問題なし / 軽微な誤り / 重大な誤り
+- ★誤り一覧★: \`項目名\` 現値 → 正値 (出典 URL, 取得日)
+- ★「-」項目の埋め提案★: \`項目名\` → 取得値 or 「取得不可」
+- ★整合性疑問点★: 矛盾するように見える数字の組み合わせ
+- ★修正版 data JSON★ (誤りがあった場合のみ): 修正済みの完全な JSON
+`;
+}
+
+/**
+ * ★v5.21.5★ ③ データ JSON 欠損埋めリサーチ (Grok 向け)
+ * 「-」項目をリサーチで埋めるための依頼。
+ */
+function buildDataGapFillPrompt(currentData) {
+  const { data: dataPart } = splitProjectData(currentData);
+
+  // 「-」項目をざっくり検出
+  const dataStr = JSON.stringify(dataPart);
+  const dashCount = (dataStr.match(/"-"/g) || []).length;
+
+  return `# データ JSON 欠損埋めリサーチ (Grok 向け)
+
+以下の data JSON で **値が "-" になっている項目** をリサーチで埋めてください。
+
+## 検出された "-" 項目数: 約 ${dashCount} 個
+
+## やってほしいこと
+1. **「-」になっている項目を全部発見**
+2. **NPB 公式 / 各球団 / 1.02 / スポナビ で値を取得**
+3. **ソース URL と取得日を明示**
+4. **取得不可な項目は理由を明記**(有料データ要、公開なし、計算困難 等)
+5. **取得した値の整合性チェック** — 他の項目と矛盾しないか
+
+## 重要ルール
+- ★打率系 (avg/obp/slg/OPS/被打率/BABIP/IsoP) は \`.345\` 形式★ (先頭 0 省略)
+- ★防御率系 (ERA/WHIP/FIP/K9) は \`0.97\` 形式★ (先頭 0 残す)
+- 整数 0 → "0" のまま (本塁打 0、勝利 0 等は意味のある値)
+- 取得不可は "-" のまま
+- すべての数値は **文字列で出力**
+
+## data JSON
+\`\`\`json
+${JSON.stringify(dataPart, null, 2).slice(0, 8000)}
+\`\`\`
+
+## 出力形式 (Markdown)
+- ★埋まった項目★: \`項目名\` → 値 (出典 URL, 取得日)
+- ★依然「-」の項目★: \`項目名\` → 取得不可 (理由)
+- ★修正版 data JSON★: 完全な JSON (整形ルール厳守)
+`;
+}
+
+/**
+ * ★v5.21.5★ ④ 台本 JSON 整合チェック
+ * data + scripts を見て、複数観点でレビュー。
+ */
+function buildScriptReviewPrompt(currentData) {
+  const scripts = currentData.scripts || [];
+
+  return `# 台本 JSON 整合チェック (構成・スワイプ対策・キャラ役割)
+
+以下の data + scripts を見て、複数の観点で問題を発見してください。
+
+## チェック観点(★全て検証★)
+
+### 1. データ前提との整合性
+- scripts で言及している数字が data JSON と一致しているか
+- comparisons に台本言及全指標が含まれているか
+- 数値整形(打率系 .345 / 防御率系 0.97)が守られているか
+
+### 2. id:1 (タイトル/フック) の設計
+- **4 原則チェック**: 1 選手フォーカス / 具体数値 or 物語キーワード / タイトル長 25-32 字 / 「数字+矛盾」型を優先検討
+- **NG パターン**: 結論先出し型(「もう打てません」「大苦戦する理由」)、阿部監督批判型、他球団選手比較型、飽和パワーワード単独使用(致命的/絶望/衝撃/異常事態/完全崩壊)
+- **戦略適合**: id:1 戦略 A 派手 / B 数字主役 / C 静物 / D ぬるっと のうちどれが選ばれていて、textSize/scenePreset/se が整合しているか
+
+### 3. 初見でも理解できるか
+- 専門用語(Stuff+ / WHIP / BABIP / IsoP 等)に説明があるか
+- 抽象的すぎないか
+- 「現象 → 数字」の順で語れているか(audience-and-language.md §1 原則)
+
+### 4. スワイプ率・視聴維持率対策
+- id:1 が 0.5-1 秒で「謎・疑問」を提示しているか
+- id:4-7 で核心数字を最速提示しているか
+- id:23-26 で「アハ体験(根本原因)」になっているか
+- id:27-30 のアウトロが文脈ある二択 or 問いかけで終わるか
+- 阿部監督批判型 (-3.2pt 逆効果) / 他球団選手 vs 巨人選手 (維持率 17-18%) のような失敗パターンを踏んでないか
+
+### 5. キャラの役割が守られているか
+- A (数原さん) が **全部敬語**か、タメ口が混入してないか
+- B (もえか) が「鋭い感想を言うコアファン枠」として動いているか(萌え寄りではない)
+- 「ヤバい」は B のみ、1 動画 1-2 回まで、疑問形 + 敬語、直前に冷静観察文
+- 同 speaker 連続最大 2 回まで
+- id:2-5 で **A↔B 呼び合い両方向**(A→B「もえかちゃん」、B→A「数原さん」)
+- emoji: A は \`👨‍🏫\`、B は感情に応じた絵文字 1 文字
+
+### 6. 文字数とテンポ(text プロパティ)
+- 1 ID あたり **3-12 字 × 3-4 行(合計 12-30 字)**
+- 句点「。」が text に入ってないか
+- 数値は【】、指標名は「」、衝撃ワードは『』で囲ってあるか
+- 長すぎ・短すぎの ID 一覧
+
+### 7. SE / scenePreset / textSize 配分(★ベスト配置か★)
+- **textSize**: xl=1 (id:1 のみ) / l=5-7 / m=18-22 / s=2-4
+- **scenePreset**: default 12 個以上、連続 4 ID 以上 NG
+- **SE**: 12-15 箇所、hook_impact (or stat_reveal) 必須 (id:1)、outro_fade 必須 (id 最終)
+- **shock_hit を 3 回以上使ってないか**(過剰演出)
+- **同 SE が 3 ID 連続してないか**
+- **連続 4 ID 以上 SE 無しになってないか**
+- **zoomBoost** が 2-3 箇所のみ使われているか
+
+### 8. NG ワード混入
+- 願望系(期待 / 応援 / 頑張れ / 信じる)
+- 誇張系(本当の / 可能性 / 驚愕 / コメントで教えて)
+- 飽和パワーワード(致命的 / 絶望 / 衝撃 / 異常事態 / 完全崩壊 / 暴く)
+
+## data JSON (抜粋)
+\`\`\`json
+${JSON.stringify({
+  layoutType: currentData.layoutType,
+  playerType: currentData.playerType,
+  mainPlayer: currentData.mainPlayer,
+  subPlayer: currentData.subPlayer,
+  comparisons: currentData.comparisons,
+}, null, 2).slice(0, 4000)}
+\`\`\`
+
+## scripts JSON
+\`\`\`json
+${JSON.stringify(scripts, null, 2).slice(0, 12000)}
+\`\`\`
+
+## 出力形式 (Markdown)
+各観点で **◎(問題なし)/ ◯(軽微)/ △(要改善)/ ✕(致命的)** で判定。
+- ★総合判定★: そのまま使える / 微調整推奨 / 大幅修正必要
+- ★観点別評価★: 1-8 を順番に評価、問題があれば具体的な ID と修正案
+- ★優先修正 TOP 3★: 最も視聴維持率に影響しそうな箇所
+- ★推奨修正版★ (任意): 修正版の scripts 抜粋(問題があった ID のみ)
+`;
+}
+
