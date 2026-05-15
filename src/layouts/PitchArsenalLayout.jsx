@@ -98,7 +98,7 @@ function SingleOrCompareView({ data, themeClass }) {
           <span className="text-[12px] font-black text-zinc-500 tracking-widest text-right">被打率</span>
         </div>
         {pitches.map((pitch, i) => {
-          // ★v5.21.10★ avg が文字列 ".375" でも数値 0.375 でも動くよう、ここで正規化
+          // avg が文字列 ".375" でも数値 0.375 でも動くよう、ここで正規化
           const pitchAvgNum = Number(pitch.avg) || 0;
           const minAvgNum = Math.min(...pitches.map(p => Number(p.avg) || 0));
           const isBest = pitchAvgNum === minAvgNum;

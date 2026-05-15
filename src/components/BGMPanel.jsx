@@ -19,7 +19,7 @@ export function BGMPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [levels, setLevels] = useState(() => {
-    // ★v5.15.5★ localStorage から復元、★v5.20.14★ 古い保存値が残ってる場合は voice の最低値を補正
+    // localStorage から復元、古い保存値が残ってる場合は voice の最低値を補正
     try {
       const saved = localStorage.getItem('mixer-levels');
       if (saved) {
@@ -34,7 +34,7 @@ export function BGMPanel() {
     } catch (e) {}
     return { ...DEFAULT_MIXER_LEVELS };
   });
-  // ★v5.20.14★ duckingAmount も localStorage から復元、デフォルトは config から
+  // duckingAmount も localStorage から復元、デフォルトは config から
   const [duckingAmount, setDuckingAmount] = useState(() => {
     try {
       const saved = localStorage.getItem('mixer-ducking');
@@ -65,7 +65,7 @@ export function BGMPanel() {
 
   // 起動時: 保存済みBGM一覧を復元
   useEffect(() => {
-    // ★v5.15.5★ localStorage の levels を mixer に反映
+    // localStorage の levels を mixer に反映
     try {
       Object.entries(levels).forEach(([track, val]) => mixer.setLevel(track, val));
     } catch (e) {}
@@ -76,7 +76,7 @@ export function BGMPanel() {
         const s = await getBgmStats();
         setStats(s);
         if (saved.length > 0) {
-          // ★v5.15.3★ localStorage に保存された選択を優先復元
+          // localStorage に保存された選択を優先復元
           let toSelect = null;
           try {
             const savedKey = localStorage.getItem('selectedBgmKey');
@@ -92,7 +92,7 @@ export function BGMPanel() {
       // SE 起動時ロード
       try {
         const savedSes = await listSes();
-        // ★v5.19.5★ assignedPresetId は localStorage['se-assignments'] に保存されているので
+        // assignedPresetId は localStorage['se-assignments'] に保存されているので
         // それを読み込んで各 se にマージしてからリストにセット (UI表示でも使う)
         const assignments = JSON.parse(localStorage.getItem('se-assignments') || '{}');
         const sesWithAssign = savedSes.map(se => ({
@@ -244,7 +244,7 @@ export function BGMPanel() {
       const url = URL.createObjectURL(blob);
       currentBlobUrlRef.current = url;
       setSelectedBgmKey(bgm.key);
-      // ★v5.15.3★ 選択された BGM key を localStorage に永続化 (audioExporter から参照可能に)
+      // 選択された BGM key を localStorage に永続化 (audioExporter から参照可能に)
       try { localStorage.setItem('selectedBgmKey', bgm.key); } catch (e) {}
       setIsPreviewingBgm(false);
       mixer.stopBgm();
@@ -264,7 +264,7 @@ export function BGMPanel() {
     }
   };
 
-  // ★v5.15.5★ レベル変更時に localStorage にも保存 (audioExporter から参照可能に)
+  // レベル変更時に localStorage にも保存 (audioExporter から参照可能に)
   const updateLevel = (track, val) => {
     setLevels(prev => {
       const next = { ...prev, [track]: val };

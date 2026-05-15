@@ -1,5 +1,5 @@
 /**
- * TeamContextLayout 横長 (16:9) 専用バリアント (★v5.20.3 新規★)
+ * TeamContextLayout 横長 (16:9) 専用バリアント ()
  *
  * 構図:
  *   mode 'single':  上半分を 3 カラム (打撃 / 投手 / 采配) で見せる

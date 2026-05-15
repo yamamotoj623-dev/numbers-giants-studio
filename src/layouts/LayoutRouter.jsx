@@ -26,12 +26,12 @@ import { TeamContextLayout } from './TeamContextLayout.jsx';
 import { RankingLayout } from './RankingLayout.jsx';
 import { PlayerSpotlightLayout } from './PlayerSpotlightLayout.jsx';
 import { BatterHeatmapLayout } from './BatterHeatmapLayout.jsx';
-// ★v5.20★ 横長専用レイアウト
+// 横長専用レイアウト
 import { RadarCompareLandscape } from './landscape/RadarCompareLandscape.jsx';
 import { RankingLandscape } from './landscape/RankingLandscape.jsx';
 import { PlayerSpotlightLandscape } from './landscape/PlayerSpotlightLandscape.jsx';
 import { VersusCardLandscape } from './landscape/VersusCardLandscape.jsx';
-// ★v5.20.3★ Phase 2 横長レイアウト
+// Phase 2 横長レイアウト
 import { TimelineLandscape } from './landscape/TimelineLandscape.jsx';
 import { PitchArsenalLandscape } from './landscape/PitchArsenalLandscape.jsx';
 import { BatterHeatmapLandscape } from './landscape/BatterHeatmapLandscape.jsx';
@@ -49,7 +49,7 @@ const LAYOUT_COMPONENTS = {
   batter_heatmap: BatterHeatmapLayout,
 };
 
-// ★v5.20.3★ 横長 (16:9) 専用バリアント — 全 8 レイアウト対応完了
+// 横長 (16:9) 専用バリアント — 全 8 レイアウト対応完了
 const LAYOUT_COMPONENTS_LANDSCAPE = {
   radar_compare: RadarCompareLandscape,
   ranking: RankingLandscape,
@@ -114,19 +114,19 @@ export function LayoutRouter(props) {
   }, [desiredLayout]);
 
   const Layout = (() => {
-    // ★v5.20★ 横長 (16:9) で専用バリアントが存在すればそれを使う
+    // 横長 (16:9) で専用バリアントが存在すればそれを使う
     if (props.projectData?.aspectRatio === '16:9' && LAYOUT_COMPONENTS_LANDSCAPE[activeLayout]) {
       return LAYOUT_COMPONENTS_LANDSCAPE[activeLayout];
     }
     return LAYOUT_COMPONENTS[activeLayout] || RadarCompareLayout;
   })();
 
-  // ★v5.18.0★ キーフレームアニメ (Gemini提言: 重要発言時のズーム/シェイク)
+  // キーフレームアニメ (Gemini提言: 重要発言時のズーム/シェイク)
   //   'zoom'    - グッと寄る
   //   'shake'   - 揺れる
   //   'zoomShake' - ズーム+揺れ (最強)
   //
-  // ★v5.18.4★ シェイクでチャートも再発火するバグ修正
+  // シェイクでチャートも再発火するバグ修正
   // 旧 (v5.18.1): zoomBoost 指定時に wrapper の key 更新 → 子レイアウト全体 remount
   //   → チャートのドット出現/レーダー描画/数値カウントアップ等の演出も全部リセットされる問題
   // 新: 2層構造に変更:
@@ -140,7 +140,7 @@ export function LayoutRouter(props) {
                   : zoomBoost === 'shake' ? 'anim-impact-shake'
                   : zoomBoost === 'zoomShake' ? 'anim-zoom-shake'
                   : '';
-  // ★v5.20.13★ zoomBoost がある id だけ key を ID込みで更新 (発火)、
+  // zoomBoost がある id だけ key を ID込みで更新 (発火)、
   // 無い id はずっと 'stable' で固定 → 継承シーンでアニメ再発火しない
   // 旧仕様 (v5.18.4): 無い時は 'stable' 一律 → zoomBoost あり id を抜けた直後は確かに stable に変わるため、
   //   そのタイミングで「key が変わった」と React が認識 → 子要素 remount → アニメ再発火
@@ -153,8 +153,8 @@ export function LayoutRouter(props) {
 
   return (
     <div className={`layout-fade-wrap ${fadeState === 'out' ? 'fade-out' : 'fade-in'}`}>
-      {/* ★v5.18.4★ animation 専用の内側 wrapper - key 変更で animation だけ再発火
-          ★v5.18.5★ zoomBoost 指定時は data-zoom-active="true" を付与 →
+      {/* animation 専用の内側 wrapper - key 変更で animation だけ再発火
+          zoomBoost 指定時は data-zoom-active="true" を付与 →
           子レイアウトの「チャート出現アニメ」を CSS で抑制し、zoomBoost だけが純粋に発火する */}
       <div
         className={`anim-layer ${animClass}`}

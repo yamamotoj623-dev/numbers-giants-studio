@@ -1,5 +1,5 @@
 /**
- * projectStorage.js (★v5.18.4 新規★)
+ * projectStorage.js ()
  *
  * 編集中の projectData を localStorage に保存・復元する仕組み。
  *

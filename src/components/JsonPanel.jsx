@@ -16,12 +16,12 @@ import { LAYOUT_TYPES, VIDEO_PATTERNS } from '../lib/config';
 import { defaultBatterData } from '../data/defaultBatter';
 import { defaultPitcherData } from '../data/defaultPitcher';
 import { splitProjectData, mergeProjectData, normalizeProjectInput } from '../lib/projectSplit';
-// ★v5.21.7★ customPromptRaw の import 廃止
+// customPromptRaw の import 廃止
 // 旧版は docs/layout-templates.md を素 Gemini 向けプロンプトに埋め込んでいたが、
 // 新版は Gem の Knowledge Files として運用するため、アプリ側で埋め込む必要なし。
 
 export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
-  // ★v5.18.12★ 「全体 / データ / 台本」の3モード切替
+  // 「全体 / データ / 台本」の3モード切替
   // - whole: 1ファイル形式 (旧来通り)
   // - data: メタ + layoutData + comparisons + radarStats のみ (台本は除外)
   // - script: scripts のみ
@@ -59,7 +59,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
     try {
       let parsed = JSON.parse(text);
 
-      // ★v5.21.8 FIX★ Gemini が { "projectData": {...} } 形式で出力した場合、ラッパーを剥がす
+      // Gemini が { "projectData": {...} } 形式で出力した場合、ラッパーを剥がす
       //   - data モード: { projectData: {...} } → projectData の中身に正規化
       //   - whole モード: { projectData: {...}, scripts: [...] } → projectData の中身 + scripts に正規化
       //   - script モード: { scripts: [...] } はラッパーなしなのでそのまま
@@ -94,13 +94,13 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
       if (!merged.audio) merged.audio = { bgmId: null, bgmVolume: 0.15, voiceVolume: 1.0, seVolume: 0.6 };
       if (!merged.layoutData) merged.layoutData = {};
 
-      // ★v5.19.5★ ユーザー固有設定 (AI が出力に含めない設定) は既存値で必ず保持
+      // ユーザー固有設定 (AI が出力に含めない設定) は既存値で必ず保持
       // これらは UI で設定するもの・メディア紐付け・サウンドなど、AI が消してはいけない
       const PRESERVE_KEYS = [
         'hookMediaPattern',
         'hookMediaDurationMs',
         'hookAnimation',     // フックの揺れ方は AI には触らせない (UI で選ぶ)
-        'outroMediaPattern', // ★v5.21.4★ アウトロメディアの揺れ方も AI に触らせない
+        'outroMediaPattern', // アウトロメディアの揺れ方も AI に触らせない
         'silhouetteType',    // シルエット種類
         'theme',             // テーマカラー
         'smartLoop',
@@ -135,7 +135,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
   };
 
   const handlePasteAndApply = async () => {
-    // ★v5.20.13★ Firefox 互換性向上 — 大きい JSON では readText がタイムアウト/失敗する事例あり
+    // Firefox 互換性向上 — 大きい JSON では readText がタイムアウト/失敗する事例あり
     //   クリップボード API が使えない/失敗時は textarea にフォーカス→Cmd+V (Ctrl+V) を促す
     if (!navigator.clipboard || !navigator.clipboard.readText) {
       const ta = document.querySelector('textarea[data-json-input]');
@@ -190,7 +190,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
     copyToClipboard(prompt, flashMsg);
   };
 
-  // ★v5.21.5★ チェック系プロンプトのコピー(汎用ヘルパー)
+  // チェック系プロンプトのコピー(汎用ヘルパー)
   const copyToClipboard = (text, flashMsg) => {
     const textArea = document.createElement('textarea');
     textArea.value = text;
@@ -209,7 +209,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
     document.body.removeChild(textArea);
   };
 
-  // ★v5.21.5★ 各チェック系プロンプトのハンドラ
+  // 各チェック系プロンプトのハンドラ
   const handleCopyLayoutAdvisor = () => {
     copyToClipboard(buildLayoutAdvisorPrompt(projectData), '🎯 レイアウト適合チェックをコピーしました! AI に貼り付けてください');
   };
@@ -240,7 +240,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
         </button>
       </div>
 
-      {/* ★v5.18.12★ データ / 台本 分割編集モード */}
+      {/* データ / 台本 分割編集モード */}
       <div className="flex gap-1 mb-2 bg-zinc-100 p-1 rounded-lg">
         {[
           { id: 'whole', label: '全体', desc: '1ファイル' },
@@ -272,7 +272,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
         <Sparkles size={16}/> 🤖 AIプロンプトを作成＆コピー
       </button>
 
-      {/* ★v5.21.8★ AI でチェック系プロンプト(v10.2-patched 単一 Gem 運用、Grok リサーチ + 各種チェック) */}
+      {/* AI でチェック系プロンプト(v10.2-patched 単一 Gem 運用、Grok リサーチ + 各種チェック) */}
       <details className="mb-3 bg-amber-50 border border-amber-200 rounded-lg overflow-hidden" open={false}>
         <summary className="text-[11px] font-bold text-amber-900 px-3 py-2 cursor-pointer hover:bg-amber-100 select-none flex items-center gap-1">
           🔍 AI でチェック (Grok / Gem の出力をレビュー)
@@ -340,7 +340,7 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
 
 
 /**
- * ★v5.21.8★ Gem 全体モード用プロンプト (whole)
+ * Gem 全体モード用プロンプト (whole)
  *
  * v10.2-patched 単一 Gem 向け、初回ベース作成用の全体 JSON 生成プロンプト。
  *
@@ -375,7 +375,7 @@ ${JSON.stringify(templateData, null, 2)}
 }
 
 /**
- * ★v5.21.7-11★ Gem データ単体モード用プロンプト (data)
+ * Gem データ単体モード用プロンプト (data)
  *
  * 既存データ JSON を入力として渡し、レイアウト/ハイライト/表現の調整を依頼。
  * 出力は projectData のみ(scripts は出力しない)。
@@ -385,7 +385,7 @@ function buildDataJsonPrompt(currentData, templateData) {
   const { data: existingData } = splitProjectData(currentData);
   const currentLayout = currentData.layoutType || 'radar_compare';
 
-  // ★v5.21.10★ layoutData の正確なスキーマ例(レイアウト別)
+  // layoutData の正確なスキーマ例(レイアウト別)
   // これがないと Gemini が推測で ratio/speed や ".375" 文字列を出してしまう
   const layoutDataExamples = {
     pitch_arsenal: `"layoutData": {
@@ -540,13 +540,13 @@ ${JSON.stringify(existingData, null, 2).slice(0, 4000)}
 `;
 }
 // ============================================================================
-// ★v5.21.8★ AI チェック系プロンプト (4 種)
+// AI チェック系プロンプト (4 種)
 // v10.2-patched 単一 Gem 運用 (Grok リサーチ → Gem 単独で生成) の各段階で
 // 「見落とし発見」「ファクトチェック」「整合確認」をするためのプロンプト集。
 // ============================================================================
 
 /**
- * ★v5.21.5★ ① データレイアウト適合チェック
+ * ① データレイアウト適合チェック
  * 現在の data + layoutType を見て、最適なレイアウトを使えているか判定。
  * 「このデータならレーダー使った方がいいよね」的な見落とし発見が目的。
  */
@@ -590,7 +590,7 @@ ${JSON.stringify(dataPart, null, 2).slice(0, 6000)}
 }
 
 /**
- * ★v5.21.5★ ② データ JSON ファクトチェック (Grok 向け)
+ * ② データ JSON ファクトチェック (Grok 向け)
  * 数字の正確性を Grok のリアルタイム情報で検証。
  */
 function buildDataFactCheckPrompt(currentData) {
@@ -624,7 +624,7 @@ ${JSON.stringify(dataPart, null, 2).slice(0, 8000)}
 }
 
 /**
- * ★v5.21.5★ ③ データ JSON 欠損埋めリサーチ (Grok 向け)
+ * ③ データ JSON 欠損埋めリサーチ (Grok 向け)
  * 「-」項目をリサーチで埋めるための依頼。
  */
 function buildDataGapFillPrompt(currentData) {
@@ -667,7 +667,7 @@ ${JSON.stringify(dataPart, null, 2).slice(0, 8000)}
 }
 
 /**
- * ★v5.21.5★ ④ 台本 JSON 整合チェック
+ * ④ 台本 JSON 整合チェック
  * data + scripts を見て、複数観点でレビュー。
  */
 function buildScriptReviewPrompt(currentData) {

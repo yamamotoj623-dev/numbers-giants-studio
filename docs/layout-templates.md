@@ -17,15 +17,15 @@
 
 ```json
 "layoutData": {
-  "radar": {
-    "stats": [
-      { "label": "長打力", "main": 75, "sub": 60 },
-      { "label": "選球眼", "main": 65, "sub": 55 },
-      { "label": "三振率", "main": 70, "sub": 50 },
-      { "label": "得点創出", "main": 80, "sub": 65 },
-      { "label": "本塁打率", "main": 72, "sub": 58 }
-    ]
-  }
+ "radar": {
+ "stats": [
+ { "label": "長打力", "main": 75, "sub": 60 },
+ { "label": "選球眼", "main": 65, "sub": 55 },
+ { "label": "三振率", "main": 70, "sub": 50 },
+ { "label": "得点創出", "main": 80, "sub": 65 },
+ { "label": "本塁打率", "main": 72, "sub": 58 }
+ ]
+ }
 }
 ```
 入力ガイド:
@@ -39,16 +39,16 @@
 
 ```json
 "layoutData": {
-  "timeline": {
-    "unit": "month",
-    "metric": "OPS",
-    "points": [
-      { "label": "4月", "value": ".724" },
-      { "label": "5月", "value": ".810", "isPeak": true, "highlight": true },
-      { "label": "6月", "value": ".945" },
-      { "label": "7月", "value": ".678", "isBottom": true }
-    ]
-  }
+ "timeline": {
+ "unit": "month",
+ "metric": "OPS",
+ "points": [
+ { "label": "4月", "value": ".724" },
+ { "label": "5月", "value": ".810", "isPeak": true, "highlight": true },
+ { "label": "6月", "value": ".945" },
+ { "label": "7月", "value": ".678", "isBottom": true }
+ ]
+ }
 }
 ```
 入力ガイド:
@@ -66,35 +66,35 @@
 
 ```json
 "layoutData": {
-  "ranking": {
-    "mood": "best",
-    "showCutoff": false,
-    "metrics": [
-      {
-        "id": "ops",
-        "label": "OPS",
-        "kana": "オーピーエス",
-        "unit": "",
-        "entries": [
-          { "rank": 1, "name": "岡本和真", "team": "G", "value": "1.013", "isMainPlayer": true },
-          { "rank": 2, "name": "村上宗隆", "team": "S", "value": ".945" },
-          { "rank": 3, "name": "牧秀悟",   "team": "DB", "value": ".928" },
-          { "rank": 4, "name": "佐野恵太", "team": "DB", "value": ".895" },
-          { "rank": 5, "name": "大山悠輔", "team": "T", "value": ".878" }
-        ]
-      },
-      {
-        "id": "hr",
-        "label": "本塁打",
-        "kana": "ほんるいだ",
-        "unit": "本",
-        "entries": [
-          { "rank": 1, "name": "岡本和真", "team": "G", "value": 18, "isMainPlayer": true },
-          /* 5-10 人 */
-        ]
-      }
-    ]
-  }
+ "ranking": {
+ "mood": "best",
+ "showCutoff": false,
+ "metrics": [
+ {
+ "id": "ops",
+ "label": "OPS",
+ "kana": "オーピーエス",
+ "unit": "",
+ "entries": [
+ { "rank": 1, "name": "岡本和真", "team": "G", "value": "1.013", "isMainPlayer": true },
+ { "rank": 2, "name": "村上宗隆", "team": "S", "value": ".945" },
+ { "rank": 3, "name": "牧秀悟", "team": "DB", "value": ".928" },
+ { "rank": 4, "name": "佐野恵太", "team": "DB", "value": ".895" },
+ { "rank": 5, "name": "大山悠輔", "team": "T", "value": ".878" }
+ ]
+ },
+ {
+ "id": "hr",
+ "label": "本塁打",
+ "kana": "ほんるいだ",
+ "unit": "本",
+ "entries": [
+ { "rank": 1, "name": "岡本和真", "team": "G", "value": 18, "isMainPlayer": true },
+ /* 5-10 人 */
+ ]
+ }
+ ]
+ }
 }
 ```
 入力ガイド:
@@ -112,16 +112,16 @@
 
 ```json
 "layoutData": {
-  "versus": {
-    "mood": "neutral",
-    "categoryScores": [
-      { "label": "打率",     "rawMain": ".305", "rawSub": ".278" },
-      { "label": "本塁打",   "rawMain": 18,    "rawSub": 12, "lowerBetter": false },
-      { "label": "OPS",      "rawMain": ".945", "rawSub": ".812" },
-      { "label": "三振率",   "rawMain": ".180", "rawSub": ".220", "lowerBetter": true },
-      { "label": "出塁率",   "rawMain": ".385", "rawSub": ".345" }
-    ]
-  }
+ "versus": {
+ "mood": "neutral",
+ "categoryScores": [
+ { "label": "打率", "rawMain": ".305", "rawSub": ".278" },
+ { "label": "本塁打", "rawMain": 18, "rawSub": 12, "lowerBetter": false },
+ { "label": "OPS", "rawMain": ".945", "rawSub": ".812" },
+ { "label": "三振率", "rawMain": ".180", "rawSub": ".220", "lowerBetter": true },
+ { "label": "出塁率", "rawMain": ".385", "rawSub": ".345" }
+ ]
+ }
 }
 ```
 入力ガイド:
@@ -137,44 +137,44 @@
 
 ```json
 "layoutData": {
-  "spotlight": {
-    "mode": "default",
-    "showPlayerName": true,
-    "players": [
-      {
-        "id": "okamoto",
-        "name": "岡本和真",
-        "team": "G",
-        "label": "26年(今季)",
-        "primaryStat": {
-          "label": "OPS",
-          "value": ".945",
-          "compareValue": { "label": "リーグ平均", "value": ".712" }
-        },
-        "stats": [
-          { "label": "打率",   "value": ".305" },
-          { "label": "本塁打", "value": 18 },
-          { "label": "打点",   "value": 52 },
-          { "label": "出塁率", "value": ".385" }
-        ],
-        "comment": "覚醒の3割打者",
-        "quotes": [
-          { "text": "もっと長打を打ちたい", "source": "2026/4 取材" },
-          { "text": "守備位置はどこでも", "source": "2026/3 春季練習" },
-          { "text": "監督の信頼に応えたい", "source": "2026/4 ヒーローインタビュー" }
-        ]
-      },
-      {
-        "id": "sano",
-        "name": "佐野恵太",
-        "team": "DB",
-        "primaryStat": { "label": "OPS", "value": ".895" },
-        "stats": [ /* 同じ構造 */ ],
-        "quotes": [ /* 2-4個 */ ]
-      }
-      /* 主役+対比1-3人 = 計 3-5 人 */
-    ]
-  }
+ "spotlight": {
+ "mode": "default",
+ "showPlayerName": true,
+ "players": [
+ {
+ "id": "okamoto",
+ "name": "岡本和真",
+ "team": "G",
+ "label": "26年(今季)",
+ "primaryStat": {
+ "label": "OPS",
+ "value": ".945",
+ "compareValue": { "label": "リーグ平均", "value": ".712" }
+ },
+ "stats": [
+ { "label": "打率", "value": ".305" },
+ { "label": "本塁打", "value": 18 },
+ { "label": "打点", "value": 52 },
+ { "label": "出塁率", "value": ".385" }
+ ],
+ "comment": "覚醒の3割打者",
+ "quotes": [
+ { "text": "もっと長打を打ちたい", "source": "2026/4 取材" },
+ { "text": "守備位置はどこでも", "source": "2026/3 春季練習" },
+ { "text": "監督の信頼に応えたい", "source": "2026/4 ヒーローインタビュー" }
+ ]
+ },
+ {
+ "id": "sano",
+ "name": "佐野恵太",
+ "team": "DB",
+ "primaryStat": { "label": "OPS", "value": ".895" },
+ "stats": [ /* 同じ構造 */ ],
+ "quotes": [ /* 2-4個 */ ]
+ }
+ /* 主役+対比1-3人 = 計 3-5 人 */
+ ]
+ }
 }
 ```
 入力ガイド:
@@ -192,29 +192,29 @@
 
 ```json
 "layoutData": {
-  "context": {
-    "mode": "single",
-    "lineup": [
-      { "order": 1, "name": "丸佳浩", "pos": "中", "ops": ".812" },
-      { "order": 2, "name": "吉川尚輝", "pos": "二", "ops": ".745" },
-      { "order": 3, "name": "岡本和真", "pos": "一", "ops": "1.013" }
-      /* 1-9番 */
-    ],
-    "rotation": [
-      { "name": "戸郷翔征", "era": "2.45", "win": 8, "ip": "85.0" },
-      { "name": "山崎伊織", "era": "3.10", "win": 6, "ip": "72.0" }
-      /* 5-6人 */
-    ],
-    "comparison": {
-      "team": "巨人",
-      "league": "セ平均",
-      "metrics": [
-        { "label": "得点",   "team": 412, "league": 320 },
-        { "label": "失点",   "team": 305, "league": 350, "lowerBetter": true },
-        { "label": "OPS",    "team": ".752", "league": ".698" }
-      ]
-    }
-  }
+ "context": {
+ "mode": "single",
+ "lineup": [
+ { "order": 1, "name": "丸佳浩", "pos": "中", "ops": ".812" },
+ { "order": 2, "name": "吉川尚輝", "pos": "二", "ops": ".745" },
+ { "order": 3, "name": "岡本和真", "pos": "一", "ops": "1.013" }
+ /* 1-9番 */
+ ],
+ "rotation": [
+ { "name": "戸郷翔征", "era": "2.45", "win": 8, "ip": "85.0" },
+ { "name": "山崎伊織", "era": "3.10", "win": 6, "ip": "72.0" }
+ /* 5-6人 */
+ ],
+ "comparison": {
+ "team": "巨人",
+ "league": "セ平均",
+ "metrics": [
+ { "label": "得点", "team": 412, "league": 320 },
+ { "label": "失点", "team": 305, "league": 350, "lowerBetter": true },
+ { "label": "OPS", "team": ".752", "league": ".698" }
+ ]
+ }
+ }
 }
 ```
 入力ガイド:
@@ -229,21 +229,21 @@
 
 ```json
 "layoutData": {
-  "arsenal": {
-    "mode": "single",
-    "pitches": [
-      { "name": "ストレート",   "pct": 48, "avg": 0.205, "velocity": 152, "color": "#ef4444" },
-      { "name": "スプリット",   "pct": 22, "avg": 0.150, "velocity": 138, "color": "#3b82f6" },
-      { "name": "スライダー",   "pct": 18, "avg": 0.180, "velocity": 132, "color": "#10b981" },
-      { "name": "カーブ",       "pct": 8,  "avg": 0.250, "velocity": 118, "color": "#f59e0b" },
-      { "name": "チェンジアップ","pct": 4,  "avg": 0.200, "velocity": 128, "color": "#8b5cf6" }
-    ]
-  }
+ "arsenal": {
+ "mode": "single",
+ "pitches": [
+ { "name": "ストレート", "pct": 48, "avg": 0.205, "velocity": 152, "color": "#ef4444" },
+ { "name": "スプリット", "pct": 22, "avg": 0.150, "velocity": 138, "color": "#3b82f6" },
+ { "name": "スライダー", "pct": 18, "avg": 0.180, "velocity": 132, "color": "#10b981" },
+ { "name": "カーブ", "pct": 8, "avg": 0.250, "velocity": 118, "color": "#f59e0b" },
+ { "name": "チェンジアップ","pct": 4, "avg": 0.200, "velocity": 128, "color": "#8b5cf6" }
+ ]
+ }
 }
 ```
 入力ガイド (★投手専用★):
 - mode: "single" (1投手) / "compare" (今季vs昨季の球種変化) / "vs_batter" (対打者別)
-  - 省略可: pitches のみなら "single" / comparePitches あれば "compare" / vsBatter あれば "vs_batter" と自動推定
+ - 省略可: pitches のみなら "single" / comparePitches あれば "compare" / vsBatter あれば "vs_batter" と自動推定
 - pitches: **4-6 種類**。pct は割合% の整数または小数(合計 100% にする)
 - ★avg は数値で出力★(0.205 のような数値リテラル)。**`".205"` のような文字列は NG(アプリで表示崩壊)**
 - velocity: 球速 km/h(数値、整数推奨)
@@ -252,25 +252,25 @@
 compare モード用の追加フィールド:
 ```json
 "layoutData": {
-  "arsenal": {
-    "mode": "compare",
-    "compareLabel": "昨季",
-    "pitches":        [ { "name": "ストレート", "pct": 48, "avg": 0.205, "velocity": 152, "color": "#ef4444" }, ... ],
-    "comparePitches": [ { "name": "ストレート", "pct": 52, "avg": 0.240, "velocity": 150, "color": "#ef4444" }, ... ]
-  }
+ "arsenal": {
+ "mode": "compare",
+ "compareLabel": "昨季",
+ "pitches": [ { "name": "ストレート", "pct": 48, "avg": 0.205, "velocity": 152, "color": "#ef4444" }, ... ],
+ "comparePitches": [ { "name": "ストレート", "pct": 52, "avg": 0.240, "velocity": 150, "color": "#ef4444" }, ... ]
+ }
 }
 ```
 
 vs_batter モード用の追加フィールド:
 ```json
 "layoutData": {
-  "arsenal": {
-    "mode": "vs_batter",
-    "vsBatter": {
-      "vsRight": [ { "name": "ストレート", "pct": 50, "avg": 0.220, "color": "#ef4444" }, ... ],
-      "vsLeft":  [ { "name": "ストレート", "pct": 45, "avg": 0.180, "color": "#ef4444" }, ... ]
-    }
-  }
+ "arsenal": {
+ "mode": "vs_batter",
+ "vsBatter": {
+ "vsRight": [ { "name": "ストレート", "pct": 50, "avg": 0.220, "color": "#ef4444" }, ... ],
+ "vsLeft": [ { "name": "ストレート", "pct": 45, "avg": 0.180, "color": "#ef4444" }, ... ]
+ }
+ }
 }
 ```
 
@@ -280,20 +280,20 @@ vs_batter モード用の追加フィールド:
 
 ```json
 "layoutData": {
-  "heatmap": {
-    "mode": "vs_handedness",
-    "vsRight": [".180", ".240", ".290",   ".220", ".310", ".340",   ".150", ".220", ".260"],
-    "vsLeft":  [".200", ".260", ".280",   ".210", ".280", ".320",   ".170", ".230", ".240"]
-  }
+ "heatmap": {
+ "mode": "vs_handedness",
+ "vsRight": [".180", ".240", ".290", ".220", ".310", ".340", ".150", ".220", ".260"],
+ "vsLeft": [".200", ".260", ".280", ".210", ".280", ".320", ".170", ".230", ".240"]
+ }
 }
 ```
 mode: "single" の場合:
 ```json
 "layoutData": {
-  "heatmap": {
-    "mode": "single",
-    "zones": [".180", ".240", ".290",   ".220", ".310", ".340",   ".150", ".220", ".260"]
-  }
+ "heatmap": {
+ "mode": "single",
+ "zones": [".180", ".240", ".290", ".220", ".310", ".340", ".150", ".220", ".260"]
+ }
 }
 ```
 入力ガイド (★打者専用★):
@@ -306,79 +306,79 @@ mode: "single" の場合:
 <schema_script>
 各 script:
 {
-  id: 連番(1から),
-  speaker: "A" or "B",
-  emoji: "👨‍🏫"(A固定) or "😲🤔🤯😨😯🧐😆🥹🥰😌🤩"等(B),
-  text: "テロップ文(改行は \\n)、強調は【】「」『』",
-  speech: "TTS用読み仮名(漢字を必ずひらがなに、数字も読み仮名)",
-  isCatchy: true (id:1のみ),
-  layoutType: "...",  ← 切替時のみ
-  scenePreset: "default|cinematic_zoom|neon_burst|mono_drama|pastel_pop|blackboard|breaking_news",  ← ★v5.19.6新★ シーン全体の演出を切替 (紙芝居脱却用)。シーン毎に違う preset を当てると同じ動画でも飽きない
-  spotlightMode: "default|quote|stats_grid|single_metric",  ← ★v5.18.14新★ 選手スポット表示時のモード。シーンごとに切替可 (省略時はlayoutData.spotlight.mode を継承)
-  highlight: "comparisonsのid",  ← 該当指標の話してる時 (ranking でも metric.id を兼ねる旧来仕様)
-  highlightScope: "variants[].id",  ← ★v5.19.6新★ 同じ指標でも 'overall'/'vs_left'/'vs_right'/'last_year' 等のスコープを選んで表示
-  focusEntry: "spotlight時のid (player.id) または ranking時のentry.name",
-  focusQuoteIndex: 0,  ← ★v5.18.13新★ 同じ player の中で別の quote を選ぶ時のインデックス (player.quotes[idx])
-  focusMetric: "ranking.metrics[].id",  ← ★v5.18.13新★ ranking で動画中に metric を切替える時の専用フィールド (highlight より優先)
-  textSize: "xl|l|m|s",  ← フェーズB-D で使用
-  zoomBoost: "zoom|shake|zoomShake",  ← ★v5.18新★ 重要発言の演出。1動画 2-3 箇所まで(乱用NG)
-  se: "hook_impact|highlight_ping|stat_reveal|shock_hit|success_chime|warning_alert|transition_swoosh|outro_fade|null"
+ id: 連番(1から),
+ speaker: "A" or "B",
+ emoji: "👨‍🏫"(A固定) or "😲🤔🤯😨😯🧐😆🥹🥰😌🤩"等(B),
+ text: "テロップ文(改行は \\n)、強調は【】「」『』",
+ speech: "TTS用読み仮名(漢字を必ずひらがなに、数字も読み仮名)",
+ isCatchy: true (id:1のみ),
+ layoutType: "...", ← 切替時のみ
+ scenePreset: "default|cinematic_zoom|neon_burst|mono_drama|pastel_pop|blackboard|breaking_news", ← シーン全体の演出を切替 (紙芝居脱却用)。シーン毎に違う preset を当てると同じ動画でも飽きない
+ spotlightMode: "default|quote|stats_grid|single_metric", ← 選手スポット表示時のモード。シーンごとに切替可 (省略時はlayoutData.spotlight.mode を継承)
+ highlight: "comparisonsのid", ← 該当指標の話してる時 (ranking でも metric.id を兼ねる旧来仕様)
+ highlightScope: "variants[].id", ← 同じ指標でも 'overall'/'vs_left'/'vs_right'/'last_year' 等のスコープを選んで表示
+ focusEntry: "spotlight時のid (player.id) または ranking時のentry.name",
+ focusQuoteIndex: 0, ← 同じ player の中で別の quote を選ぶ時のインデックス (player.quotes[idx])
+ focusMetric: "ranking.metrics[].id", ← ranking で動画中に metric を切替える時の専用フィールド (highlight より優先)
+ textSize: "xl|l|m|s", ← フェーズB-D で使用
+ zoomBoost: "zoom|shake|zoomShake", ← 重要発言の演出。1動画 2-3 箇所まで(乱用NG)
+ se: "hook_impact|highlight_ping|stat_reveal|shock_hit|success_chime|warning_alert|transition_swoosh|outro_fade|null"
 }
 ★zoomBoost 使い分け★
-  - "zoom": ポジティブな衝撃データ (「OPS .950超え」)
-  - "shake": ネガティブ驚き (「実は防御率11.20」)
-  - "zoomShake": オチ直前の最大盛り上げ (「覚醒の理由は…」)
+ - "zoom": ポジティブな衝撃データ (「OPS .950超え」)
+ - "shake": ネガティブ驚き (「実は防御率11.20」)
+ - "zoomShake": オチ直前の最大盛り上げ (「覚醒の理由は…」)
 ★id:1 (hook) は zoomBoost 指定不要★ — 自動で冒頭フラッシュ + 太鼓SEが入る
 
 ### scripts 配列の完全な実例 (1動画 28-30 シーン)
 
 ```json
 "scripts": [
-  /* ===== id:1 動画タイトル (フック、isCatchy: true) ===== */
-  {
-    "id": 1,
-    "speaker": "A",
-    "emoji": "👨‍🏫",
-    "text": "岡本和真\n【.305】\n覚醒の理由",
-    "speech": "おかもとかずまの打率さんわりごぶ。覚醒の理由を解説します。",
-    "isCatchy": true,
-    "layoutType": "radar_compare",
-    "textSize": "xl"
-  },
+ /* ===== id:1 動画タイトル (フック、isCatchy: true) ===== */
+ {
+ "id": 1,
+ "speaker": "A",
+ "emoji": "👨‍🏫",
+ "text": "岡本和真\n【.305】\n覚醒の理由",
+ "speech": "おかもとかずまの打率さんわりごぶ。覚醒の理由を解説します。",
+ "isCatchy": true,
+ "layoutType": "radar_compare",
+ "textSize": "xl"
+ },
 
-  /* ===== id:2-3 状況設定 (A→B 呼び合いで開始) ===== */
-  { "id": 2, "speaker": "A", "emoji": "👨‍🏫", "text": "もえかちゃん\n岡本選手\n知ってる?", "speech": "もえかちゃん、岡本選手知ってる?", "textSize": "m" },
-  { "id": 3, "speaker": "B", "emoji": "🤔", "text": "巨人の\n4番ですよね", "speech": "巨人の四番ですよね。", "textSize": "m" },
+ /* ===== id:2-3 状況設定 (A→B 呼び合いで開始) ===== */
+ { "id": 2, "speaker": "A", "emoji": "👨‍🏫", "text": "もえかちゃん\n岡本選手\n知ってる?", "speech": "もえかちゃん、岡本選手知ってる?", "textSize": "m" },
+ { "id": 3, "speaker": "B", "emoji": "🤔", "text": "巨人の\n4番ですよね", "speech": "巨人の四番ですよね。", "textSize": "m" },
 
-  /* ===== id:4-8 第1ハイライト: 打率 (variants で対左/対右切替) ===== */
-  { "id": 4, "speaker": "A", "emoji": "👨‍🏫", "text": "今季の打率は\n【.305】", "speech": "今季の打率はさんわりごぶ。", "highlight": "avg", "highlightScope": "overall", "scenePreset": "cinematic_zoom", "textSize": "l", "zoomBoost": "zoom", "se": "stat_reveal" },
-  { "id": 5, "speaker": "B", "emoji": "😲", "text": "凄い数字です\nね!", "speech": "すごい数字ですね!", "textSize": "m" },
-  { "id": 6, "speaker": "A", "emoji": "👨‍🏫", "text": "ですが対左だと\n【.201】", "speech": "ですが対左だとにわりいちぶ。", "highlight": "avg", "highlightScope": "vs_left", "scenePreset": "mono_drama", "textSize": "l", "se": "shock_hit" },
-  { "id": 7, "speaker": "B", "emoji": "🤯", "text": "1割も\n落ちてる…", "speech": "いちわりもおちてる…", "textSize": "m" },
-  { "id": 8, "speaker": "A", "emoji": "👨‍🏫", "text": "対右だと\n【.342】の\n打ち分け", "speech": "対右だとさんわりよんぶの打ち分け。", "highlight": "avg", "highlightScope": "vs_right", "scenePreset": "default", "textSize": "m" },
+ /* ===== id:4-8 第1ハイライト: 打率 (variants で対左/対右切替) ===== */
+ { "id": 4, "speaker": "A", "emoji": "👨‍🏫", "text": "今季の打率は\n【.305】", "speech": "今季の打率はさんわりごぶ。", "highlight": "avg", "highlightScope": "overall", "scenePreset": "cinematic_zoom", "textSize": "l", "zoomBoost": "zoom", "se": "stat_reveal" },
+ { "id": 5, "speaker": "B", "emoji": "😲", "text": "凄い数字です\nね!", "speech": "すごい数字ですね!", "textSize": "m" },
+ { "id": 6, "speaker": "A", "emoji": "👨‍🏫", "text": "ですが対左だと\n【.201】", "speech": "ですが対左だとにわりいちぶ。", "highlight": "avg", "highlightScope": "vs_left", "scenePreset": "mono_drama", "textSize": "l", "se": "shock_hit" },
+ { "id": 7, "speaker": "B", "emoji": "🤯", "text": "1割も\n落ちてる…", "speech": "いちわりもおちてる…", "textSize": "m" },
+ { "id": 8, "speaker": "A", "emoji": "👨‍🏫", "text": "対右だと\n【.342】の\n打ち分け", "speech": "対右だとさんわりよんぶの打ち分け。", "highlight": "avg", "highlightScope": "vs_right", "scenePreset": "default", "textSize": "m" },
 
-  /* ===== id:9-13 第2ハイライト: スポットライト (focusEntry + spotlightMode) ===== */
-  { "id": 9, "speaker": "A", "emoji": "👨‍🏫", "text": "選手詳細\n見てみよう", "speech": "選手詳細を見てみよう。", "layoutType": "player_spotlight", "focusEntry": "okamoto", "spotlightMode": "stats_grid", "textSize": "m", "se": "transition_swoosh" },
-  { "id": 10, "speaker": "B", "emoji": "🧐", "text": "OPS .945は\n突出して\nますね", "speech": "オーピーエスきゅーよんごは突出してますね。", "spotlightMode": "single_metric", "scenePreset": "neon_burst", "textSize": "m" },
-  { "id": 11, "speaker": "A", "emoji": "👨‍🏫", "text": "本人は\nこう語る", "speech": "本人はこう語る。", "spotlightMode": "quote", "focusQuoteIndex": 0, "textSize": "m" },
-  { "id": 12, "speaker": "A", "emoji": "👨‍🏫", "text": "そして\n別の取材では", "speech": "そして別の取材では。", "spotlightMode": "quote", "focusQuoteIndex": 1, "textSize": "m" },
-  { "id": 13, "speaker": "B", "emoji": "🥹", "text": "謙虚な姿勢が\n素敵です", "speech": "けんきょなしせいがすてきです。", "textSize": "m" },
+ /* ===== id:9-13 第2ハイライト: スポットライト (focusEntry + spotlightMode) ===== */
+ { "id": 9, "speaker": "A", "emoji": "👨‍🏫", "text": "選手詳細\n見てみよう", "speech": "選手詳細を見てみよう。", "layoutType": "player_spotlight", "focusEntry": "okamoto", "spotlightMode": "stats_grid", "textSize": "m", "se": "transition_swoosh" },
+ { "id": 10, "speaker": "B", "emoji": "🧐", "text": "OPS .945は\n突出して\nますね", "speech": "オーピーエスきゅーよんごは突出してますね。", "spotlightMode": "single_metric", "scenePreset": "neon_burst", "textSize": "m" },
+ { "id": 11, "speaker": "A", "emoji": "👨‍🏫", "text": "本人は\nこう語る", "speech": "本人はこう語る。", "spotlightMode": "quote", "focusQuoteIndex": 0, "textSize": "m" },
+ { "id": 12, "speaker": "A", "emoji": "👨‍🏫", "text": "そして\n別の取材では", "speech": "そして別の取材では。", "spotlightMode": "quote", "focusQuoteIndex": 1, "textSize": "m" },
+ { "id": 13, "speaker": "B", "emoji": "🥹", "text": "謙虚な姿勢が\n素敵です", "speech": "けんきょなしせいがすてきです。", "textSize": "m" },
 
-  /* ===== id:14-19 第3ハイライト: ランキング (focusMetric で metric 切替) ===== */
-  { "id": 14, "speaker": "A", "emoji": "👨‍🏫", "text": "セ・リーグ\n打率\nランキング", "speech": "セ・リーグの打率ランキング。", "layoutType": "ranking", "focusMetric": "avg", "scenePreset": "default", "textSize": "m", "se": "transition_swoosh" },
-  { "id": 15, "speaker": "B", "emoji": "😲", "text": "岡本が\n1位なんですか", "speech": "おかもとがいちいなんですか。", "textSize": "m" },
-  { "id": 16, "speaker": "A", "emoji": "👨‍🏫", "text": "本塁打でも\n見てみよう", "speech": "本塁打でも見てみよう。", "focusMetric": "hr", "textSize": "m" },
-  { "id": 17, "speaker": "B", "emoji": "🤩", "text": "ここでも\n1位!", "speech": "ここでもいちい!", "textSize": "m", "zoomBoost": "zoom" },
-  { "id": 18, "speaker": "A", "emoji": "👨‍🏫", "text": "OPSは\n圧倒的", "speech": "オーピーエスはあっとうてき。", "focusMetric": "ops", "scenePreset": "breaking_news", "textSize": "m" },
-  { "id": 19, "speaker": "B", "emoji": "🤯", "text": "覚醒\nしてますね…", "speech": "かくせいしてますね…", "textSize": "m" },
+ /* ===== id:14-19 第3ハイライト: ランキング (focusMetric で metric 切替) ===== */
+ { "id": 14, "speaker": "A", "emoji": "👨‍🏫", "text": "セ・リーグ\n打率\nランキング", "speech": "セ・リーグの打率ランキング。", "layoutType": "ranking", "focusMetric": "avg", "scenePreset": "default", "textSize": "m", "se": "transition_swoosh" },
+ { "id": 15, "speaker": "B", "emoji": "😲", "text": "岡本が\n1位なんですか", "speech": "おかもとがいちいなんですか。", "textSize": "m" },
+ { "id": 16, "speaker": "A", "emoji": "👨‍🏫", "text": "本塁打でも\n見てみよう", "speech": "本塁打でも見てみよう。", "focusMetric": "hr", "textSize": "m" },
+ { "id": 17, "speaker": "B", "emoji": "🤩", "text": "ここでも\n1位!", "speech": "ここでもいちい!", "textSize": "m", "zoomBoost": "zoom" },
+ { "id": 18, "speaker": "A", "emoji": "👨‍🏫", "text": "OPSは\n圧倒的", "speech": "オーピーエスはあっとうてき。", "focusMetric": "ops", "scenePreset": "breaking_news", "textSize": "m" },
+ { "id": 19, "speaker": "B", "emoji": "🤯", "text": "覚醒\nしてますね…", "speech": "かくせいしてますね…", "textSize": "m" },
 
-  /* ===== id:20-25 ストーリーアーク後半: なぜ覚醒したか (versus_card や timeline) ===== */
-  /* ... 同様に */
+ /* ===== id:20-25 ストーリーアーク後半: なぜ覚醒したか (versus_card や timeline) ===== */
+ /* ... 同様に */
 
-  /* ===== id:26-30 締め (二択で問いかけ) ===== */
-  { "id": 28, "speaker": "A", "emoji": "👨‍🏫", "text": "皆さんは\nどう思う?", "speech": "みなさんはどうおもう?", "scenePreset": "blackboard", "textSize": "m" },
-  { "id": 29, "speaker": "B", "emoji": "🤔", "text": "コメントで\n教えて\nください", "speech": "コメントでおしえてください。", "textSize": "m" },
-  { "id": 30, "speaker": "A", "emoji": "👨‍🏫", "text": "次回も\nお楽しみに", "speech": "じかいもおたのしみに。", "textSize": "m" }
+ /* ===== id:26-30 締め (二択で問いかけ) ===== */
+ { "id": 28, "speaker": "A", "emoji": "👨‍🏫", "text": "皆さんは\nどう思う?", "speech": "みなさんはどうおもう?", "scenePreset": "blackboard", "textSize": "m" },
+ { "id": 29, "speaker": "B", "emoji": "🤔", "text": "コメントで\n教えて\nください", "speech": "コメントでおしえてください。", "textSize": "m" },
+ { "id": 30, "speaker": "A", "emoji": "👨‍🏫", "text": "次回も\nお楽しみに", "speech": "じかいもおたのしみに。", "textSize": "m" }
 ]
 ```
 

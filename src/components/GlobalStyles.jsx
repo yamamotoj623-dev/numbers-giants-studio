@@ -7,7 +7,7 @@ import React from 'react';
 
 const CSS_TEXT = `
   :root {
-    /* ★v5.17.0★ ネオン/サイバーパンク化: より明るく発光感のある値に */
+    /* ネオン/サイバーパンク化: より明るく発光感のある値に */
     /* 旧: --p: #f97316 (普通のオレンジ) */
     /* 新: --p: #ff8c1a (より明るく彩度高め)、--p-glow も強化 */
     --p: #ff8c1a;
@@ -56,10 +56,10 @@ const CSS_TEXT = `
 
   .phone { width: 360px; max-width: 92vw; aspect-ratio: 9/16; background: #0a0a0c; border-radius: 32px; border: 6px solid #18181b; box-shadow: 0 15px 40px rgba(0,0,0,0.18); overflow: hidden; position: relative; transition: border-radius 0.3s, border 0.3s; }
   .phone.square { border-radius: 0; border: 1px solid #e4e4e7; }
-  /* ★v5.19.7★ 横長 (16:9) 対応 — YouTube 通常動画向け */
+  /* 横長 (16:9) 対応 — YouTube 通常動画向け */
   .phone.landscape { width: 640px; max-width: 95vw; aspect-ratio: 16/9; }
 
-  /* ★v5.20★ 横長 (16:9) レイアウト — 完全別構図
+  /* 横長 (16:9) レイアウト — 完全別構図
      構図:
        ┌─────────────────────────────────┐
        │ ヘッダー (左上: 選手名 / 右上: 日付)│ 上 36px
@@ -79,7 +79,7 @@ const CSS_TEXT = `
     top: 10px; left: 12px; right: auto; justify-content: flex-start;
   }
   .phone.landscape .ph-date { top: 10px; right: 12px; font-size: 11px; }
-  /* ★v5.20.2★ ロゴ: top を明示的に auto にして bottom に固定 (top:10px が残ってると右上に浮く) */
+  /* ロゴ: top を明示的に auto にして bottom に固定 (top:10px が残ってると右上に浮く) */
   .phone.landscape .brand-logo-fixed {
     top: auto !important;
     bottom: 6px !important;
@@ -89,14 +89,14 @@ const CSS_TEXT = `
     transform-origin: bottom right;
     align-items: flex-end;
   }
-  /* ★v5.20.2★ 出典 (source) が右下でロゴと重なる → 横長は左下に移動 */
+  /* 出典 (source) が右下でロゴと重なる → 横長は左下に移動 */
   .phone.landscape .source {
     right: auto !important;
     left: 10px !important;
     bottom: 6px !important;
   }
 
-  /* ★v5.20.2★ テロップ: 横を広く使う — max-width 460→640、padding を 30px に詰める */
+  /* テロップ: 横を広く使う — max-width 460→640、padding を 30px に詰める */
   .phone.landscape .telop-wrap-normal,
   .phone.landscape .telop-wrap-hl {
     bottom: 8%;
@@ -111,7 +111,7 @@ const CSS_TEXT = `
     align-items: center !important;
     padding: 0 30px !important;
   }
-  /* ★v5.20.4★ テロップ本体: 横長は max 600px、文字も縦長より大きく */
+  /* テロップ本体: 横長は max 600px、文字も縦長より大きく */
   .phone.landscape .telop-bg {
     max-width: 600px;
     font-size: 1.3em;       /* 1.1 → 1.3 (横長は読ませる時間あるので大きめが映える) */
@@ -122,7 +122,7 @@ const CSS_TEXT = `
     font-size: 1.05em;
     line-height: 1.35;
   }
-  /* ★v5.20.3★ speaker 別に左右へ寄せる (中央すぎ問題対策) */
+  /* speaker 別に左右へ寄せる (中央すぎ問題対策) */
   /* speaker-a (数原・男性): 左寄り */
   .phone.landscape .telop-wrap-normal:has(.telop-bg[data-speaker="a"]),
   .phone.landscape .telop-wrap-hl:has(.telop-bg[data-speaker="a"]) {
@@ -138,7 +138,7 @@ const CSS_TEXT = `
     padding-right: 100px !important; /* 右アバター B + ロゴを避ける */
   }
 
-  /* ★v5.20.2★ アバター: テロップの両脇 (左下/右下) に小さく */
+  /* アバター: テロップの両脇 (左下/右下) に小さく */
   .phone.landscape .avatar-wrapper {
     bottom: 2% !important;
     transform: scale(0.55) !important;
@@ -158,7 +158,7 @@ const CSS_TEXT = `
     /* 上半分のみが主役表示エリア */
   }
 
-  /* ★v5.20.6★ ハイライトカード横長 — もっと縦に侵食、横は中央でコンパクトに
+  /* ハイライトカード横長 — もっと縦に侵食、横は中央でコンパクトに
      - bottom 46% → 28% (テロップ直前まで下に伸ばす)
      - width 75% → 60% (横を更に絞ってコンパクト感)
      - z-index は 20 (テロップ 25 より下層) なので衝突時は自動でテロップ優先 */
@@ -186,7 +186,7 @@ const CSS_TEXT = `
   .phone.landscape .hl-header-compact { gap: 6px; margin-bottom: 6px; flex-shrink: 0; }
   .phone.landscape .hl-radar-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
   .phone.landscape .hl-label-group { flex-direction: row; align-items: baseline; gap: 6px; }
-  /* ★v5.20.9★ 指標名を更に大きく */
+  /* 指標名を更に大きく */
   .phone.landscape .hl-label-compact { font-size: 28px; line-height: 1; letter-spacing: 0.5px; }
   .phone.landscape .hl-kana-compact { font-size: 11px; }
   /* 計算式 (あれば 1 行) */
@@ -194,7 +194,7 @@ const CSS_TEXT = `
   .phone.landscape .hl-formula-compact .eq-label { font-size: 8px; padding-right: 5px; }
   .phone.landscape .hl-formula-compact .eq-text { font-size: 12px; }
 
-  /* ★v5.20.9★ 値比較: card の残り高さを全部使う + 縦中央寄せ */
+  /* 値比較: card の残り高さを全部使う + 縦中央寄せ */
   .phone.landscape .highlight-card > .hl-values {
     flex: 1;
     align-items: center;
@@ -202,14 +202,14 @@ const CSS_TEXT = `
     padding: 6px 0;
   }
   .phone.landscape .hl-values { gap: 14px; }
-  /* ★v5.20.9★ 指標値を更に大きく (空きスペースを活用) */
+  /* 指標値を更に大きく (空きスペースを活用) */
   .phone.landscape .hl-val-main .num { font-size: 50px; letter-spacing: -1px; }
   .phone.landscape .hl-val-sub .num { font-size: 34px; }
   .phone.landscape .hl-val-main .tag,
   .phone.landscape .hl-val-sub .tag { font-size: 11px; margin-top: 3px; }
   .phone.landscape .hl-vs { font-size: 14px; }
 
-  /* ★v5.20.9★ 下部 context: 下に張り付かせる (margin-top: auto) */
+  /* 下部 context: 下に張り付かせる (margin-top: auto) */
   .phone.landscape .hl-context-row {
     gap: 5px;
     flex: none;
@@ -236,7 +236,7 @@ const CSS_TEXT = `
   .phone.landscape .hl-criteria-side .label { font-size: 8px; white-space: nowrap; }
   .phone.landscape .hl-criteria-side .value { font-size: 12px; white-space: nowrap; }
 
-  /* ★v5.20.5★ hook (id:1) — 横長専用配置
+  /* hook (id:1) — 横長専用配置
      ベースの top: 36% + transform: translate(-50%, -50%) を活かして垂直中央寄せ
      横長は画面が低いのでテロップを縦中央〜上寄り、stats を下半分に */
   .phone.landscape .hook-telop-wrap {
@@ -264,8 +264,8 @@ const CSS_TEXT = `
   .phone.record-mode .duration-badge { display: none; }
   .phone.record-mode .safe-zone-guide { display: none !important; }
 
-  /* ★v5.17.0★ 球場フレア (Gemini提言③: 背景の抜け感) — 右上から差し込む光
-     ★v5.18.4★ より動きを強化: 3層フレア + ゆっくり移動でカクテル光線感 */
+  /* 球場フレア (Gemini提言③: 背景の抜け感) — 右上から差し込む光
+     より動きを強化: 3層フレア + ゆっくり移動でカクテル光線感 */
   .phone::before {
     content: '';
     position: absolute;
@@ -286,7 +286,7 @@ const CSS_TEXT = `
     100% { opacity: 0.6; transform: translate(0, 0) scale(1); }
   }
 
-  /* ★v5.17.0★ 微細なノイズアニメ (Gemini提言③) — 動きを錯覚させる */
+  /* 微細なノイズアニメ (Gemini提言③) — 動きを錯覚させる */
   .phone::after {
     content: '';
     position: absolute;
@@ -307,7 +307,7 @@ const CSS_TEXT = `
     100% { transform: translate(0, 0); }
   }
 
-  /* ★v5.18.4★ Ken Burns エフェクト: レイアウト全体にじわじわズーム
+  /* Ken Burns エフェクト: レイアウト全体にじわじわズーム
      12秒周期で 1.0 → 1.04 → 1.0 のゆっくりした動き
      視聴者の脳に「画面が動いている」と錯覚させ、退屈感を削減 */
   @keyframes kenBurns {
@@ -317,7 +317,7 @@ const CSS_TEXT = `
     75%  { transform: scale(1.025) translate(0.3%, -0.3%); }
     100% { transform: scale(1.0)  translate(0, 0); }
   }
-  /* ★v5.21.0★ キャラの頭の小揺れ (常時) と瞬き */
+  /* キャラの頭の小揺れ (常時) と瞬き */
   @keyframes charHeadBob {
     0%, 100% { transform: rotate(0deg) translateY(0); }
     25%      { transform: rotate(-1.2deg) translateY(-1px); }
@@ -329,7 +329,7 @@ const CSS_TEXT = `
     93%, 95%           { transform: scaleY(0.1); }
   }
   .char-eyes { animation: charBlink 5s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
-  /* ★v5.21.0★ キャラSVGラッパー (絵文字 circle 代替) */
+  /* キャラSVGラッパー (絵文字 circle 代替) */
   .avatar-hl .char-wrap {
     width: 92px; height: 138px;
     display: flex; align-items: flex-end; justify-content: center;
@@ -378,7 +378,7 @@ const CSS_TEXT = `
   .ph-date::before { content: '●'; font-size: 7px; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 
-  /* ★v5.18.0★ Gemini提言: キーフレームアニメ (重要発言時のズーム/シェイク) */
+  /* Gemini提言: キーフレームアニメ (重要発言時のズーム/シェイク) */
   /* zoomBoost: 一瞬グッと寄る (0.6秒) */
   @keyframes zoomBoost {
     0% { transform: scale(1); }
@@ -413,10 +413,10 @@ const CSS_TEXT = `
   }
   .anim-zoom-shake { animation: zoomShake 0.5s ease-out; }
 
-  /* ★v5.18.0★ 冒頭フラッシュ (打撃音/ミット音と同時に画面が一瞬白く光る) */
+  /* 冒頭フラッシュ (打撃音/ミット音と同時に画面が一瞬白く光る) */
   @keyframes hookFlash {
 
-  /* ★v5.19.0★ Hook メディアオーバーレイ遷移パターン */
+  /* Hook メディアオーバーレイ遷移パターン */
   @keyframes hookMediaFlashIn {
     0% { opacity: 0; filter: brightness(3); }
     30% { opacity: 1; filter: brightness(2); }
@@ -458,7 +458,7 @@ const CSS_TEXT = `
     60% { clip-path: inset(50% 0 10% 50%); }
     100% { opacity: 0; clip-path: inset(0 100% 0 0); }
   }
-  /* ★v5.20★ HookMediaOverlay の入場アニメ — 持続アニメと連結する用に簡素化 */
+  /* HookMediaOverlay の入場アニメ — 持続アニメと連結する用に簡素化 */
   @keyframes hookEntryFade {
     0% { opacity: 0; filter: brightness(2.5); }
     100% { opacity: 1; filter: brightness(1); }
@@ -478,7 +478,7 @@ const CSS_TEXT = `
     75%  { clip-path: inset(70% 0 10% 0); }
     100% { opacity: 1; clip-path: inset(0 0 0 0); }
   }
-  /* ★v5.19.5★ 表示中の持続アニメ — 画面が揺れるレベルにインパクト強化 */
+  /* 表示中の持続アニメ — 画面が揺れるレベルにインパクト強化 */
   @keyframes hookMediaKenBurns {
     0%   { transform: scale(1) translate(0, 0); }
     25%  { transform: scale(1.15) translate(-2%, -3%); }
@@ -505,7 +505,7 @@ const CSS_TEXT = `
     86% { clip-path: inset(40% 0 30% 0); transform: translate(4px, 0) scale(1.07); filter: hue-rotate(10deg); }
     88% { clip-path: inset(0 0 0 0); transform: translate(0, 0) scale(1.05); filter: hue-rotate(0); }
   }
-  /* ★v5.19.5★ 新パターン: ズームパルス (ドンドン拡大縮小) */
+  /* 新パターン: ズームパルス (ドンドン拡大縮小) */
   @keyframes hookMediaZoomPulse {
     0%, 100% { transform: scale(1.05); }
     25% { transform: scale(1.18) rotate(0.5deg); }
@@ -553,7 +553,7 @@ const CSS_TEXT = `
     width: 100%; height: 100%;
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
-    /* ★v5.19.0★ レイアウト切替を fade + scale + slide でリッチに */
+    /* レイアウト切替を fade + scale + slide でリッチに */
     transition: opacity 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                 transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
     transform: scale(1) translateY(0);
@@ -564,7 +564,7 @@ const CSS_TEXT = `
   .phase.active { display: block; }
 
   /* ================================================================ */
-  /* ★v5.19.0★ バネアニメーション基盤                                */
+  /* バネアニメーション基盤                                */
   /* ================================================================ */
   :root {
     --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -604,14 +604,14 @@ const CSS_TEXT = `
     100% { transform: scaleX(1); }
   }
   .bar-spring {
-    /* ★v5.19.3★ 0.6s → 1.1s に延長、視認できる速さに */
+    /* 0.6s → 1.1s に延長、視認できる速さに */
     animation: barSpring 1.1s var(--spring-bounce) forwards;
     transform: scaleX(0);
     transform-origin: left;
   }
 
   /* ★ 数値カウントアップ用の弾むパルス ★ */
-  /* ★v5.19.3★ 一瞬すぎ問題: 期間を倍に、scale 倍率も大きく */
+  /* 一瞬すぎ問題: 期間を倍に、scale 倍率も大きく */
   @keyframes numReveal {
     0% { opacity: 0; transform: scale(0.3) translateY(12px); }
     35% { opacity: 1; transform: scale(1.4) translateY(-4px); }
@@ -629,7 +629,7 @@ const CSS_TEXT = `
     70% { transform: translateY(1px) scale(0.99); }
     100% { opacity: 1; transform: translateY(0) scale(1); }
   }
-  /* ★v5.19.6★ 8種類のテロップ entrance アニメ — 毎シーンで異なる動きに */
+  /* 8種類のテロップ entrance アニメ — 毎シーンで異なる動きに */
   @keyframes telopSlideRight {
     0% { opacity: 0; transform: translateX(-80px) scale(0.92); }
     60% { opacity: 1; transform: translateX(8px) scale(1.04); }
@@ -683,7 +683,7 @@ const CSS_TEXT = `
     50% { transform: translate(1px, 0) scale(0.998) rotate(0.2deg); }
     75% { transform: translate(0, 1px) scale(1.005) rotate(-0.1deg); }
   }
-  /* ★v5.19.7★ テロップ文字単位アニメ — 1文字ずつスケールイン (紙芝居脱却) */
+  /* テロップ文字単位アニメ — 1文字ずつスケールイン (紙芝居脱却) */
   @keyframes telopCharIn {
     0% { opacity: 0; transform: translateY(8px) scale(0.5); filter: blur(2px); }
     60% { opacity: 1; transform: translateY(-2px) scale(1.1); filter: blur(0); }
@@ -696,7 +696,7 @@ const CSS_TEXT = `
   }
 
   /* ★ カード/パネル出現 (弾むスケール) ★ */
-  /* ★v5.19.3★ 0.45s → 0.7s に延長 */
+  /* 0.45s → 0.7s に延長 */
   @keyframes cardBounceIn {
     0% { opacity: 0; transform: scale(0.7) translateY(20px); }
     50% { opacity: 1; transform: scale(1.06) translateY(-3px); }
@@ -718,7 +718,7 @@ const CSS_TEXT = `
   }
 
   /* ★ spotlight: 主指標の値が弾んで出現 ★ */
-  /* ★v5.19.3★ 一瞬すぎ問題: 0.65s → 1.2s、scale 0→1.5 で大胆に */
+  /* 一瞬すぎ問題: 0.65s → 1.2s、scale 0→1.5 で大胆に */
   @keyframes heroValuePop {
     0% { opacity: 0; transform: scale(0) rotate(-15deg); }
     35% { opacity: 1; transform: scale(1.5) rotate(5deg); }
@@ -825,7 +825,7 @@ const CSS_TEXT = `
     0% { opacity: 0; transform: translateY(30px) scaleY(0.7); }
     100% { opacity: 1; transform: translateY(0) scaleY(1); }
   }
-  /* ★v5.20.5★ 横長: translateX(-50%) を維持しつつ scale */
+  /* 横長: translateX(-50%) を維持しつつ scale */
   @keyframes cardExpandLandscape {
     0% { opacity: 0; transform: translateX(-50%) translateY(20px) scaleY(0.7); }
     100% { opacity: 1; transform: translateX(-50%) translateY(0) scaleY(1); }
@@ -890,14 +890,14 @@ const CSS_TEXT = `
 
   .hook-telop-wrap { position: absolute; top: 36%; left: 50%; transform: translate(-50%, -50%); z-index: 20; width: 100%; padding: 0 12px; }
   .telop-hook { font-size: 46px; font-weight: 900; text-align: center; line-height: 1.05; letter-spacing: -1.5px; color: #fff; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 10px 30px rgba(0,0,0,1); }
-  /* ★v5.20★ 行数別の自動縮小 (4/5/6行+ サポート) */
+  /* 行数別の自動縮小 (4/5/6行+ サポート) */
   .telop-hook.lines-4 { font-size: 38px; line-height: 1.02; }
   .telop-hook.lines-5 { font-size: 32px; line-height: 1.0; letter-spacing: -1.8px; }
   .telop-hook.lines-6 { font-size: 28px; line-height: 0.98; letter-spacing: -2px; }
-  /* ★v5.20★ UI から手動でフォントスケール (0.7-1.3) — projectData.hookFontScale */
+  /* UI から手動でフォントスケール (0.7-1.3) — projectData.hookFontScale */
   #phone-root[data-hook-font-scale="0.7"] .telop-hook { font-size: 0.7em; }
   .telop-hook .em-y { color: var(--neon-yellow); font-size: 1.3em; letter-spacing: -2.5px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 18px var(--neon-yellow-glow), 0 0 36px rgba(255,233,75,0.5); }
-  /* ★v5.19.2★ hook 用の em-o / em-r / em-n が未定義だったバグ修正 */
+  /* hook 用の em-o / em-r / em-n が未定義だったバグ修正 */
   .telop-hook .em-o { color: var(--p-bright); font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 14px var(--p-glow), 0 0 28px rgba(249,115,22,0.5); }
   .telop-hook .em-r { color: #FF6B47; font-size: 1.25em; letter-spacing: -1.5px; font-weight: 900; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 14px rgba(255,107,71,0.8), 0 0 28px rgba(255,107,71,0.4); }
   .telop-hook .em-n { color: var(--neon-yellow); font-family: monospace; font-size: 1.3em; letter-spacing: -1px; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 0 12px var(--neon-yellow-glow); }
@@ -980,7 +980,7 @@ const CSS_TEXT = `
   .radar-svg-box svg { width: 100%; height: auto; display: block; }
 
   /* 描画時間 0.8s に短縮 */
-  /* ★v5.19.0★ レーダー描画アニメを fade → バネバウンスに昇格
+  /* レーダー描画アニメを fade → バネバウンスに昇格
      ポリゴンが scale(0) から弾んで出現、ドットは順次ポップイン */
   .phase[data-p="normal"].active .radar-main-poly {
     animation: radarPolyBounce 0.6s var(--spring-bounce) forwards;
@@ -1016,8 +1016,8 @@ const CSS_TEXT = `
   .phase[data-p="normal"].active .radar-label-group:nth-of-type(5) { animation-delay: 0.75s; }
   @keyframes radarFadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-  /* ★v5.18.5★ zoomBoost (shake/zoom) 発火時は出現アニメを完全抑制
-     ★v5.18.6★ ハイライト系・テロップ・stats-table も追加 (出現アニメすべて)
+  /* zoomBoost (shake/zoom) 発火時は出現アニメを完全抑制
+     ハイライト系・テロップ・stats-table も追加 (出現アニメすべて)
      キーフレームアニメだけが純粋に走るようにする (シェイクが「描画途中の動き」と被らない)
      注: 継続する infinite 系アニメ (cardPulse, numberPulse 等) は止めない
          → 初回出現タイミングだけ即時化
@@ -1049,7 +1049,7 @@ const CSS_TEXT = `
     opacity: 1 !important;
     transform: translateY(0) scaleY(1) !important;
   }
-  /* ★v5.20.12★ 横長は translateX(-50%) で中央配置するため、zoom時も translateX を維持 */
+  /* 横長は translateX(-50%) で中央配置するため、zoom時も translateX を維持 */
   .phone.landscape .anim-layer[data-zoom-active="true"] .highlight-card {
     transform: translateX(-50%) translateY(0) scaleY(1) !important;
   }
@@ -1098,7 +1098,7 @@ const CSS_TEXT = `
 
   /* デフォルト配置=中央 */
   .telop-wrap-normal, .telop-wrap-hl { align-items: center; }
-  /* ★v5.18.1★ テロップは bottom:20% の位置にあり、アバター(bottom:13% +高さ85px≒17%) より上にあるので
+  /* テロップは bottom:20% の位置にあり、アバター(bottom:13% +高さ85px≒17%) より上にあるので
      左端まで使ってよい。アバターの真上を通過しても重ならない。
      - speaker-a (数原): 左端〜右端32pxまで使える
      - speaker-b (もえか): 左端14px〜右端60px (Shorts右UI回避) */
@@ -1108,7 +1108,7 @@ const CSS_TEXT = `
   .telop-wrap-normal:has(.telop-bg[data-speaker="b"]),
   .telop-wrap-hl:has(.telop-bg[data-speaker="b"]) { align-items: flex-end; padding-left: 6px; padding-right: 50px; }
 
-  /* ★v5.19.8★ テロップ幅をセーフゾーン目一杯に + 日本語の自動改行を制御 (変な位置で折り返さない)
+  /* テロップ幅をセーフゾーン目一杯に + 日本語の自動改行を制御 (変な位置で折り返さない)
      - speaker-a 側 padding 32px → speaker-b 側 padding 60px の差分を考慮:
        phone width 360px、左端 8px + 右側UI 60px ≒ 292px 取れる
      - max-width: 320px に拡大 (一部 UI とは重なる、ただ視認最優先) */
@@ -1117,7 +1117,7 @@ const CSS_TEXT = `
     max-width: 320px;
     border: 2px solid rgba(255,255,255,0.15); position: relative; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
   }
-  /* ★v5.19.8★ telop-normal は word-break: keep-all でブラウザの自動改行を抑制
+  /* telop-normal は word-break: keep-all でブラウザの自動改行を抑制
      (\n を入れた箇所だけで改行、不要な縦長化を防ぐ) */
   .telop-bg .telop-normal {
     word-break: keep-all;
@@ -1127,7 +1127,7 @@ const CSS_TEXT = `
   /* 横長 (16:9) ではテロップを横に長く許可 */
   .phone.landscape .telop-bg { max-width: 540px; }
 
-  /* ★v5.18.1★ speaker-a (数原): オレンジ→青系へ (オレンジは数値強調用に取っておく) */
+  /* speaker-a (数原): オレンジ→青系へ (オレンジは数値強調用に取っておく) */
   .telop-bg[data-speaker="a"] { border-color: rgba(56,189,248,0.85); box-shadow: 0 4px 16px rgba(56,189,248,0.4), 0 0 24px rgba(56,189,248,0.2); }
   /* speaker-b (もえか): ローズピンク枠 (変更なし) */
   .telop-bg[data-speaker="b"] { border-color: rgba(251,113,133,0.85); box-shadow: 0 4px 16px rgba(251,113,133,0.35), 0 0 24px rgba(251,113,133,0.15); }
@@ -1135,7 +1135,7 @@ const CSS_TEXT = `
   /* 吹き出し尻尾: 話者アバター方向に出す */
   .telop-bg::before, .telop-bg::after { content: ''; position: absolute; width: 0; height: 0; border-style: solid; display: none; }
 
-  /* ★v5.18.1★ speaker-a: 尻尾も青系に */
+  /* speaker-a: 尻尾も青系に */
   .telop-bg[data-speaker="a"]::before {
     display: block;
     left: 22px; bottom: -14px;
@@ -1175,7 +1175,7 @@ const CSS_TEXT = `
   .telop-normal .em-r { color: #FF6B47; font-size: 1.15em; text-shadow: 0 0 10px rgba(255,107,71,0.7); }
   .telop-normal .em-n { color: var(--neon-yellow); font-family: monospace; font-size: 1.2em; letter-spacing: -0.5px; text-shadow: 0 0 8px var(--neon-yellow-glow); }
 
-  /* ★v5.19.5★ テロップアニメは React 側 inline style で確実に再発火させる方式に変更
+  /* テロップアニメは React 側 inline style で確実に再発火させる方式に変更
      ここの CSS animation 設定はコメントアウト (inline style と競合させない)
   .phase.active .telop-wrap-normal .telop-bg { animation: telopBounceIn 0.5s var(--spring-bounce) 0.25s backwards !important; }
   .phase.active .telop-wrap-hl .telop-bg { animation: telopBounceIn 0.5s var(--spring-bounce) 0.25s backwards !important; }
@@ -1354,7 +1354,7 @@ const CSS_TEXT = `
   .avatar-hl.b { right: 72px; }
   .avatar-hl.active { transform: scale(1.1); animation: avatarTalk 0.6s ease-in-out infinite; }
   .avatar-hl.passive { transform: scale(0.88); opacity: 0.4; }
-  /* ★v5.21.0★ SVG キャラモード時は内部 svg で個別 opacity 制御するため、外側の opacity 上書きは無効化 */
+  /* SVG キャラモード時は内部 svg で個別 opacity 制御するため、外側の opacity 上書きは無効化 */
   .avatar-hl.passive:has(.char-wrap) { opacity: 1; transform: scale(0.92); }
   .avatar-hl.active:has(.char-wrap) { transform: scale(1.05); animation: none; }
   .avatar-hl .circle { width: 46px; height: 46px; border-radius: 50%; background: #18181b; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 2px solid #52525b; position: relative; }
@@ -1445,7 +1445,7 @@ const CSS_TEXT = `
   .phase-d.active .outro-point:nth-child(2) .check { animation-delay: 0.75s; }
   .phase-d.active .outro-point:nth-child(3) .check { animation-delay: 1.05s; }
 
-  /* いいね/登録 アクションボタン (★v5.11.2 で復活、目立たせ★) */
+  /* いいね/登録 アクションボタン */
   .outro-actions { flex: 1; display: flex; gap: 10px; }
   .outro-action { flex: 1; background: rgba(24,24,27,0.92); border: 2px solid; border-radius: 14px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); justify-content: center; position: relative; overflow: hidden; }
   .outro-action .icon { font-size: 32px; line-height: 1; }
@@ -1489,13 +1489,13 @@ const CSS_TEXT = `
   .phone.fullscreen.square {
     aspect-ratio: 9/16;
   }
-  /* ★v5.20.2★ 横長 (16:9) フルスクリーン: 幅基準で算出 (高さは 9/16 で決まる) */
+  /* 横長 (16:9) フルスクリーン: 幅基準で算出 (高さは 9/16 で決まる) */
   .phone.fullscreen.landscape {
     width: min(95vw, calc(95vh * 16 / 9)) !important;
     height: auto !important;
     aspect-ratio: 16/9 !important;
   }
-  /* ★v5.20.4★ 録画モード横長: ピクセル比固定 (1280x720 想定、固定幅で出力安定化) */
+  /* 録画モード横長: ピクセル比固定 (1280x720 想定、固定幅で出力安定化) */
   .phone.record-mode.landscape {
     width: 1280px !important;
     height: 720px !important;
@@ -1515,7 +1515,7 @@ const CSS_TEXT = `
     border-radius: 0 !important;
     border: none !important;
   }
-  /* ★v5.20.2★ 正方 (1:1) フルスクリーン */
+  /* 正方 (1:1) フルスクリーン */
   .phone.fullscreen:not(.landscape).square[data-ar="1:1"] {
     width: min(95vw, 95vh) !important;
     height: auto !important;
@@ -1545,7 +1545,7 @@ const CSS_TEXT = `
     width: 100%;
   }
 
-  /* ★v5.17.0★ Gemini提言②: 暴力的にフォントを太く
+  /* Gemini提言②: 暴力的にフォントを太く
      - .font-impact: 数値専用 (Anton, 超極太コンデンスド英数字)
      - .font-headline: ヘッドライン (Bebas Neue, 細長い極太)
      - .font-jp-heavy: 日本語の最重量 (M PLUS 1p weight 900)
@@ -1569,7 +1569,7 @@ const CSS_TEXT = `
     letter-spacing: -0.02em;
   }
 
-  /* ★v5.17.0★ ネオン主要数値クラス (player_spotlight の primary-stat 等で使う) */
+  /* ネオン主要数値クラス (player_spotlight の primary-stat 等で使う) */
   .neon-number {
     color: var(--pure-white);
     text-shadow:
@@ -1598,8 +1598,8 @@ const CSS_TEXT = `
       0 0 4px rgba(255,255,255,0.5);
   }
 
-  /* ★v5.19.2★ 勝者数値のシマー (光の筋が横切る) — VS カード等で利用 */
-  /* ★v5.19.3★ 2.5s → 3.8s にゆっくり、目で追える速度に */
+  /* 勝者数値のシマー (光の筋が横切る) — VS カード等で利用 */
+  /* 2.5s → 3.8s にゆっくり、目で追える速度に */
   @keyframes shimmerSweep {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
@@ -1619,7 +1619,7 @@ const CSS_TEXT = `
     animation: shimmerSweep 3.8s ease-in-out infinite;
   }
 
-  /* ★v5.19.2★ 数値のきらりん (1回だけ光る) */
+  /* 数値のきらりん (1回だけ光る) */
   @keyframes numFlash {
     0% { filter: brightness(1); }
     15% { filter: brightness(1.8); }
@@ -1628,11 +1628,11 @@ const CSS_TEXT = `
   }
   .num-flash { animation: numFlash 0.6s ease-out; }
 
-  /* ★v5.19.6★ scenePreset — 1シーン全体の演出を束ねたバリアント
+  /* scenePreset — 1シーン全体の演出を束ねたバリアント
      phone-root に data-scene-preset="..." が付与され、ここで上書き */
 
   /* cinematic_zoom: 周辺暗減 (vignette) のみ。
-     ★v5.20.15★ 拡大アニメは scenePreset 切替時に必ず再ペイント誘発 → 子の cardBounceIn 等が再発火するため完全撤去。
+     拡大アニメは scenePreset 切替時に必ず再ペイント誘発 → 子の cardBounceIn 等が再発火するため完全撤去。
      代替: vignette だけでも「映画のような集中効果」は十分得られる。 */
   #phone-root[data-scene-preset="cinematic_zoom"]::after {
     content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 5;
@@ -1651,7 +1651,7 @@ const CSS_TEXT = `
     mix-blend-mode: screen;
     animation: scenePresetNeonShift 4s ease-in-out infinite;
   }
-  /* ★v5.20.15★ filter を .anim-layer に当てると scenePreset 切替で再ペイント誘発 → 子要素のアニメ再発火。
+  /* filter を .anim-layer に当てると scenePreset 切替で再ペイント誘発 → 子要素のアニメ再発火。
      filter は完全撤去、overlay の発光だけで「ネオン感」を表現 */
   @keyframes scenePresetNeonShift {
     0%, 100% { transform: translate(0, 0); }

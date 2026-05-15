@@ -85,7 +85,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
 
   const comparisons = projectData.comparisons || [];
 
-  // ★v5.18.4★ focusEntry 候補を layoutData から動的取得
+  // focusEntry 候補を layoutData から動的取得
   // player_spotlight: spotlight.players[].id / .name
   // ranking: ranking.metrics[].entries[].name
   // versus_card: versus.categoryScores[].label (これは通常 highlight の方が適切なので除外)
@@ -162,7 +162,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                 )}
               </div>
               <div className="flex items-center gap-0.5">
-                {/* ★v5.20.13★ ここから再生 */}
+                {/* ここから再生 */}
                 {jumpTo && togglePlay && (
                   <button
                     onClick={() => {
@@ -235,7 +235,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
 
             {isExpanded && (
               <div className="mt-2 space-y-1.5 border-t pt-2">
-                {/* ★v5.19.0★ フック (id:1) 専用: 画像/動画インサート */}
+                {/* フック (id:1) 専用: 画像/動画インサート */}
                 {script.isCatchy && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-2">
                     <label className="text-[10px] font-bold text-amber-800 block mb-1">
@@ -278,7 +278,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                       PNG/JPG/WebP/MP4 対応。
                       <span className="text-amber-900 font-bold"> id:1 の TTS が終わるまで自動表示</span>。
                     </div>
-                    {/* ★v5.19.0★ 切替アニメーションパターン選択 */}
+                    {/* 切替アニメーションパターン選択 */}
                     <div className="mt-1.5">
                       <label className="text-[9px] text-amber-700 font-bold">切替パターン:</label>
                       <select
@@ -293,7 +293,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                         <option value="zoom_pulse">💥 zoom_pulse (ドンドン拡縮し続け)</option>
                       </select>
                     </div>
-                    {/* ★v5.19.4★ 表示時間調整 */}
+                    {/* 表示時間調整 */}
                     <div className="mt-1.5">
                       <label className="text-[9px] text-amber-700 font-bold">表示時間:</label>
                       <select
@@ -316,7 +316,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   </div>
                 )}
 
-                {/* ★v5.21.4★ アウトロ (最後の id) 専用: 画像/動画インサート
+                {/* アウトロ (最後の id) 専用: 画像/動画インサート
                     smartLoop の設定に関わらず currentIndex が最後の id の時に全画面表示する */}
                 {idx === (projectData.scripts?.length || 0) - 1 && !script.isCatchy && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 mb-2">
@@ -418,7 +418,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   </div>
                 </div>
 
-                {/* ★v5.18.0★ zoomBoost (キーフレームアニメ — Gemini提言: 重要発言時のズーム/シェイク) */}
+                {/* zoomBoost (キーフレームアニメ — Gemini提言: 重要発言時のズーム/シェイク) */}
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
                     💥 キーフレームアニメ (重要発言時の演出)
@@ -449,7 +449,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   </select>
                 </div>
 
-                {/* ★v5.19.6★ scenePreset: シーン全体の演出を切替 (紙芝居からの脱却) */}
+                {/* scenePreset: シーン全体の演出を切替 (紙芝居からの脱却) */}
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
                     🎬 演出プリセット (シーン全体の見せ方)
@@ -466,7 +466,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   </select>
                 </div>
 
-                {/* ★v5.18.14★ spotlightMode: シーンごとに選手スポットの表示パターンを変更 */}
+                {/* spotlightMode: シーンごとに選手スポットの表示パターンを変更 */}
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
                     👤 スポットモード (選手スポット表示時)
@@ -498,7 +498,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   </select>
                 </div>
 
-                {/* ★v5.19.6★ ハイライトスコープ — 同じ指標で「対左/対右/今季vs昨季」等を切替 */}
+                {/* ハイライトスコープ — 同じ指標で「対左/対右/今季vs昨季」等を切替 */}
                 {(() => {
                   const selectedComp = (Array.isArray(comparisons) ? comparisons : []).find(c => c.id === script.highlight);
                   const variants = Array.isArray(selectedComp?.variants) ? selectedComp.variants : [];
@@ -524,9 +524,9 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   );
                 })()}
 
-                {/* ★v5.18.4★ focusEntry: 選手スポット/ランキングで「どの選手を主役にするか」
-                    ★v5.18.7★ 候補が無くても手入力で指定できるように常時表示 + 候補は datalist で補助 */}
-                {/* ★v5.19.4★ プルダウン化 — datalist+input より探しやすい
+                {/* focusEntry: 選手スポット/ランキングで「どの選手を主役にするか」
+                    候補が無くても手入力で指定できるように常時表示 + 候補は datalist で補助 */}
+                {/* プルダウン化 — datalist+input より探しやすい
                     候補なし時のみ手入力フォールバック */}
                 <div>
                   <label className="text-[9px] text-zinc-500 font-bold mb-0.5 block">
@@ -563,7 +563,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   )}
                 </div>
 
-                {/* ★v5.18.13★ focusQuoteIndex: 同じ player の中で複数 quote を切替 */}
+                {/* focusQuoteIndex: 同じ player の中で複数 quote を切替 */}
                 {(() => {
                   // 現在の focusEntry 選手の quotes を取得
                   const players = projectData.layoutData?.spotlight?.players || [];
@@ -594,7 +594,7 @@ export function ScriptEditorPanel({ projectData, currentIndex, onChange, jumpTo,
                   );
                 })()}
 
-                {/* ★v5.18.13★ focusMetric: ranking 系で動画中に metric を切り替える時 */}
+                {/* focusMetric: ranking 系で動画中に metric を切り替える時 */}
                 {(() => {
                   const metrics = projectData.layoutData?.ranking?.metrics || [];
                   if (metrics.length <= 1) return null;  // 1個以下なら切替不要

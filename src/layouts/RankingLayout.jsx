@@ -17,7 +17,7 @@
  *         {
  *           rank: 1,
  *           name: "泉口",
- *           team: "G",              // ★v5.18.4新★ 球団略称 (G/D/T/S/E/F/B/H/M/L 等)
+ *           team: "G",              // 球団略称 (G/D/T/S/E/F/B/H/M/L 等)
  *                                    // 球団横断ランキング (リーグ全体等) で表示推奨
  *                                    // 自軍動画では省略可 (G が並ぶだけなのでノイズ)
  *           value: "1.013",
@@ -47,7 +47,7 @@ import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx
 import { isEnglishMetric } from '../lib/metricUtils';
 import { useSpringNumber } from '../hooks/useSpringNumber';
 
-// ★v5.19.0★ 数値をバネ物理でカウントアップ表示
+// 数値をバネ物理でカウントアップ表示
 function SpringValue({ value, unit }) {
   const raw = String(value || '');
   const numMatch = raw.match(/^([+-]?)(\d*\.?\d+)/);
@@ -56,7 +56,7 @@ function SpringValue({ value, unit }) {
   const hasLeadingDot = raw.startsWith('.');
 
   const springVal = useSpringNumber(isNaN(numericVal) ? 0 : numericVal, {
-    // ★v5.19.3★ 一瞬すぎ問題の修正: 60→1.013 に約 1.5 秒かけて到達 (目で追える)
+    // 一瞬すぎ問題の修正: 60→1.013 に約 1.5 秒かけて到達 (目で追える)
     stiffness: 55, damping: 11, precision: decimals > 0 ? 0.0005 : 0.3,
   });
 
@@ -165,7 +165,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
     );
   }
 
-  // ★v5.18.13★ metric の解決優先順位:
+  // metric の解決優先順位:
   //   1. currentScript.focusMetric (新フィールド、ranking 専用)
   //   2. currentScript.highlight (互換: comparisons.id とも兼用)
   //   3. metrics[0] (デフォルト先頭)
@@ -178,7 +178,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
 
   return (
     <>
-      {/* ★v5.19.4★ key は activeMetric.id のみ — metric 切替時はカード全体バネ入場、
+      {/* key は activeMetric.id のみ — metric 切替時はカード全体バネ入場、
           focusEntry 変更だけでは全体は動かさない (focused 行が下で個別 remount される) */}
       <div key={`rank-${animationKey}-${activeMetric?.id || ''}`}
            className="flex-1 flex flex-col justify-start relative z-10 w-full pt-12 pb-[32%] px-3">
@@ -284,7 +284,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       ⋯ 圏外 ⋯
                     </div>
                   )}
-                  {/* ★v5.19.0★ rank-row-anim でバネ入場 (左からスライドイン + バウンス) */}
+                  {/* rank-row-anim でバネ入場 (左からスライドイン + バウンス) */}
                   <div
                     className={`rank-row-anim flex items-center px-3 py-2 border-b border-zinc-800 ${rowClass} ${
                       isFocused ? 'scale-[1.04] z-10 relative' : ''
@@ -308,7 +308,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       }`}>
                         {entry.isTeam && <span className="text-[10px] mr-1 opacity-70">[ チーム ]</span>}
                         {entry.name}
-                        {/* ★v5.18.4★ 球団略称 (G/D/T/S/E/F 等) — 球団横断ランキングで識別 */}
+                        {/* 球団略称 (G/D/T/S/E/F 等) — 球団横断ランキングで識別 */}
                         {entry.team && !entry.isTeam && (
                           <span className={`ml-1 text-[11px] font-bold ${
                             entry.team === 'G' ? 'text-orange-300' : 'text-zinc-400'
@@ -326,7 +326,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                       {entry.sub && <div className="text-[10px] font-bold text-zinc-500 truncate leading-tight">{entry.sub}</div>}
                     </div>
 
-                    {/* 値 + バー (★v5.19.0★ バネアニメーション) */}
+                    {/* 値 + バー (バネアニメーション) */}
                     <div className="flex-shrink-0 flex flex-col items-end" style={{ width: 80 }}>
                       <div className={`num-spring text-[18px] font-impact leading-none ${
                         isFocused
@@ -336,7 +336,7 @@ export function RankingLayout({ projectData, currentScript, animationKey, phase 
                         <SpringValue value={entry.value} unit={activeMetric.unit || ''} />
                       </div>
                       <div className="w-full h-1.5 bg-zinc-800 rounded-full mt-1 overflow-hidden">
-                        {/* ★v5.19.0★ bar-spring でバネ伸長 (scaleX ベース) */}
+                        {/* bar-spring でバネ伸長 (scaleX ベース) */}
                         <div
                           className="h-full rounded-full bar-spring"
                           style={{

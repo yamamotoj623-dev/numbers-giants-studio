@@ -1,5 +1,5 @@
 /**
- * TimelineLayout 横長 (16:9) 専用バリアント (★v5.20.3 新規★)
+ * TimelineLayout 横長 (16:9) 専用バリアント ()
  *
  * 構図:
  *   上半分を SVG でフルワイドに使う折れ線
@@ -83,7 +83,7 @@ export function TimelineLandscape({ projectData, currentScript, animationKey, ph
         className="absolute z-10 flex flex-col"
         style={{ top: 32, bottom: '42%', left: 14, right: 14 }}
       >
-        {/* ★v5.20.4★ ヘッダー: 指標名は中央、凡例は右 */}
+        {/* ヘッダー: 指標名は中央、凡例は右 */}
         <div className="relative flex items-center mb-1 px-2" style={{ minHeight: 22 }}>
           {/* 中央: 指標名 + 単位 */}
           <div className="absolute left-1/2 -translate-x-1/2 flex items-baseline gap-2">

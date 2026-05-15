@@ -1,7 +1,7 @@
 /**
  * 指標 (label) が英語ベースかどうか判定するヘルパー
  *
- * ★v5.15.5★ 英語指標 (OPS, WAR, K/9, BB/9 等) のみ kana/formula を表示する用途。
+ * 英語指標 (OPS, WAR, K/9, BB/9 等) のみ kana/formula を表示する用途。
  * 日本語指標 (打率、本塁打、防御率) は読み・式が冗長なので非表示。
  */
 export function isEnglishMetric(label) {

@@ -1,5 +1,5 @@
 /**
- * BatterHeatmapLayout 横長 (16:9) 専用バリアント (★v5.20.3 新規★)
+ * BatterHeatmapLayout 横長 (16:9) 専用バリアント ()
  *
  * 構図:
  *   mode 'single':         中央に大きいヒートマップ + 凡例

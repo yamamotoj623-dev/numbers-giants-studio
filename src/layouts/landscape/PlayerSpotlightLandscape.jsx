@@ -1,5 +1,5 @@
 /**
- * PlayerSpotlightLayout 横長 (16:9) 専用バリアント (★v5.20 新規★)
+ * PlayerSpotlightLayout 横長 (16:9) 専用バリアント ()
  *
  * 構図 (写真は使わずテキストで主役感を出す):
  *   左 1/3:  選手名 (大) + 背番号 + 期間ラベル + 球団バッジ
@@ -69,7 +69,7 @@ export function PlayerSpotlightLandscape({ projectData, currentScript, animation
               {player.team}
             </div>
           )}
-          {/* ★v5.20.2★ 選手名: 14px (縮小、背番号と並べる前提) */}
+          {/* 選手名: 14px (縮小、背番号と並べる前提) */}
           <div className={`text-[14px] font-black leading-tight tracking-tight ${themeClass.text}`}
                style={{ textShadow: `0 0 12px ${themeClass.glow}80`, wordBreak: 'keep-all' }}>
             {player.name || '選手名'}

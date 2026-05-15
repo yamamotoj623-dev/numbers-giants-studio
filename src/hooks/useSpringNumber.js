@@ -1,5 +1,5 @@
 /**
- * useSpringNumber.js (★v5.19.0 新規★)
+ * useSpringNumber.js ()
  *
  * 数値を「バネの動き」でカウントアップ/ダウンするカスタムフック。
  * 線形ではなく、オーバーシュート → 戻り → 収束 の自然な物理アニメーション。
@@ -18,7 +18,7 @@ import { useState, useEffect, useRef } from 'react';
 
 export function useSpringNumber(target, options = {}) {
   const {
-    // ★v5.19.3★ 一瞬すぎ問題の修正: デフォルトをゆっくり寄りに
+    // 一瞬すぎ問題の修正: デフォルトをゆっくり寄りに
     //   旧: stiffness 120, damping 14 (約 0.5s で収束)
     //   新: stiffness 50, damping 11 (約 1.5-2s かけて収束、目で追える)
     stiffness = 50,

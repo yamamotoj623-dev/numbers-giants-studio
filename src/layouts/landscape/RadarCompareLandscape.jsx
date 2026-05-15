@@ -1,5 +1,5 @@
 /**
- * RadarCompareLayout 横長 (16:9) 専用バリアント (★v5.20 新規★)
+ * RadarCompareLayout 横長 (16:9) 専用バリアント ()
  *
  * 構図:
  *   左: 主役選手のラベル + 5軸の数値リスト (テキスト主体、写真不使用)
@@ -51,7 +51,7 @@ export function RadarCompareLandscape({ projectData, currentScript, animationKey
 
   const themeClass = THEMES[projectData.theme] || THEMES.orange;
 
-  // ★v5.20.11★ stats 解決の優先順位:
+  // stats 解決の優先順位:
   //   1. layoutData.radar.stats (明示指定) ← 最優先
   //   2. projectData.radarStats を配列化 (top-level の radarStats を使う)
   //   3. playerType ベースのデフォルト

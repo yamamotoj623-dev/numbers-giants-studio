@@ -22,7 +22,7 @@ function getPhase(currentScript, currentIndex, scripts, projectData) {
   if (!currentScript) return 'normal';
   if (currentScript.isCatchy) return 'hook';
   const total = scripts?.length || 0;
-  // ★v5.18.0★ smartLoop=true ならアウトロをスキップ (Gemini提言: 無限ループ)
+  // smartLoop=true ならアウトロをスキップ (Gemini提言: 無限ループ)
   // 末尾→冒頭にシームレス遷移するため、最後の2つもhighlight/normalのまま
   if (!projectData?.smartLoop && total && currentIndex >= total - 2) return 'outro';
   if (currentScript.highlight) return 'highlight';
@@ -56,7 +56,7 @@ function getHookAnim(projectData) {
   return shakePatterns.includes(pattern) ? 'shake' : 'pop';
 }
 
-// ★v5.19.6★ テロップ吹き出し — 毎マウント時に異なる entrance アニメを選んで「紙芝居からの脱却」
+// テロップ吹き出し — 毎マウント時に異なる entrance アニメを選んで「紙芝居からの脱却」
 // 8 種類の entrance アニメを順繰り (id ベース) + 微小な strut アニメ (常時微振動) で生命感を
 const TELOP_ENTRANCE_ANIMS = [
   'telopBounceIn',     // 下から弾む
@@ -68,7 +68,7 @@ const TELOP_ENTRANCE_ANIMS = [
   'telopShakeIn',      // 振動して登場
   'telopElasticIn',    // 弾性的にスケール
 ];
-// ★v5.19.7★ テロップ文字単位アニメ — 1文字ずつ順次フェードイン+スケール
+// テロップ文字単位アニメ — 1文字ずつ順次フェードイン+スケール
 // 紙芝居感の解消。発言中も文字が躍動する。
 function TelopBubble({ speaker, text, textSize, kind }) {
   // text のハッシュで entrance アニメを決定 (毎シーンで違うアニメに、再現性あり)
@@ -88,14 +88,14 @@ function TelopBubble({ speaker, text, textSize, kind }) {
       style={{ animation: bubbleAnim }}
     >
       <div className={`telop-normal ${speaker === 'B' ? 'b' : ''} size-${textSize} telop-charwise`}>
-        {/* ★v5.19.7★ 文字単位アニメで紙芝居から脱却 */}
+        {/* 文字単位アニメで紙芝居から脱却 */}
         <CharwiseText text={text} speaker={speaker} />
       </div>
     </div>
   );
 }
 
-// ★v5.19.9★ 文字単位アニメ展開で例外が起きても真っ白にならない安全網
+// 文字単位アニメ展開で例外が起きても真っ白にならない安全網
 class CharwiseSafeBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError(_err) { return { hasError: true }; }
@@ -121,7 +121,7 @@ function CharwiseText({ text, speaker }) {
 }
 
 // React node tree を再帰的に walk して、文字レベルで span に分解
-// ★v5.19.9 修正★ <br />, Fragment, void 要素の cloneElement エラーで真っ白になっていたバグ
+// <br />, Fragment, void 要素の cloneElement エラーで真っ白になっていたバグ
 function CharwiseWalker({ node, startIndex = 0 }) {
   if (node == null || typeof node === 'boolean') return null;
   // 文字列 → 1文字ずつ span に
@@ -184,7 +184,7 @@ function countChars(node) {
   return 0;
 }
 
-// ★v5.20.13★ #f97316 のような hex を rgba に変換 (CSS 変数の glow 計算用)
+// #f97316 のような hex を rgba に変換 (CSS 変数の glow 計算用)
 function hexToRgba(hex, alpha = 1) {
   if (!hex || typeof hex !== 'string') return `rgba(255,140,26,${alpha})`;
   const m = hex.replace('#', '').match(/.{2}/g);
@@ -211,7 +211,7 @@ export function PreviewFrame({
   const textSize = resolveTextSize(currentScript);
   const estDuration = useMemo(() => estimateDuration(scripts), [scripts]);
 
-  // ★v5.19.0★ Hook メディア (画像/動画) のロード
+  // Hook メディア (画像/動画) のロード
   const [hookMedia, setHookMedia] = useState(null);
   useEffect(() => {
     let cancelled = false;
@@ -223,7 +223,7 @@ export function PreviewFrame({
     return () => { cancelled = true; };
   }, []);
 
-  // ★v5.21.4★ Outro メディア (最後の id の画像/動画) のロード
+  // Outro メディア (最後の id の画像/動画) のロード
   // 既存の hookMedia と同じ仕組みで、IndexedDB の 'outro' キーから取得。
   // 最後の id (scripts.length - 1) の時に HookMediaOverlay 経由で全画面表示する。
   const [outroMedia, setOutroMedia] = useState(null);
@@ -251,13 +251,13 @@ export function PreviewFrame({
     return '😲';
   }, [currentIndex, scripts]);
 
-  // ★v5.19.7★ aspectRatio 対応 — projectData.aspectRatio で 9:16 / 16:9 / 1:1 切替
+  // aspectRatio 対応 — projectData.aspectRatio で 9:16 / 16:9 / 1:1 切替
   const aspectRatio = projectData?.aspectRatio || '9:16';
   const isLandscape = aspectRatio === '16:9';
   const isSquare1to1 = aspectRatio === '1:1';
 
   const effectiveSquare = isSquareMode || isRecordingMode || isSquare1to1;
-  // ★v5.21.3★ セーフゾーンガイドはショート(9:16) 専用 — YouTubeショートUI(上下バー+右アクション)
+  // セーフゾーンガイドはショート(9:16) 専用 — YouTubeショートUI(上下バー+右アクション)
   // が被る領域を可視化する目的のため、横長(16:9) や正方形(1:1) では非表示にする。
   const effectiveShowSafe = showSafeZone && !isRecordingMode && !isLandscape && !isSquare1to1;
 
@@ -270,7 +270,7 @@ export function PreviewFrame({
   ].filter(Boolean).join(' ');
 
   const arRatio = isLandscape ? '16/9' : isSquare1to1 ? '1/1' : '9/16';
-  // ★v5.20.14★ チーム色は「右上の選手名ピル」だけに適用、グローバル --p は変えない
+  // チーム色は「右上の選手名ピル」だけに適用、グローバル --p は変えない
   // (旧 v5.20.13 では phone 全体に --p を上書きしてハイライトカード等も染まっていた)
   const teamPreset = getTeamPreset(projectData?.teamPreset || 'npb_giants');
   const phoneStyle = isFullscreenMode ? {
@@ -299,7 +299,7 @@ export function PreviewFrame({
          data-current-id={currentScript?.id ?? -1}
          key={`phone-${animationKey}`}>
 
-      {/* ★v5.19.0★ 浮遊ボケ光パーティクル — 常にぬるっと動いて視覚退屈を防ぐ */}
+      {/* 浮遊ボケ光パーティクル — 常にぬるっと動いて視覚退屈を防ぐ */}
       <div className="absolute inset-0 pointer-events-none z-[3] overflow-hidden" aria-hidden="true">
         {[
           { x: 30, y: -80, s: 0.6, d: 12, l: 25, t: 15, sz: 6, c: 'rgba(249,115,22,0.15)' },
@@ -350,11 +350,11 @@ export function PreviewFrame({
       {/* ================= フェーズA: フック ================= */}
       {phase === 'hook' && (
         <div className={phaseClassMap.hook} data-p="hook" key={`hook-${animationKey}-${currentIndex}`}>
-          {/* ★v5.18.0★ Gemini提言: 冒頭0.5秒フラッシュ — 視聴者の指を止めるため
+          {/* Gemini提言: 冒頭0.5秒フラッシュ — 視聴者の指を止めるため
               key を毎ループ更新して再生のたびに発火 */}
           <div className="hook-flash-overlay" key={`flash-${animationKey}-${currentIndex}`} />
 
-          {/* ★v5.20★ ユーザーアップロード画像/動画インサート (hook のみ)
+          {/* ユーザーアップロード画像/動画インサート (hook のみ)
               isVisible だけで描画判定、phase が hook のあいだ表示し続ける */}
           {hookMedia && (
             <HookMediaOverlay
@@ -380,7 +380,7 @@ export function PreviewFrame({
               <span className="sub">Giants Analytics · {new Date().getFullYear().toString().slice(-2)} Season</span>
             </div>
           </div>
-          {/* ★v5.20.14★ チーム色は player pill のみに inline style で適用 */}
+          {/* チーム色は player pill のみに inline style で適用 */}
           <div className="hook-player-pill" style={{
             borderColor: hexToRgba(teamPreset.primary, 0.4),
           }}>
@@ -454,7 +454,7 @@ export function PreviewFrame({
           />
 
           {/* テロップ
-              ★v5.19.6★ 動かない問題の真因対策 — class + style 両方つけ、アニメ名は CSS 統一、
+              動かない問題の真因対策 — class + style 両方つけ、アニメ名は CSS 統一、
               key は currentScript.id (確実にユニーク) で完全 remount */}
           {phase === 'normal' && (
             <div className="telop-wrap-normal" key={`telop-n-${currentIndex}`}>
@@ -477,7 +477,7 @@ export function PreviewFrame({
             </div>
           )}
 
-          {/* ★v5.21.4★ Outro メディア (最後の id の画像/動画) — phase 非依存
+          {/* Outro メディア (最後の id の画像/動画) — phase 非依存
               smartLoop が true/false どちらでも、currentIndex が最後の id の時に表示。
               hook の HookMediaOverlay と同じコンポーネントを再利用、IndexedDB の 'outro' キーから読み込み。
               z-50 で背景画像、その後にテロップ・アバターが描画されるので前面に乗る。 */}
@@ -510,7 +510,7 @@ export function PreviewFrame({
                 data-anim={currentScript?.speaker === 'A' ? (currentScript?.animation || getAnimFromEmoji(currentEmojiA)) : undefined}
                 key={`avatar-a-${currentIndex}`}
               >
-                {/* ★v5.21.0★ projectData.charMode === 'svg' でキャラSVG、デフォルトは絵文字 */}
+                {/* projectData.charMode === 'svg' でキャラSVG、デフォルトは絵文字 */}
                 {projectData?.charMode === 'svg' ? (
                   <div className="char-wrap">
                     <Kazuhara
@@ -591,7 +591,7 @@ function renderHookLines(text) {
 function getHookTextClass(text) {
   if (!text) return '';
   const lines = text.split('\n').length;
-  // ★v5.20★ 4行/5行/6行+ で段階的にフォントを小さく
+  // 4行/5行/6行+ で段階的にフォントを小さく
   if (lines >= 6) return 'lines-6';
   if (lines >= 5) return 'lines-5';
   if (lines >= 4) return 'lines-4';
@@ -600,7 +600,7 @@ function getHookTextClass(text) {
 
 function renderHookStatCell(projectData, key, label) {
   const raw = projectData?.mainPlayer?.stats?.[key];
-  // ★v5.19.7★ 0 / null / undefined → '-'、0始まり小数 → '.xxx'
+  // 0 / null / undefined → '-'、0始まり小数 → '.xxx'
   const formatted = formatStat(raw,
     ['avg', 'ops', 'era', 'whip', 'winRate'].includes(key) ? 'rate' : 'auto'
   );
@@ -613,7 +613,7 @@ function renderHookStatCell(projectData, key, label) {
 }
 
 function renderHookStatsCells(projectData) {
-  // ★v5.19.7★ projectData.hookStats でカスタマイズ可能 — 例: [{key:'avg', label:'打率'}, ...]
+  // projectData.hookStats でカスタマイズ可能 — 例: [{key:'avg', label:'打率'}, ...]
   const customCells = Array.isArray(projectData?.hookStats) ? projectData.hookStats : null;
   if (customCells && customCells.length > 0) {
     return (

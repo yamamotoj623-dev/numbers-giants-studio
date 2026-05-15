@@ -1,5 +1,5 @@
 /**
- * PanelErrorBoundary (★v5.18.7 新規★)
+ * PanelErrorBoundary ()
  *
  * 編集タブパネル (LayoutPanel / ScriptEditorPanel / JsonPanel / TTSPanel / BGMPanel)
  * のいずれかで例外が発生してもアプリ全体が真っ白にならないようにする ErrorBoundary。

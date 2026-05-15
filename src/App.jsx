@@ -25,22 +25,22 @@ const TABS = [
 ];
 
 const App = () => {
-  // ★v5.18.4★ 初期化時に localStorage から自動復元 (前回編集中だったプロジェクト)
+  // 初期化時に localStorage から自動復元 (前回編集中だったプロジェクト)
   const [projectData, setProjectData] = useState(() => {
     const saved = loadEditing();
     return saved || defaultBatterData;
   });
   const [activeTab, setActiveTab] = useState('json');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
-  // ★v5.20.7★ 拡大画面でのシーン一覧表示
+  // 拡大画面でのシーン一覧表示
   const [showScenePicker, setShowScenePicker] = useState(false);
-  // ★v5.20.8★ 横長コントロールのアコーディオン (16:9 + landscape の時に使う)
+  // 横長コントロールのアコーディオン (16:9 + landscape の時に使う)
   const [controlsExpanded, setControlsExpanded] = useState(false);
-  // ★v5.18.4★ 保存スロット管理用
+  // 保存スロット管理用
   const [showSavePanel, setShowSavePanel] = useState(false);
   const [savedSlots, setSavedSlots] = useState(() => listSlots());
 
-  // ★v5.18.4★ projectData 変更時に localStorage へ自動保存 (debounce: 1秒)
+  // projectData 変更時に localStorage へ自動保存 (debounce: 1秒)
   useEffect(() => {
     const timer = setTimeout(() => {
       autoSaveEditing(projectData);
@@ -48,7 +48,7 @@ const App = () => {
     return () => clearTimeout(timer);
   }, [projectData]);
 
-  // ★v5.18.10★ 起動時に合成音 SE プリセットを WAV 化して HTMLAudioElement プールに登録
+  // 起動時に合成音 SE プリセットを WAV 化して HTMLAudioElement プールに登録
   // → 画面録画でデフォルト SE も拾えるようになる (Firefox 画面録画ワークフロー対応)
   // 一度きりの実行 (depending: [])
   useEffect(() => {
@@ -77,7 +77,7 @@ const App = () => {
   }, []);
 
   const [ttsEngine, setTtsEngine] = useState('web_speech');
-  // ★v5.20.16★ デフォルト再生速度 1.4x (1.6→1.4)、localStorage で永続化
+  // デフォルト再生速度 1.4x (1.6→1.4)、localStorage で永続化
   const [speechRate, setSpeechRate] = useState(() => {
     try {
       const v = parseFloat(localStorage.getItem('speech-rate'));
@@ -259,7 +259,7 @@ const App = () => {
             </div>
               </>
             ) : (
-              /* ★v5.20.6★ パネル閉じた状態: アイコンのみ縦並び (横向きスマホで重なり問題解消) */
+              /* パネル閉じた状態: アイコンのみ縦並び (横向きスマホで重なり問題解消) */
               <>
                 <Settings size={20} className="text-white"/>
                 <span className="hidden md:inline-block text-[9px] font-bold text-zinc-400 [writing-mode:vertical-rl] tracking-widest">パネル展開</span>
@@ -270,7 +270,7 @@ const App = () => {
 
           {isPanelOpen && (
             <>
-              {/* ★v5.20.13★ タブを sticky にして常に上に固定表示 */}
+              {/* タブを sticky にして常に上に固定表示 */}
               <div className="flex border-b bg-zinc-50 shrink-0 overflow-x-auto sticky top-0 z-10 shadow-sm">
                 {TABS.map(tab => (
                   <button
@@ -288,7 +288,7 @@ const App = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto bg-zinc-50 relative custom-scrollbar">
-                {/* ★v5.18.7★ 各パネルを ErrorBoundary でラップ
+                {/* 各パネルを ErrorBoundary でラップ
                     パネル内で例外が出てもアプリ全体が真っ白にならないようにする */}
                 {activeTab === 'json' && (
                   <PanelErrorBoundary panelName="JSON">
@@ -348,7 +348,7 @@ const App = () => {
 
         {isFullscreenMode && !isRecordingMode && (
           <>
-            {/* ★v5.20.8★ 左上: 縦並び (動画の左外側、動画に被らない) */}
+            {/* 左上: 縦並び (動画の左外側、動画に被らない) */}
             <div className={`absolute top-4 left-3 z-[100] flex flex-col gap-2 transition-opacity duration-300 ${isPlaying ? 'opacity-30 hover:opacity-100' : 'opacity-100'}`}>
               <button
                 onClick={() => setIsFullscreenMode(false)}
@@ -396,7 +396,7 @@ const App = () => {
               </button>
             </div>
 
-            {/* ★v5.20.7★ 下部: 進捗バー + シーン番号 */}
+            {/* 下部: 進捗バー + シーン番号 */}
             <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 z-[100] bg-black/60 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-3 shadow-xl border border-white/10 transition-opacity duration-300 ${isPlaying ? 'opacity-30 hover:opacity-100' : 'opacity-100'}`}>
               <span className="text-white text-xs font-mono font-bold whitespace-nowrap">
                 {currentIndex + 1} / {projectData?.scripts?.length || 0}
@@ -412,7 +412,7 @@ const App = () => {
               </span>
             </div>
 
-            {/* ★v5.20.7★ シーンピッカー (オーバーレイ) */}
+            {/* シーンピッカー (オーバーレイ) */}
             {showScenePicker && (
               <div className="absolute top-4 left-16 z-[110] bg-zinc-900/95 backdrop-blur-md rounded-lg shadow-2xl border border-white/10 max-h-[80vh] overflow-y-auto p-2"
                    style={{ width: 260 }}>
@@ -461,7 +461,7 @@ const App = () => {
           </button>
         )}
 
-        {/* ★v5.20.7★ 横長動画かつ画面が横向きの時だけ controls を右に配置 */}
+        {/* 横長動画かつ画面が横向きの時だけ controls を右に配置 */}
         <div className={`flex gap-4 items-start justify-center ${
           projectData?.aspectRatio === '16:9'
             ? 'flex-col landscape:flex-row'
@@ -484,7 +484,7 @@ const App = () => {
             <div className={`flex flex-col items-center gap-3 ${
               projectData?.aspectRatio === '16:9' ? 'mt-0 landscape:mt-0' : 'mt-6'
             }`}>
-            {/* ★v5.20.8★ メインバー: 縦長動画は横並び、横長動画+横画面は縦並びでコンパクト */}
+            {/* メインバー: 縦長動画は横並び、横長動画+横画面は縦並びでコンパクト */}
             <div className={`flex items-center bg-white rounded-full shadow-lg border border-zinc-200 ${
               projectData?.aspectRatio === '16:9'
                 ? 'gap-3 px-3 py-2 landscape:flex-col landscape:gap-2 landscape:px-2 landscape:py-3 landscape:rounded-2xl'
@@ -513,7 +513,7 @@ const App = () => {
               >
                 {isRecording ? <Loader2 size={16} className="animate-spin"/> : <Download size={16}/>}
               </button>
-              {/* ★v5.20.8★ 横長動画 + 横画面の時のみアコーディオントグル表示 */}
+              {/* 横長動画 + 横画面の時のみアコーディオントグル表示 */}
               {projectData?.aspectRatio === '16:9' && (
                 <button
                   onClick={() => setControlsExpanded(v => !v)}
@@ -525,7 +525,7 @@ const App = () => {
               )}
             </div>
 
-            {/* ★v5.20.8★ プレビューモードトグル: 16:9 + 横画面で controlsExpanded == false なら隠す */}
+            {/* プレビューモードトグル: 16:9 + 横画面で controlsExpanded == false なら隠す */}
             <div className={`flex items-center gap-2 flex-wrap justify-center ${
               projectData?.aspectRatio === '16:9' && !controlsExpanded ? 'landscape:hidden' : ''
             }`}>
@@ -581,7 +581,7 @@ const App = () => {
                 ))}
               </div>
 
-              {/* ★v5.18.0★ smartLoop トグル (Gemini提言: 無限ループ) */}
+              {/* smartLoop トグル (Gemini提言: 無限ループ) */}
               <button
                 onClick={() => setProjectData(prev => ({ ...prev, smartLoop: !prev.smartLoop }))}
                 className={`text-[10px] font-bold px-2 py-1 rounded-full transition flex items-center gap-1 border ${
@@ -596,7 +596,7 @@ const App = () => {
                 {projectData.smartLoop ? '🔁 ループON' : '⏹ ループOFF'}
               </button>
 
-              {/* ★v5.18.4★ 保存スロット (台本/編集の永続化) */}
+              {/* 保存スロット (台本/編集の永続化) */}
               <button
                 onClick={() => {
                   setSavedSlots(listSlots());
@@ -621,7 +621,7 @@ const App = () => {
         </div>
       </div>
 
-      {/* ★v5.18.4★ 保存スロット モーダル */}
+      {/* 保存スロット モーダル */}
       {showSavePanel && (
         <SaveSlotModal
           projectData={projectData}
@@ -649,7 +649,7 @@ const App = () => {
 };
 
 // ============================================================================
-// 保存スロット モーダル (★v5.18.4★)
+// 保存スロット モーダル ()
 // ============================================================================
 function SaveSlotModal({ projectData, slots, onClose, onSave, onLoad, onDelete }) {
   const [newName, setNewName] = useState('');

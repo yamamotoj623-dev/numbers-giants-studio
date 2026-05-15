@@ -1,7 +1,7 @@
 /**
  * layoutType: versus_card (v5) — 行強調追加
  *
- * v5 改修点 (★v5.14.0★):
+ * v5 改修点 ():
  * - 基本成績の視覚的強調: script.highlight が指す comparison の label と
  *   categoryScores[].label が一致する行をパルス強調 (迷子防止)
  *
@@ -31,7 +31,7 @@ import React from 'react';
 import { THEMES } from '../lib/config';
 import { OutroPanel } from '../components/OutroPanel.jsx';
 import { HighlightCard, useHighlightComp } from '../components/HighlightCard.jsx';
-// ★v5.19.3★ HighlightCard は VS カードでは出さない (ユーザー要望: ハイライトカード非表示で行強調のみ)
+// HighlightCard は VS カードでは出さない (ユーザー要望: ハイライトカード非表示で行強調のみ)
 // import は他のレイアウト都合上残すが、本コンポーネントでは使用しない
 
 // ラベル一致判定 (完全一致 or 双方向部分一致、case-insensitive)
@@ -47,7 +47,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
   if (phase === 'hook') return null;
   if (phase === 'outro') return <OutroPanel projectData={projectData} currentScript={currentScript} />;
 
-  // ★v5.19.3★ phase に関係なく、currentScript.highlight があれば行強調を発火
+  // phase に関係なく、currentScript.highlight があれば行強調を発火
   // ハイライトカード (別表示) は出さない — VS カード内の該当指標行を amber で強調するだけ
   const focusedComp = currentScript?.highlight
     ? projectData.comparisons?.find(c => c.id === currentScript.highlight)
@@ -92,13 +92,13 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
   return (
     <>
-      {/* ★v5.19.4★ key は animationKey のみ — VS カード自体は再生開始時にしかバウンスインしない
+      {/* key は animationKey のみ — VS カード自体は再生開始時にしかバウンスインしない
           (焦点指標の変更は内部の focused row 個別 remount で処理する) */}
       <div key={`vs-${animationKey}`}
            className="flex-1 flex flex-col justify-start relative z-10 w-full pt-14 pb-[42%] px-3">
 
         {/* ヘッダー: 両選手のラベルと VS のみ (装飾バッジ無し) */}
-        {/* ★v5.19.2★ ヘッダーにもバウンスイン */}
+        {/* ヘッダーにもバウンスイン */}
         <div className="z-20 mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2"
              style={{ animation: 'cardBounceIn 0.4s var(--spring-bounce) both' }}>
           {/* main 側 */}
@@ -111,7 +111,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
             </span>
           </div>
 
-          {/* VS — ★v5.19.2★ バウンスポップ */}
+          {/* VS — バウンスポップ */}
           <span className="text-[20px] font-black italic tracking-tighter px-2" style={{
             background: `linear-gradient(180deg, ${themeClass.primary} 0%, #fff 50%, #38bdf8 100%)`,
             WebkitBackgroundClip: 'text',
@@ -132,7 +132,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
           </div>
         </div>
 
-        {/* メイン: 純粋な数字比較 — ★v5.19.2★ カード全体にバウンスイン */}
+        {/* メイン: 純粋な数字比較 — カード全体にバウンスイン */}
         <div className="z-20 bg-zinc-900/78 rounded-xl border border-zinc-700/50 overflow-hidden shadow-2xl backdrop-blur-sm"
              style={{ animation: 'cardBounceIn 0.45s var(--spring-bounce) both 0.05s' }}>
           {(Array.isArray(data.categoryScores) ? data.categoryScores : []).map((cat, i) => {
@@ -141,12 +141,12 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
             const subWin = winner === 'sub';
             const mainDisplay = cat.rawMain ?? cat.main ?? '-';
             const subDisplay = cat.rawSub ?? cat.sub ?? '-';
-            // ★v5.14.0★ 行フォーカス判定
+            // 行フォーカス判定
             const focused = focusedLabel && (statMatches(cat.label, focusedLabel) || statMatches(cat.kana, focusedLabel));
 
             return (
               <div
-                /* ★v5.19.4★ focused 行のみ focusedLabel 込みの key で個別 remount
+                /* focused 行のみ focusedLabel 込みの key で個別 remount
                    = 焦点指標が変わった瞬間にその行だけバウンスでハイライトする */
                 key={focused ? `${i}-foc-${focusedLabel}` : `${i}`}
                 className={`relative px-3 py-2.5 border-b border-zinc-800 last:border-b-0 ${
@@ -158,7 +158,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
                   } : {}),
                 }}
               >
-                {/* ★v5.15.5★ フォーカス時は左側矢印 + 行全体ハイライト (テキスト「話題中」は削除) */}
+                {/* フォーカス時は左側矢印 + 行全体ハイライト (テキスト「話題中」は削除) */}
                 {focused && (
                   <div className="absolute -left-1 top-1/2 -translate-y-1/2 text-amber-400 text-[20px] drop-shadow-lg"
                        style={{ animation: 'badgeBreath 1.2s ease-in-out infinite' }}>
@@ -166,7 +166,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
                   </div>
                 )}
 
-                {/* ラベル中央 (★v5.15.5★ kana 削除、縦の間延び解消) */}
+                {/* ラベル中央 (kana 削除、縦の間延び解消) */}
                 <div className="text-center mb-1">
                   <span className={`text-[12px] font-black tracking-widest ${
                     focused ? 'text-amber-300' : 'text-zinc-200'
@@ -177,7 +177,7 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
 
                 {/* ★純粋な数字比較★: main 数値 / 矢印 / sub 数値 */}
                 <div className="grid grid-cols-[1fr_30px_1fr] items-center gap-2">
-                  {/* main 数値 (★v5.19.2★ num-spring + 勝者はシマー光沢) */}
+                  {/* main 数値 (num-spring + 勝者はシマー光沢) */}
                   <div className="text-right">
                     <span className={`num-spring font-impact leading-none ${
                       focused ? 'text-[34px]' : 'text-[28px]'
@@ -191,14 +191,14 @@ export function VersusCardLayout({ projectData, currentScript, animationKey, pha
                     </span>
                   </div>
 
-                  {/* 中央矢印 (勝者を指す) — ★v5.19.2★ バッジ呼吸 */}
+                  {/* 中央矢印 (勝者を指す) — バッジ呼吸 */}
                   <div className="text-[16px] font-black text-center">
                     {mainWin && <span className={themeClass.text} style={{ textShadow: `0 0 8px ${themeClass.glow}`, animation: 'badgeBreath 1.5s ease-in-out infinite' }}>◀</span>}
                     {subWin && <span className="text-sky-400" style={{ textShadow: '0 0 8px rgba(56,189,248,0.7)', animation: 'badgeBreath 1.5s ease-in-out infinite' }}>▶</span>}
                     {!mainWin && !subWin && <span className="text-zinc-600">=</span>}
                   </div>
 
-                  {/* sub 数値 (★v5.19.2★ num-spring + 勝者はシマー光沢) */}
+                  {/* sub 数値 (num-spring + 勝者はシマー光沢) */}
                   <div className="text-left">
                     <span className={`num-spring font-impact leading-none ${
                       focused ? 'text-[34px]' : 'text-[28px]'

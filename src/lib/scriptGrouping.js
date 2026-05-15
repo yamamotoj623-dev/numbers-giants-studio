@@ -1,5 +1,5 @@
 /**
- * scriptGrouping.js (★v5.18.3 新規★)
+ * scriptGrouping.js ()
  *
  * scripts を「同一 speaker 連続グループ」に分割する**共通ヘルパー**。
  *

@@ -1,5 +1,5 @@
 /**
- * projectSplit.js (★v5.18.12 新規★)
+ * projectSplit.js ()
  *
  * projectData を「データJSON」「台本JSON」に分割・結合するヘルパー。
  *

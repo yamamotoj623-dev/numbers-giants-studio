@@ -22,7 +22,7 @@ export function LayoutPanel({ projectData, onChange }) {
     onChange(updated);
   };
 
-  // ★v5.21.3★ グローバル layoutType 切替時は scripts[i].layoutType の上書きを保持する。
+  // グローバル layoutType 切替時は scripts[i].layoutType の上書きを保持する。
   // 旧 v5.15.5 では「グローバル変更しても画面が変わらない(scripts[0].layoutType が残るため)」
   // を回避するため scripts.layoutType を一括クリアしていたが、
   // ScriptEditor で個別シーン上書き(継承からの離脱)を設定したケースでも消えてしまい、
@@ -36,7 +36,7 @@ export function LayoutPanel({ projectData, onChange }) {
     });
   };
 
-  // ★v5.21.3★ 個別シーン上書きを一括クリアするヘルパ(警告UIから呼び出す)
+  // 個別シーン上書きを一括クリアするヘルパ(警告UIから呼び出す)
   const clearAllScriptLayoutOverrides = () => {
     onChange({
       ...projectData,
@@ -91,7 +91,7 @@ export function LayoutPanel({ projectData, onChange }) {
             <span className="ml-1">{LAYOUT_TYPES[projectData.layoutType].desc}</span>
           </div>
         )}
-        {/* ★v5.21.3★ 個別シーン上書き警告 — ScriptEditor で layoutType を「継承」以外にした script がある時の表示 */}
+        {/* 個別シーン上書き警告 — ScriptEditor で layoutType を「継承」以外にした script がある時の表示 */}
         {hasScriptLayoutOverrides && (() => {
           const overrideCount = (projectData.scripts || []).filter(s => s.layoutType).length;
           return (
@@ -168,7 +168,7 @@ export function LayoutPanel({ projectData, onChange }) {
         </div>
       </div>
 
-      {/* ★v5.20.13★ チーム/リーグプリセット (NPB/MLB) - 選手バッジ・色を切替 */}
+      {/* チーム/リーグプリセット (NPB/MLB) - 選手バッジ・色を切替 */}
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-sm text-zinc-700">リーグ・チーム</span>
@@ -208,7 +208,7 @@ export function LayoutPanel({ projectData, onChange }) {
         </select>
       </div>
 
-      {/* ★v5.21.0★ キャラ表示モード (絵文字 ↔ オリジナル SVG キャラ) */}
+      {/* キャラ表示モード (絵文字 ↔ オリジナル SVG キャラ) */}
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-sm text-zinc-700">キャラ表示</span>
@@ -256,10 +256,10 @@ export function LayoutPanel({ projectData, onChange }) {
         )}
       </div>
 
-      {/* ★v5.19.7★ id:1 (フック) の 4 指標カスタマイズ */}
+      {/* id:1 (フック) の 4 指標カスタマイズ */}
       <HookStatsEditor projectData={projectData} onChange={onChange} />
 
-      {/* ★v5.20★ id:1 フックフォント調整 */}
+      {/* id:1 フックフォント調整 */}
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="font-bold text-sm text-zinc-700 mb-2">🔤 フックタイトル文字サイズ</div>
         <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export function LayoutPanel({ projectData, onChange }) {
         </div>
       </div>
 
-      {/* ★v5.19.7★ アスペクト比選択 */}
+      {/* アスペクト比選択 */}
       <div className="bg-white p-3 rounded-lg border border-zinc-200">
         <div className="font-bold text-sm text-zinc-700 mb-2">📐 動画アスペクト比</div>
         <div className="grid grid-cols-3 gap-1.5">
@@ -326,15 +326,15 @@ export function LayoutPanel({ projectData, onChange }) {
       {projectData.layoutType === 'player_spotlight' && (
         <SpotlightDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {/* ★v5.19.7★ 球種構成エディタ */}
+      {/* 球種構成エディタ */}
       {projectData.layoutType === 'pitch_arsenal' && (
         <ArsenalDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {/* ★v5.19.7★ ヒートマップエディタ */}
+      {/* ヒートマップエディタ */}
       {projectData.layoutType === 'batter_heatmap' && (
         <HeatmapDataEditor projectData={projectData} onChange={onChange} />
       )}
-      {/* ★v5.20★ ランキング専用エディタ */}
+      {/* ランキング専用エディタ */}
       {projectData.layoutType === 'ranking' && (
         <RankingDataEditor projectData={projectData} onChange={onChange} />
       )}
@@ -350,7 +350,7 @@ export function LayoutPanel({ projectData, onChange }) {
 }
 
 function TimelineDataEditor({ projectData, onChange }) {
-  // ★v5.20.13★ 拡張: 系列ラベル / 強調 / 注釈 / 空値 (null) サポート
+  // 拡張: 系列ラベル / 強調 / 注釈 / 空値 (null) サポート
   const tlRaw = projectData.layoutData?.timeline || {};
   const timeline = {
     unit: tlRaw.unit || 'month',
@@ -388,7 +388,7 @@ function TimelineDataEditor({ projectData, onChange }) {
 
   const addPoint = () => update({ ...timeline, points: [...(timeline.points || []), { label: '', main: null, sub: null }] });
   const removePoint = (i) => update({ ...timeline, points: (timeline.points || []).filter((_, idx) => idx !== i) });
-  // ★v5.20.13★ 系列入替 (main ↔ sub)
+  // 系列入替 (main ↔ sub)
   const swapSeries = () => {
     const swapped = (timeline.points || []).map(p => ({ ...p, main: p.sub, sub: p.main }));
     update({ ...timeline, mainLabel: timeline.subLabel, subLabel: timeline.mainLabel, points: swapped });
@@ -429,7 +429,7 @@ function TimelineDataEditor({ projectData, onChange }) {
           />
         </label>
       </div>
-      {/* ★v5.20.13★ 系列ラベル: 例「MLB」「NPB」「今季」「昨季」 */}
+      {/* 系列ラベル: 例「MLB」「NPB」「今季」「昨季」 */}
       <div className="grid grid-cols-2 gap-2 mb-2">
         <label className="text-[10px] text-zinc-600">
           主系列ラベル
@@ -517,7 +517,7 @@ function TimelineDataEditor({ projectData, onChange }) {
 
 
 function VersusDataEditor({ projectData, onChange }) {
-  // ★v5.14.0★ rawMain/rawSub の v4 仕様に対応 (overall/main/sub スコアは廃止済)
+  // rawMain/rawSub の v4 仕様に対応 (overall/main/sub スコアは廃止済)
   const versus = projectData.layoutData?.versus || {
     categoryScores: [
       { label: '打率',   rawMain: '.285', rawSub: '.265' },
@@ -624,7 +624,7 @@ function VersusDataEditor({ projectData, onChange }) {
 }
 
 
-// ★v5.14.0 新規★ SpotlightDataEditor — player_spotlight 専用編集UI
+// SpotlightDataEditor — player_spotlight 専用編集UI
 function SpotlightDataEditor({ projectData, onChange }) {
   const spotlight = projectData.layoutData?.spotlight || {
     showPlayerName: 'auto',
@@ -649,7 +649,7 @@ function SpotlightDataEditor({ projectData, onChange }) {
   };
 
   const setShowName = (val) => update({ ...spotlight, showPlayerName: val });
-  // ★v5.15.5★ mode 切替
+  // mode 切替
   const setMode = (val) => update({ ...spotlight, mode: val });
 
   const updatePlayer = (i, field, value) => {
@@ -724,7 +724,7 @@ function SpotlightDataEditor({ projectData, onChange }) {
     <div className="bg-white p-3 rounded-lg border border-zinc-200 space-y-3">
       <div className="font-bold text-sm text-zinc-700">選手スポット</div>
 
-      {/* ★v5.15.5★ 表示モード切替 */}
+      {/* 表示モード切替 */}
       <div className="bg-emerald-50 border border-emerald-200 rounded p-2">
         <div className="text-[11px] font-bold text-emerald-800 mb-1.5">
           表示モード
@@ -873,7 +873,7 @@ function SpotlightDataEditor({ projectData, onChange }) {
             <div className="space-y-1">
               <div className="text-[10px] font-bold text-zinc-600">サブ指標 (周囲の補助情報、Geminiが柔軟にカスタム可)</div>
               <div className="space-y-1">
-                {/* ★v5.18.8★ stats が配列でない (オブジェクト等) 場合に .map でクラッシュするバグ防御 */}
+                {/* stats が配列でない (オブジェクト等) 場合に .map でクラッシュするバグ防御 */}
                 {(Array.isArray(p.stats) ? p.stats : []).map((stat, si) => (
                   <div key={si} className="flex gap-1.5 items-center">
                     <input
@@ -906,7 +906,7 @@ function SpotlightDataEditor({ projectData, onChange }) {
               className="w-full text-[11px] border border-zinc-200 rounded px-1.5 py-1"
             />
 
-            {/* ★v5.15.5★ quote モード用 (発言・出典) */}
+            {/* quote モード用 (発言・出典) */}
             {(spotlight.mode === 'quote') && (
               <div className="mt-1 p-2 bg-emerald-50 border border-emerald-200 rounded space-y-1">
                 <div className="text-[10px] font-bold text-emerald-700">発言ピック (quote モード時に使用)</div>
@@ -943,7 +943,7 @@ function SpotlightDataEditor({ projectData, onChange }) {
   );
 }
 
-// ★v5.19.7★ 球種構成エディタ
+// 球種構成エディタ
 function ArsenalDataEditor({ projectData, onChange }) {
   const arsenal = projectData.layoutData?.arsenal || { mode: 'single', pitches: [] };
   const pitches = Array.isArray(arsenal.pitches) ? arsenal.pitches : [];
@@ -995,7 +995,7 @@ function ArsenalDataEditor({ projectData, onChange }) {
   );
 }
 
-// ★v5.19.7★ ヒートマップエディタ (3x3 グリッド)
+// ヒートマップエディタ (3x3 グリッド)
 function HeatmapDataEditor({ projectData, onChange }) {
   const heatmap = projectData.layoutData?.heatmap || { mode: 'single', zones: Array(9).fill(0.250) };
   const mode = heatmap.mode || 'single';
@@ -1067,7 +1067,7 @@ function HeatmapDataEditor({ projectData, onChange }) {
   );
 }
 
-// ★v5.19.7★ id:1 フック 4指標 カスタマイズ
+// id:1 フック 4指標 カスタマイズ
 function HookStatsEditor({ projectData, onChange }) {
   const stats = projectData?.mainPlayer?.stats || {};
   const playerType = projectData?.playerType;
@@ -1138,7 +1138,7 @@ function HookStatsEditor({ projectData, onChange }) {
   );
 }
 
-// ★v5.20★ ランキング専用エディタ
+// ランキング専用エディタ
 function RankingDataEditor({ projectData, onChange }) {
   const ranking = projectData.layoutData?.ranking || { mode: 'single', mood: 'neutral', metrics: [] };
   const metrics = Array.isArray(ranking.metrics) ? ranking.metrics : [];

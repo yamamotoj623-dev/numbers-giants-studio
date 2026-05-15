@@ -26,7 +26,7 @@ import { audioBufferToWav } from './audioExporter';
 
 /**
  * 合成音 SE プリセット (class 外に export — audioExporter / pregenerateSyntheticSeWavs から参照)
- * ★v5.18.10★ 旧版は playSe 内に持っていたが、起動時に WAV 化するため module-level に昇格。
+ * 旧版は playSe 内に持っていたが、起動時に WAV 化するため module-level に昇格。
  */
 export const SYNTHETIC_SE_PRESETS = {
   hook_impact:     { freqs: [80, 40],   type: 'sawtooth', attack: 0.01, release: 0.25, gain: 0.5 },
@@ -39,7 +39,7 @@ export const SYNTHETIC_SE_PRESETS = {
   click_tap:       { freqs: [2000],     type: 'square',   attack: 0.001, release: 0.04, gain: 0.2 },
   radar_ping:      { freqs: [1200],     type: 'sine',     attack: 0.005, release: 0.15, gain: 0.25 },
   outro_fade:      { freqs: [440, 330, 220], type: 'sine', attack: 0.02, release: 0.6, gain: 0.3 },
-  // ★v5.20.13 追加バリエーション (★v5.20.15 で合成定義追加)
+  // v5.20.15 で合成定義追加)
   // sparkle_up: 高音上昇 (キラキラ)
   sparkle_up:      { freqs: [1047, 1568, 2093], type: 'sine', attack: 0.005, release: 0.35, gain: 0.25 },
   // drum_roll: 低音震動 (ドラムロール)
@@ -59,7 +59,7 @@ export const SYNTHETIC_SE_PRESETS = {
 };
 
 /**
- * ★v5.18.10★ 合成音 SE プリセットを OfflineAudioContext で WAV blob 化
+ * 合成音 SE プリセットを OfflineAudioContext で WAV blob 化
  *
  * 【目的】 デフォルト SE を画面録画で拾えるようにする。
  *   旧: AudioContext で実時間合成 → 画面録画キャプチャに乗らない (Firefox/Chrome 共通の制約)
@@ -142,7 +142,7 @@ export class MixerEngine {
       // voice は TTSAdapter 側で HTMLAudioElement を直接作るので、
       // mixer 側は levels を保持するだけ (TTS再生時にこの値を適用)
     } else if (track === 'se') {
-      // ★v5.18.9★ プール化対応: entry.pool の各要素に対して volume 更新
+      // プール化対応: entry.pool の各要素に対して volume 更新
       for (const entry of this._seAudioEls.values()) {
         if (entry && entry.pool) {
           for (const el of entry.pool) {
@@ -181,7 +181,7 @@ export class MixerEngine {
       try { this.bgmAudioEl.remove(); } catch (e) {}
       this.bgmAudioEl.src = '';
     }
-    // ★v5.14.6★ <video> 要素に変更 (AUDIO_USAGE_MEDIA を確実にするため)
+    // <video> 要素に変更 (AUDIO_USAGE_MEDIA を確実にするため)
     const audio = document.createElement('video');
     audio.loop = true;
     audio.preload = 'auto';
@@ -275,7 +275,7 @@ export class MixerEngine {
 
   /**
   /**
-   * ★v5.18.10★ 全合成音SEプリセットを起動時に WAV 化して registerCustomSe で登録
+   * 全合成音SEプリセットを起動時に WAV 化して registerCustomSe で登録
    *
    * 【目的】 デフォルト SE (合成音) を画面録画で拾えるようにする。
    *   旧 (v5.18.9): カスタムSE未登録の場合 AudioContext で実時間合成 → 画面録画で取れない
@@ -312,7 +312,7 @@ export class MixerEngine {
   /**
    * カスタムSEファイルを登録 (HTMLAudioElement + blob URL で保持)
    *
-   * ★v5.18.9★ プール化: 起動時に N 個の <video> 要素を DOM に常駐させ、
+   * プール化: 起動時に N 個の <video> 要素を DOM に常駐させ、
    * 再生時は **DOM mutation ゼロ** で空き要素を再利用する。
    * これにより画面録画時のテロップ進行遅延 (SE のたびにメインスレッド詰まり) を解消。
    */
@@ -334,7 +334,7 @@ export class MixerEngine {
     let firstDuration = 0;
 
     for (let i = 0; i < POOL_SIZE; i++) {
-      // ★v5.14.6★ <video> 要素に変更 (AUDIO_USAGE_MEDIA 確実化)
+      // <video> 要素に変更 (AUDIO_USAGE_MEDIA 確実化)
       const audio = document.createElement('video');
       audio.preload = 'auto';
       audio.setAttribute('playsinline', '');
@@ -389,10 +389,10 @@ export class MixerEngine {
   /**
    * SE再生: カスタムSE優先 (HTMLAudioElement 録画対応)、なければ合成音 fallback
    *
-   * ★v5.18.9★ プール化: cloneNode + appendChild + remove の DOM mutation を排除。
+   * プール化: cloneNode + appendChild + remove の DOM mutation を排除。
    * メインスレッド負荷ほぼゼロ → 画面録画時のテロップ進行遅延を解消。
    *
-   * ★v5.18.10★ 通常運用では preregisterSyntheticSes() で全プリセットが
+   * 通常運用では preregisterSyntheticSes() で全プリセットが
    * HTMLAudioElement 化されているので、合成音 fallback は preregister 失敗時の保険のみ。
    */
   playSe(seId) {
@@ -415,7 +415,7 @@ export class MixerEngine {
       return;
     }
 
-    // ★v5.18.10★ 通常は preregisterSyntheticSes() で HTMLAudioElement 化済み。
+    // 通常は preregisterSyntheticSes() で HTMLAudioElement 化済み。
     // ここに来るのは preregister 失敗時のみ → AudioContext 合成 (画面録画では拾えないが、無音よりマシ)
     console.warn(`[mixer] SE "${seId}" not found in pool, falling back to AudioContext synth (will not be captured by screen recording)`);
     this._ensureSynthContext();
@@ -454,7 +454,7 @@ export class MixerEngine {
     this.stopBgm();
     if (this.bgmAudioEl?._blobUrl) URL.revokeObjectURL(this.bgmAudioEl._blobUrl);
     this.bgmAudioEl = null;
-    // ★v5.18.9★ プール化対応: 各エントリの pool / blobUrl を片付ける
+    // プール化対応: 各エントリの pool / blobUrl を片付ける
     for (const entry of this._seAudioEls.values()) {
       if (entry?.pool) {
         for (const el of entry.pool) {

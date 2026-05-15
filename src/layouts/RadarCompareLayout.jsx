@@ -129,7 +129,7 @@ function HighlightView({ projectData, comp }) {
 
       {/* ハイライトカード (keyをcomp.idにするとIDが変わった時だけ再マウント、レーダーは維持) */}
       <div className="highlight-card" key={highlightId}>
-        {/* 1行統合ヘッダー (★v5.15.5★ 英語指標のみ kana/formula) */}
+        {/* 1行統合ヘッダー (英語指標のみ kana/formula) */}
         <div className="hl-header-compact">
           <span className="hl-radar-badge">📊 {comp.radarMatch || comp.label}</span>
           <div className="hl-label-group">

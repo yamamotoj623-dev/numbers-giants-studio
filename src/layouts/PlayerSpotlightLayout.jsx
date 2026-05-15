@@ -2,20 +2,19 @@
  * layoutType: player_spotlight (v5)
  * 1選手のデータを「主役感」で見せるレイアウト。
  *
- * ★v5.15.5★ mode で複数パターン切替:
+ * mode で複数パターン切替:
  *   - 'default' (or undefined): primaryStat + stats grid (現状)
  *   - 'quote': 選手の発言・コメントを大きな文字でピック表示
  *   - 'stats_grid': 基本成績を等価で網羅 (4-6指標、フォーカスなし)
  *   - 'single_metric': 1指標を画面いっぱいに超巨大表示
  *
- * v5 改修点 (★v5.14.0★):
+ * v5 改修点 ():
  * - showPlayerName: 'auto'|true|false 追加
  * - 基本成績の視覚的強調
  *
  * layoutData.spotlight スキーマ:
  * {
- *   mode?: 'default' | 'quote' | 'stats_grid' | 'single_metric',  // ★v5.15.5新★
- *   showPlayerName?: 'auto' | true | false,
+ *   mode?: 'default' | 'quote' | 'stats_grid' | 'single_metric',  // *   showPlayerName?: 'auto' | true | false,
  *   players: [
  *     {
  *       id: "okamoto",
@@ -26,7 +25,7 @@
  *       stats: [{ label, value }, ...],                             // default / stats_grid
  *       quote?: "...",                                              // (旧) 単発発言。後方互換。
  *       quoteSource?: "監督インタビュー (4/15)",                     // (旧) quote の出典
- *       quotes?: [                                                   // ★v5.18.13新★ 複数発言ピック
+ *       quotes?: [                                                   // 複数発言ピック
  *         { text: "もっと長打を打ちたい", source: "2026/4 取材" },    //   currentScript.focusQuoteIndex でシーンごとに切替
  *         { text: "守備位置はどこでも", source: "2026/3 春季練習" },
  *         ...
@@ -76,7 +75,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   const highlightComp = useHighlightComp(projectData, currentScript);
   const isHighlight = phase === 'highlight' && highlightComp;
 
-  // ★v5.14.0★ phase に関係なく、currentScript.highlight があれば行強調を発火
+  // phase に関係なく、currentScript.highlight があれば行強調を発火
   // (ハイライトカードは phase==='highlight' のみだが、行強調は normal phase でも発動)
   const focusedComp = currentScript?.highlight
     ? projectData.comparisons?.find(c => c.id === currentScript.highlight)
@@ -109,7 +108,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   const matchedPlayer = focusId ? data.players?.find(p => p.id === focusId || p.name === focusId) : null;
   const player = matchedPlayer || data.players?.[0] || {};
 
-  // ★v5.18.14★ デバッグ支援: focusEntry が指定されているのにマッチしない場合に警告
+  // デバッグ支援: focusEntry が指定されているのにマッチしない場合に警告
   if (focusId && !matchedPlayer && data.players?.length > 0) {
     console.warn(
       `[PlayerSpotlight] focusEntry="${focusId}" がどの player にもマッチしません。`,
@@ -119,7 +118,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
     );
   }
 
-  // ★v5.18.13★ quote 解決: player.quotes[] + currentScript.focusQuoteIndex に対応
+  // quote 解決: player.quotes[] + currentScript.focusQuoteIndex に対応
   // 後方互換: 旧 player.quote / quoteSource (単数) も維持
   //
   // 解決順序:
@@ -150,7 +149,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   // 期間ラベル
   const periodLabel = player.label || projectData.mainPlayer?.label || '';
 
-  // ★v5.14.0★ showPlayerName 判定
+  // showPlayerName 判定
   const showNameOption = data.showPlayerName;
   const showName = (() => {
     if (showNameOption === true) return true;
@@ -161,20 +160,20 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
   const displayName = player.name || (showName ? projectData.mainPlayer?.name : null);
   const displayNumber = player.number || (showName ? projectData.mainPlayer?.number : null);
 
-  // ★v5.14.0★ フォーカス判定 (currentScript.highlight が指す指標と一致する行)
+  // フォーカス判定 (currentScript.highlight が指す指標と一致する行)
   const primaryFocused = focusedLabel && statMatches(player.primaryStat?.label, focusedLabel);
   const isStatFocused = (statLabel) => focusedLabel && statMatches(statLabel, focusedLabel);
 
-  // ★v5.15.5★ mode 解決 (default | quote | stats_grid | single_metric)
-  // ★v5.18.14★ per-script 上書き: currentScript.spotlightMode が指定されていれば
+  // mode 解決 (default | quote | stats_grid | single_metric)
+  // per-script 上書き: currentScript.spotlightMode が指定されていれば
   //   グローバルの data.mode より優先する。
   //   これで1動画内で「シーン3=default / シーン5=quote / シーン7=single_metric」が可能。
   const mode = currentScript?.spotlightMode || data.mode || 'default';
 
   return (
     <>
-      {/* ★v5.19.2★ focusQuoteIndex も key に含めて quote 切替時にアニメ再発火 */}
-      {/* ★v5.20.16★ key を player のみベースに固定 (mode 切替で remount しない)
+      {/* focusQuoteIndex も key に含めて quote 切替時にアニメ再発火 */}
+      {/* key を player のみベースに固定 (mode 切替で remount しない)
          spotlightMode の切替 (#4 default → #5 cinematic_zoom → #6 default 等) で
          spot 全体が remount → cardBounceIn 全発火していたバグを修正。
          mode による表示違いは内部の条件分岐で対応 (key には含めない) */}
@@ -193,7 +192,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
           </div>
         )}
 
-        {/* ★v5.14.0★ 選手名 + 背番号 (showName のとき) */}
+        {/* 選手名 + 背番号 (showName のとき) */}
         {showName && displayName && (
           <div className="z-20 text-center mb-3">
             <span className="text-[18px] font-black text-white tracking-tight">
@@ -207,14 +206,14 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
           </div>
         )}
 
-        {/* ★v5.15.5★ mode 別本体 */}
+        {/* mode 別本体 */}
         {mode === 'quote' && (
           <div className="z-20 flex-1 flex flex-col items-center justify-start pt-4 px-2">
             {/* 引用記号 装飾 */}
             <div className="text-[80px] leading-none opacity-20 -mb-4 select-none" style={{ color: themeClass.primary }}>
               "
             </div>
-            {/* ★v5.19.4★ key={focusQuoteIndex} で quote 切替時のみここだけ remount → numReveal が走る */}
+            {/* key={focusQuoteIndex} で quote 切替時のみここだけ remount → numReveal が走る */}
             <div key={`q-${focusQuoteIndex ?? 0}`}
                  className="num-spring text-[20px] font-black text-white text-center leading-snug px-3 py-2"
                  style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
@@ -230,7 +229,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                 — {resolvedQuote.source}
               </div>
             )}
-            {/* ★v5.18.13★ 複数 quote 存在時、現在のインデックスを薄く表示 (デバッグ補助) */}
+            {/* 複数 quote 存在時、現在のインデックスを薄く表示 (デバッグ補助) */}
             {quotesArr.length > 1 && (
               <div className="absolute top-2 right-2 text-[8px] text-white/40 font-mono">
                 {(typeof focusQuoteIndex === 'number' ? focusQuoteIndex : 0) + 1}/{quotesArr.length}
@@ -244,7 +243,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
             <div className={`text-[16px] font-jp-heavy tracking-widest mb-2 ${themeClass.text} num-spring`}>
               {player.primaryStat.label}
             </div>
-            {/* ★v5.19.0★ 衝撃数字にバネ出現 (heroValuePop) */}
+            {/* 衝撃数字にバネ出現 (heroValuePop) */}
             <div
               className={`hero-value-pop font-impact leading-none ${isNeg ? 'neon-number-red' : 'neon-number'}`}
               style={{ fontSize: '140px' }}
@@ -340,7 +339,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                   {player.primaryStat.label}
                 </div>
 
-                {/* ★v5.14.0★ フォーカス時の左側矢印インジケータ */}
+                {/* フォーカス時の左側矢印インジケータ */}
                 {primaryFocused && (
                   <div className="absolute -left-1 top-1/2 -translate-y-1/2 text-amber-400 text-[20px] animate-bounce-x">
                     ▶
@@ -352,7 +351,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                     <span className="text-[12px] font-black text-zinc-300 tracking-widest mb-1">
                       {player.primaryStat.label}
                     </span>
-                    {/* ★巨大数値★ (★v5.17.0★ font-impact + neon-number 適用、★v5.19.0★ バネ出現) */}
+                    {/* ★巨大数値★ (font-impact + neon-number 適用、バネ出現) */}
                     <span className={`hero-value-pop text-[68px] font-impact leading-none ${
                       isNeg ? 'neon-number-red' : 'neon-number'
                     }`}>
@@ -394,7 +393,7 @@ export function PlayerSpotlightLayout({ projectData, currentScript, animationKey
                         animationDelay: `${i * 0.06 + 0.2}s`,
                       }}
                     >
-                      {/* ★v5.15.5★ フォーカス時は枠 + scale + amber 色のみ (テキスト「話題中」削除) */}
+                      {/* フォーカス時は枠 + scale + amber 色のみ (テキスト「話題中」削除) */}
                       <div className={`text-[10px] font-black tracking-widest mb-0.5 ${
                         focused ? 'text-amber-300' : 'text-zinc-300'
                       }`}>{stat.label}</div>

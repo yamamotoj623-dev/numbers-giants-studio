@@ -40,7 +40,7 @@ export const SE_PRESETS = [
   { id: 'click_tap',        label: 'クリック',       description: '小さなアクセント' },
   { id: 'radar_ping',       label: 'レーダー脈動',   description: 'チャート更新時' },
   { id: 'outro_fade',       label: 'アウトロ',       description: '動画終了直前に' },
-  // ★v5.20.13 追加バリエーション★
+  // 
   { id: 'sparkle_up',       label: 'キラキラ上昇',   description: '朗報・好調話の頂点' },
   { id: 'drum_roll',        label: 'ドラムロール',   description: '発表前の溜め' },
   { id: 'whoosh_in',        label: '勢い登場',       description: '新指標・選手登場時' },
@@ -52,18 +52,15 @@ export const SE_PRESETS = [
 ];
 
 export const DEFAULT_MIXER_LEVELS = {
-  // ★v5.20.13: ご要望どおり voice 1.4x / ducking 50%★
-  voice: 1.4,
+  // voice: 1.4,
   bgm: 0.15,
   se: 0.6,
   master: 1.0,
   duckingAmount: 0.5,
 };
 
-// ★v5.20.13: チームプリセット (リーグ/チーム/カラー)★
-// number/league/team を選択するとプレビューの選手色が自動で切り替わる
-// ★v5.20.14: 各チームの textColor は暗背景でも読める明度で統一★
-export const TEAM_PRESETS = [
+// // number/league/team を選択するとプレビューの選手色が自動で切り替わる
+// export const TEAM_PRESETS = [
   // NPB セ・リーグ
   { id: 'npb_giants',    league: 'NPB', team: 'G',     label: '巨人',       primary: '#f97316', secondary: '#c2410c', textColor: '#fb923c' },
   { id: 'npb_tigers',    league: 'NPB', team: 'T',     label: '阪神',       primary: '#facc15', secondary: '#a16207', textColor: '#fde047' },

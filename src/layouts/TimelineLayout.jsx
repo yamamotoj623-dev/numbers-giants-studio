@@ -74,7 +74,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
 
   // === 互換性レイヤ ===
   // 旧スキーマ points[].main / sub を新スキーマ value / compareLine に変換
-  // ★v5.20.13★ null 値を許容 (線を切る/系列入替表現用)
+  // null 値を許容 (線を切る/系列入替表現用)
   const data = (() => {
     const points = (rawData.points || [])
       .map(p => {
@@ -158,7 +158,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
   const scaleX = (i) => padX + (i * (chartW - 2 * padX) / Math.max(1, enhancedPoints.length - 1));
   const scaleY = (v) => padY + (chartH - 2 * padY) * (1 - (v - minVal) / range);
 
-  // ★v5.20.13★ 比較線パス: null 値で線を切る (M/L を null 直前で打ち切る)
+  // 比較線パス: null 値で線を切る (M/L を null 直前で打ち切る)
   const comparePath = data.compareLine
     ? (() => {
         const segs = [];
@@ -288,7 +288,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
                   fill={fillColor}
                   style={p.highlight || p.isPeak ? { filter: `drop-shadow(0 0 8px ${fillColor})` } : {}}
                 />
-                {/* ★v5.20.13★ 注釈テキスト (例: 「移籍」「故障」) */}
+                {/* 注釈テキスト (例: 「移籍」「故障」) */}
                 {p.note && !isHighlight && (
                   <text
                     x={scaleX(i)}
@@ -314,7 +314,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
                     style={{ filter: `drop-shadow(0 0 3px rgba(0,0,0,0.9))` }}
                   >
                     {(() => {
-                      // ★v5.21.10★ 文字列 ".333" でも数値 0.333 でも動くよう Number 正規化
+                      // 文字列 ".333" でも数値 0.333 でも動くよう Number 正規化
                       const v = Number(p.value);
                       if (!isFinite(v)) return '-';
                       return v < 10 ? v.toFixed(3).replace(/^0/, '') : v.toFixed(0);
@@ -340,7 +340,7 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
             </text>
           ))}
 
-          {/* ★v5.20.13★ 系列ラベル凡例 (右上、main/sub 名) */}
+          {/* 系列ラベル凡例 (右上、main/sub 名) */}
           {(data.mainLabel || data.subLabel) && (
             <g>
               {data.mainLabel && (

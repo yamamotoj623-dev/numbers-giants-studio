@@ -57,7 +57,7 @@ function base64ToBytes(base64) {
   return bytes;
 }
 
-// ★v5.14.4★ blob を data URL に変換 (Android 画面録画対応のため)
+// blob を data URL に変換 (Android 画面録画対応のため)
 // blob: URL は短時間 PCM バッファとして扱われ、Pixel の画面録画でキャプチャされない場合がある。
 // data URL ならインラインデータとして扱われ、メディア音として認識されやすい。
 async function blobToDataUrl(blob) {
@@ -199,18 +199,17 @@ export class GeminiAdapter {
     this._audioCtx = null;
     this._totalCostUsd = 0;
 
-    // ★v5.11.7: 再生レイテンシ削減のための拡張★
-    this._currentSource = null;       // 現在再生中の AudioBufferSourceNode
+    // this._currentSource = null;       // 現在再生中の AudioBufferSourceNode
     this._decodedCache = new Map();   // (speaker:text) → AudioBuffer (decode 済み)
     this._DECODE_CACHE_MAX = 12;      // メモリリーク防止: 最大12件保持 (LRU)
     this._unlocked = false;           // AudioContext がユーザー操作で resume 済みか
 
-    // ★v5.14.5★ 共有 audio 要素 (永続的に DOM に存在)
+    // 共有 audio 要素 (永続的に DOM に存在)
     // 動的に new Audio() で作って即削除すると Pixel 画面録画でキャプチャされないため、
     // 1つの audio 要素を最初に DOM に attach し、src を切り替えて再利用する。
     this._sharedAudio = null;
 
-    // ★v5.21.3★ pregenerate の進捗 state を adapter インスタンス (singleton) に保持。
+    // pregenerate の進捗 state を adapter インスタンス (singleton) に保持。
     // TTSPanel は条件レンダリング ({activeTab === 'tts' && <TTSPanel/>}) でタブ切替時に完全アンマウントされ、
     // React state が破棄されるが、pregenerate 内の Promise.all は走り続け、IndexedDB へのキャッシュ保存も継続する。
     // しかし TTSPanel 再マウント時に進捗を復元する手段がないため、ユーザーには「止まった」ように見えていた。
@@ -225,7 +224,7 @@ export class GeminiAdapter {
     this._pregenListeners = new Set();
   }
 
-  // ★v5.21.3★ 進捗購読 API — TTSPanel が useEffect で subscribe / unsubscribe する
+  // 進捗購読 API — TTSPanel が useEffect で subscribe / unsubscribe する
   subscribePregenState(listener) {
     this._pregenListeners.add(listener);
     // 即時に現状を渡す (再マウント時の復元用)
@@ -240,7 +239,7 @@ export class GeminiAdapter {
   }
 
   /**
-   * ★v5.14.6★ 共有 <video> 要素を取得 (なければ作って DOM に attach)
+   * 共有 <video> 要素を取得 (なければ作って DOM に attach)
    *
    * 【なぜ <video> 要素を使うか】
    * v5.14.5 で <audio> 要素を DOM 永続化したが、ユーザー診断ログで
@@ -309,7 +308,7 @@ export class GeminiAdapter {
    * 「事前生成」ボタンや再生ボタンを押した時に呼んでおくと、
    * 後続の new Audio() が autoplay block されない & レイテンシゼロで再生開始可能。
    *
-   * ★v5.14.3★ HTMLMediaElement の autoplay policy unlock も追加。
+   * HTMLMediaElement の autoplay policy unlock も追加。
    *   silent.wav を一度 play() すると以降の new Audio() が許可される。
    *   これがないと Android Chrome で「最初の再生だけ無音」「何度かやり直すと出る」現象が発生する。
    */
@@ -324,7 +323,7 @@ export class GeminiAdapter {
       console.warn('AudioContext resume failed:', e);
     }
 
-    // 2. ★v5.14.3★ HTMLMediaElement unlock
+    // 2. HTMLMediaElement unlock
     if (!this._mediaUnlocked) {
       try {
         // 最小の silent WAV (ヘッダのみ、空 PCM)
@@ -441,10 +440,9 @@ export class GeminiAdapter {
       blob: wavBlob,
       wasCached: false,
       costUsd: data.estimatedCostUsd || 0,
-      // ★v5.11.9: フォールバック情報を伝達★
-      usedFallback: !!data.usedFallback,
+      // usedFallback: !!data.usedFallback,
       modelUsed: data.modelUsed || 'gemini-3.1-flash-tts-preview',
-      // ★v5.16.0★ APIキーローテーション情報を伝達
+      // APIキーローテーション情報を伝達
       usedKeyIndex: typeof data.usedKeyIndex === 'number' ? data.usedKeyIndex : 0,
       keysAvailable: data.keysAvailable || 1,
     };
@@ -454,7 +452,7 @@ export class GeminiAdapter {
    * 次のscriptの音声を事前生成してキャッシュに入れる (speak時のレイテンシ削減)
    * キャッシュ済みなら何もしない。エラーは握りつぶす (prefetchは best effort)
    *
-   * ★v5.14.1★ HTMLAudioElement に戻したため、blob を IndexedDB キャッシュに保存しておくだけで OK。
+   * HTMLAudioElement に戻したため、blob を IndexedDB キャッシュに保存しておくだけで OK。
    * Audio 要素は内部で自動 decode する。decoded AudioBuffer のメモリキャッシュは不要。
    */
   async prefetch(text, speaker) {
@@ -478,7 +476,7 @@ export class GeminiAdapter {
       const fixedText = applyYomigana(text);
 
       try {
-        // ★v5.14.5★ 共有 audio 要素を再利用 (動的生成→即削除をやめる)
+        // 共有 audio 要素を再利用 (動的生成→即削除をやめる)
         // Pixel 画面録画は「動的生成・短時間で削除される audio」をキャプチャしない可能性が高い。
         // 永続的に DOM に存在する audio 要素の src を切り替える方式に変更。
         const { blob } = await this._getOrGenerate(fixedText, speaker);
@@ -493,7 +491,7 @@ export class GeminiAdapter {
         audio.onerror = null;
 
         audio.src = dataUrl;
-        // ★v5.21.3★ Firefox 対策: 同じ audio 要素に同一 src(キャッシュデータURL)を再設定した際、
+        // Firefox 対策: 同じ audio 要素に同一 src(キャッシュデータURL)を再設定した際、
         // pause() 後の状態(currentTime が再生終了点)と readyState がリセットされず、
         // l531 の `readyState >= 3` 判定で即 startPlayback に入って onended が即発火 → 無音化する。
         // 明示的に load() を呼び readyState を 0 に戻して、canplay 待ちパスに乗せる。
@@ -515,10 +513,10 @@ export class GeminiAdapter {
           if (resolved) return;
           resolved = true;
           clearTimeout(this.fallbackTimer);
-          // ★v5.14.5★ 共有要素なので DOM remove はしない
+          // 共有要素なので DOM remove はしない
           // src だけクリアしておく (次の speak で上書きされる)
           if (this.currentAudio === audio) this.currentAudio = null;
-          // ★v5.14.6★ Media Session を paused に
+          // Media Session を paused に
           try {
             if ('mediaSession' in navigator) {
               navigator.mediaSession.playbackState = 'paused';
@@ -541,13 +539,13 @@ export class GeminiAdapter {
         // 即時再生
         const startPlayback = async () => {
           try {
-            // ★v5.14.3★ play() 直前に rate と preservesPitch を設定
+            // play() 直前に rate と preservesPitch を設定
             audio.playbackRate = rate;
             audio.preservesPitch = true;
             audio.mozPreservesPitch = true;
             audio.webkitPreservesPitch = true;
-            audio.muted = false;  // ★v5.14.6★ 念のため muted=false 確認
-            // ★v5.14.6★ Media Session に playing 状態を伝える
+            audio.muted = false;  // 念のため muted=false 確認
+            // Media Session に playing 状態を伝える
             try {
               if ('mediaSession' in navigator) {
                 navigator.mediaSession.playbackState = 'playing';
@@ -606,12 +604,11 @@ export class GeminiAdapter {
     });
   }
 
-  // ★v5.14.1★ レガシー _speakLegacyHtmlAudio は削除 (上の speak() 本体が同等の実装に)
+  // レガシー _speakLegacyHtmlAudio は削除 (上の speak() 本体が同等の実装に)
 
   stop() {
     clearTimeout(this.fallbackTimer);
-    // ★v5.11.7: AudioBufferSourceNode を停止★
-    // ★v5.14.1★ AudioBufferSourceNode は使わなくなったが、念のため残骸を停止
+    // // AudioBufferSourceNode は使わなくなったが、念のため残骸を停止
     if (this._currentSource) {
       try {
         this._currentSource.onended = null;
@@ -625,14 +622,14 @@ export class GeminiAdapter {
       this.currentAudio.onended = null;
       this.currentAudio.onerror = null;
       try { this.currentAudio.pause(); } catch (e) {}
-      // ★v5.14.5★ 共有 audio 要素は DOM remove しない (永続的に保持)
+      // 共有 audio 要素は DOM remove しない (永続的に保持)
       // currentAudio 参照だけクリア
       this.currentAudio = null;
     }
   }
 
   /**
-   * ★v5.18.3 修正★ scripts を**グループ単位**で一括事前生成
+   * scripts を**グループ単位**で一括事前生成
    *
    * 旧 (v5.18.2): 個別 script 単位で TTS API を叩いていたため、
    *   アプリ再生時のグループキャッシュキーと不一致 → 二重生成 + 「未生成」誤判定
@@ -654,7 +651,7 @@ export class GeminiAdapter {
     const groups = groupBySpeaker(scripts);
     const totalGroups = groups.length;
 
-    // ★v5.21.3★ adapter インスタンスに進捗 state を持たせる (TTSPanel 再マウント時に復元するため)
+    // adapter インスタンスに進捗 state を持たせる (TTSPanel 再マウント時に復元するため)
     this._pregenState = {
       isGenerating: true,
       progress: { current: 0, total: totalGroups, generated: 0, cached: 0, errors: 0, costUsd: 0, fallbackCount: 0, fallbackIds: [], failedIds: [] },
@@ -695,7 +692,7 @@ export class GeminiAdapter {
           fallbackCount,
           fallbackIds: [...fallbackIds],
         };
-        // ★v5.21.3★ adapter state も更新 → 全 subscriber に通知
+        // adapter state も更新 → 全 subscriber に通知
         this._pregenState = { ...this._pregenState, progress: progressSnapshot };
         this._emitPregenState();
         // 既存の onProgress callback (アンマウント済み TTSPanel の setState は React が discard するが、生成は止まらない)
@@ -710,7 +707,7 @@ export class GeminiAdapter {
     }
 
     const finalResult = { generated, cached, errors, costUsd, failedIds, fallbackCount, fallbackIds };
-    // ★v5.21.3★ 完了時の最終結果も保持 (再マウント時に「完了済み」として表示するため)
+    // 完了時の最終結果も保持 (再マウント時に「完了済み」として表示するため)
     this._pregenState = {
       isGenerating: false,
       progress: this._pregenState.progress,
@@ -723,7 +720,7 @@ export class GeminiAdapter {
   }
 
   /**
-   * ★v5.18.3 修正★ scripts のうち、まだキャッシュに無いグループを **グループ単位** で返す
+   * scripts のうち、まだキャッシュに無いグループを **グループ単位** で返す
    *
    * 旧 (v5.18.2): 個別 script ごとにキャッシュチェック → アプリ再生時のグループキー
    *   と一致せず、「実は生成済みなのに未生成」と誤判定するバグがあった。
@@ -772,7 +769,7 @@ export class GeminiAdapter {
   }
 
   /**
-   * ★v5.18.3 修正★ 指定された script id を含むグループだけを再生成
+   * 指定された script id を含むグループだけを再生成
    *
    * 旧 (v5.18.2): 個別 script で再生成 → 別キャッシュキーに保存され
    *   アプリ再生時にキャッシュヒットしないバグがあった。

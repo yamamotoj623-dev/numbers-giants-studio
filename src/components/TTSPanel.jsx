@@ -26,27 +26,21 @@ export function TTSPanel({
   const [progress, setProgress] = useState(null);
   const [totalCost, setTotalCost] = useState(0);
   const [cacheStats, setCacheStats] = useState({ count: 0, totalBytes: 0 });
-  const [fallbackInfo, setFallbackInfo] = useState({ count: 0, ids: [] });  // ★v5.11.9: フォールバック発生の追跡★
-
-  // ★v5.11.6 新規: 不足チェック関連の state★
-  const [missingList, setMissingList] = useState([]);
+  const [fallbackInfo, setFallbackInfo] = useState({ count: 0, ids: [] });  // // const [missingList, setMissingList] = useState([]);
   const [checkingMissing, setCheckingMissing] = useState(false);
   const [retryingId, setRetryingId] = useState(null);  // 個別再生成中の id
 
-  // ★v5.14.2 新規: 全 scripts 操作 (任意選択再生成・個別試聴)★
-  const [showAllScripts, setShowAllScripts] = useState(false);
+  // const [showAllScripts, setShowAllScripts] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);   // 一括再生成用
   const [cachedSet, setCachedSet] = useState(new Set()); // どの id がキャッシュ済か
   const [previewingId, setPreviewingId] = useState(null); // 個別試聴中の id
 
-  // ★v5.14.4 新規: 録画診断モード★
-  const [diagnostic, setDiagnostic] = useState(null);
+  // const [diagnostic, setDiagnostic] = useState(null);
 
-  // ★v5.15.0 新規: 動画用音声エクスポート★
-  const [exporting, setExporting] = useState(false);
+  // const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ msg: '', percent: 0 });
   const [exportResult, setExportResult] = useState(null);
-  // ★v5.15.2★ SoundTouchJS でピッチ維持時間伸縮できるようになったため、デフォルト ON
+  // SoundTouchJS でピッチ維持時間伸縮できるようになったため、デフォルト ON
   const [applySpeechRate, setApplySpeechRate] = useState(true);  // { audioCount, currentAudios, lastPlayLog }
 
   const refreshCacheStats = async () => {
@@ -60,7 +54,7 @@ export function TTSPanel({
 
   React.useEffect(() => { refreshCacheStats(); }, []);
 
-  // ★v5.21.3★ adapter (singleton) の進捗 state を subscribe → タブ切替で TTSPanel が
+  // adapter (singleton) の進捗 state を subscribe → タブ切替で TTSPanel が
   // アンマウントされても、内部の Promise.all は走り続けキャッシュは IndexedDB に保存される。
   // 再マウント時、ここで adapter._pregenState を読み取って progress/pregenStatus を復元する。
   React.useEffect(() => {
@@ -104,19 +98,16 @@ export function TTSPanel({
     setFallbackInfo({ count: 0, ids: [] });  // ★リセット★
     try {
       const adapter = getAdapter('gemini');
-      // ★v5.11.7: AudioContext を unlock (再生時のレイテンシをゼロに)★
-      if (adapter.unlock) await adapter.unlock();
+      // if (adapter.unlock) await adapter.unlock();
       const result = await adapter.pregenerate(projectData.scripts, (p) => {
         setProgress(p);
-        // ★v5.11.9: フォールバック件数の進捗反映★
-        if (p.fallbackCount !== undefined) {
+        // if (p.fallbackCount !== undefined) {
           setFallbackInfo({ count: p.fallbackCount, ids: p.fallbackIds || [] });
         }
       });
       setTotalCost(prev => prev + result.costUsd);
       setPregenStatus(result.errors > 0 ? 'partial' : 'done');
-      // ★v5.11.9: 最終的なフォールバック件数を反映★
-      setFallbackInfo({
+      // setFallbackInfo({
         count: result.fallbackCount || 0,
         ids: result.fallbackIds || []
       });
@@ -137,8 +128,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.11.6 新規: 不足チェック★
-   * scripts のうち、キャッシュにないものをリストアップする
+   * * scripts のうち、キャッシュにないものをリストアップする
    */
   const handleCheckMissing = async () => {
     setCheckingMissing(true);
@@ -158,8 +148,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.11.6 新規: 不足分のみ一括再生成★
-   */
+   * */
   const handleRegenerateMissing = async () => {
     if (missingList.length === 0) return;
     if (!confirm(`不足 ${missingList.length} 件を再生成します。よろしいですか？`)) return;
@@ -191,8 +180,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.11.6 新規: 特定 id だけ個別再生成★
-   */
+   * */
   const handleRegenerateOne = async (id) => {
     setRetryingId(id);
     try {
@@ -215,8 +203,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.14.2 新規: キャッシュ済み一覧を取得 (全 scripts ビュー用)★
-   */
+   * */
   const refreshCachedSet = async () => {
     if (!projectData?.scripts?.length) return;
     try {
@@ -241,7 +228,7 @@ export function TTSPanel({
   }, [showAllScripts, projectData?.scripts]);
 
   /**
-   * ★v5.21.11★ 任意 id を試聴 — 本番再生と完全に同じグループ連結 TTS を使う
+   * 任意 id を試聴 — 本番再生と完全に同じグループ連結 TTS を使う
    *
    * 旧版: 単一 script の text を単独 speak → 本番と微妙に違う(ぶつ切り、キャッシュキー不一致)
    * 新版: その id が属する speaker グループ全体を `。` 連結して 1 回 speak
@@ -291,8 +278,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.14.2 新規: 任意 id を強制再生成 (キャッシュ済でも上書き)★
-   */
+   * */
   const handleForceRegenerateOne = async (id) => {
     if (!confirm(`id:${id} を再生成します (既存キャッシュを上書き)。よろしいですか？`)) return;
     setRetryingId(id);
@@ -317,8 +303,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.14.2 新規: 選択中の id を一括強制再生成★
-   */
+   * */
   const handleRegenerateSelected = async () => {
     if (selectedIds.length === 0) return;
     if (!confirm(`選択した ${selectedIds.length} 件を再生成します (既存キャッシュを上書き)。よろしいですか？`)) return;
@@ -348,8 +333,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.14.2 新規: 選択チェックボックス★
-   */
+   * */
   const toggleSelected = (id) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
@@ -361,7 +345,7 @@ export function TTSPanel({
   const clearSelection = () => setSelectedIds([]);
 
   /**
-   * ★v5.14.4 新規 / v5.14.5 強化 / v5.14.6 環境チェック追加★ 録画診断
+   * 録画診断
    */
   const handleDiagnostic = async () => {
     try {
@@ -370,7 +354,7 @@ export function TTSPanel({
       log.push(`[${new Date().toLocaleTimeString()}] 診断開始`);
       log.push(`UA: ${navigator.userAgent.substring(0, 80)}`);
 
-      // ★v5.14.6★ 環境チェック (録画されない原因の切り分け)
+      // 環境チェック (録画されない原因の切り分け)
       log.push(`--- 環境チェック ---`);
       log.push(`Media Session API: ${'mediaSession' in navigator ? '✅対応' : '❌非対応'}`);
       log.push(`AudioContext: ${'AudioContext' in window || 'webkitAudioContext' in window ? '✅対応' : '❌非対応'}`);
@@ -461,7 +445,7 @@ export function TTSPanel({
         }
       } catch (e) {}
 
-      // 7. 共有要素の永続性チェック (★v5.14.6★)
+      // 7. 共有要素の永続性チェック ()
       const adapter2 = getAdapter('gemini');
       if (adapter2._sharedAudio) {
         const tag = adapter2._sharedAudio.tagName.toLowerCase();
@@ -483,8 +467,7 @@ export function TTSPanel({
   };
 
   /**
-   * ★v5.15.0 新規: 動画用音声をエクスポート (オフライン合成 → WAV)★
-   *
+   * *
    * 画面録画では Pixel Chrome が TTS を録音してくれない問題への根本的解決策。
    * OfflineAudioContext で TTS+BGM+SE+ducking を全部メモリ上で合成して
    * 1本の WAV として出力する。
@@ -503,8 +486,7 @@ export function TTSPanel({
       const result = await exportProjectAudio({
         scripts: projectData.scripts,
         speechRate,
-        applySpeechRate,                   // ★v5.15.1★
-        audio: projectData.audio || {},
+        applySpeechRate,                   // audio: projectData.audio || {},
         onProgress: (msg, percent) => setExportProgress({ msg, percent }),
       });
 
@@ -612,7 +594,7 @@ export function TTSPanel({
                 )}
               </button>
 
-              {/* ★v5.11.9 新規: フォールバック発生の表示★ */}
+              {/* */}
               {fallbackInfo.count > 0 && (
                 <div className="bg-blue-50 border border-blue-300 rounded-lg p-2 flex items-center gap-2 text-[11px]">
                   <Sparkles size={12} className="text-blue-600 flex-shrink-0"/>
@@ -625,7 +607,7 @@ export function TTSPanel({
                 </div>
               )}
 
-              {/* ★v5.11.6 新規: 不足チェック★ */}
+              {/* */}
               <button
                 onClick={handleCheckMissing}
                 disabled={checkingMissing || pregenStatus === 'loading' || !projectData?.scripts?.length}
@@ -638,7 +620,7 @@ export function TTSPanel({
                 )}
               </button>
 
-              {/* ★v5.11.6 新規: 不足リスト + 一括再生成 + 個別再生成★ */}
+              {/* */}
               {missingList.length > 0 && (
                 <div className="bg-amber-50 border border-amber-300 rounded-lg p-2.5 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
@@ -688,7 +670,7 @@ export function TTSPanel({
                 </div>
               )}
 
-              {/* ★v5.14.2 新規: 全 scripts ビュー (任意選択して再生成 or 試聴)★ */}
+              {/* */}
               <div className="bg-zinc-50 border border-zinc-200 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setShowAllScripts(s => !s)}
@@ -841,7 +823,7 @@ export function TTSPanel({
                 </button>
               </div>
 
-              {/* ★v5.15.0 新規: 動画用音声エクスポート★ */}
+              {/* */}
               <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg overflow-hidden">
                 <div className="px-2.5 py-2 bg-emerald-100">
                   <div className="text-[11px] font-black text-emerald-900 flex items-center gap-1.5">
@@ -855,7 +837,7 @@ export function TTSPanel({
                     アプリで <strong>映像だけ画面録画 (音はミュートでOK)</strong> → このボタンで <strong>音声 WAV を取得</strong> → 動画編集アプリで合成。
                   </div>
 
-                  {/* ★v5.15.2★ 速度反映オプション (SoundTouchJS でピッチ維持) */}
+                  {/* 速度反映オプション (SoundTouchJS でピッチ維持) */}
                   <label className="flex items-start gap-1.5 text-[10px] text-zinc-700 bg-emerald-50 border border-emerald-200 rounded p-1.5 cursor-pointer">
                     <input
                       type="checkbox"
@@ -960,7 +942,7 @@ export function TTSPanel({
                 </div>
               </div>
 
-              {/* ★v5.14.4 新規: 録画診断★ */}
+              {/* */}
               <details className="bg-amber-50 border border-amber-200 rounded-lg overflow-hidden">
                 <summary className="px-2.5 py-1.5 text-[10px] font-bold text-amber-800 cursor-pointer hover:bg-amber-100">
                   🔍 録画診断 (TTSが録画されない時)
@@ -998,7 +980,7 @@ export function TTSPanel({
               <button onClick={() => setSpeechRate(p => Math.min(2.5, +(p + 0.1).toFixed(2)))} className="px-1.5 py-0.5 bg-zinc-200 hover:bg-zinc-300 rounded text-[10px] font-bold text-zinc-600">+0.1</button>
               <span className="text-[11px] font-mono font-black text-indigo-600 min-w-[40px] text-right">x{speechRate.toFixed(2)}</span>
             </div>
-            {/* ★v5.14.2★ 音程維持の説明 */}
+            {/* 音程維持の説明 */}
             <div className="text-[9px] text-zinc-500 px-1">
               💡 音程維持 ON (preservesPitch) なので速度を上げても声質は変わりません。
               {speechRate >= 1.4 && <span className="text-amber-600 font-bold ml-1">x1.4以上は早口でも聞き取れる程度に。</span>}

@@ -4,7 +4,7 @@
  * currentScript.highlight で指定された comparison を大カードで深掘り表示
  * レーダー以外のレイアウトでも画面中央にどーんと出す
  *
- * ★v5.19.6★ スコープ対応:
+ * スコープ対応:
  *   comparison.variants[] に複数スコープ (例: 通季 / 対左 / 対右 / vs他選手) を持たせ、
  *   currentScript.highlightScope で表示する variant を切り替え。
  *   旧来の comp.valMain/valSub も引き続きデフォルト variant として動作。
@@ -50,7 +50,7 @@ export function HighlightCard({ comp, projectData, currentScript }) {
 
   const variant = resolveVariant(comp, currentScript?.highlightScope);
 
-  // ★v5.15.5★ 英語指標のみ kana/formula 表示 (ユーザー要望)
+  // 英語指標のみ kana/formula 表示 (ユーザー要望)
   const showKanaFormula = isEnglishMetric(comp.label);
 
   return (
@@ -61,7 +61,7 @@ export function HighlightCard({ comp, projectData, currentScript }) {
         <div className="hl-label-group">
           {showKanaFormula && comp.kana && <span className="hl-kana-compact">{comp.kana}</span>}
           <span className="hl-label-compact">{comp.label}</span>
-          {/* ★v5.19.6★ スコープラベル (例: 対左投手 / 今季vs昨季) を併記 */}
+          {/* スコープラベル (例: 対左投手 / 今季vs昨季) を併記 */}
           {variant.scopeLabel && (
             <span className="ml-1.5 text-[10px] font-bold text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded">
               {variant.scopeLabel}
@@ -78,7 +78,7 @@ export function HighlightCard({ comp, projectData, currentScript }) {
         </div>
       )}
 
-      {/* 値 vs 値 (★v5.19.6★ scope に応じた variant を表示) */}
+      {/* 値 vs 値 (scope に応じた variant を表示) */}
       <div className="hl-values">
         <div className={`hl-val-main ${variant.winner === 'main' ? 'winner' : 'loser'}`}>
           <div className="num">{variant.valMain}{comp.unit || ''}</div>
@@ -120,7 +120,7 @@ function formatFormula(f) {
   );
 }
 
-// ★v5.20★ criteria 表示の堅牢化 — AI が「高いほどいい」等を混入させても自然に表示
+// criteria 表示の堅牢化 — AI が「高いほどいい」等を混入させても自然に表示
 //   1. 文字列 "優秀: .300以上"           → ".300以上"
 //   2. 文字列 "高いほどいい"               → '' (空)
 //   3. 文字列 ".300以上"                   → ".300以上"

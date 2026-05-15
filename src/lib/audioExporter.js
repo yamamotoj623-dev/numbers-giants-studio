@@ -1,11 +1,11 @@
 /**
- * audioExporter.js (★v5.15.4★)
+ * audioExporter.js ()
  *
  * 動画用音声トラックをオフライン合成して WAV ファイルとしてダウンロード可能にする。
  *
- * ★v5.15.2★ SoundTouchJS で TTS のピッチを維持したまま速度変更可能に
- * ★v5.15.3★ BGM/SE は IndexedDB + localStorage 直接アクセス (mixer 経由をやめて確実化)
- * ★v5.15.4★ 合成音 SE フォールバック (カスタム SE 未登録の preset でも音が出るように)
+ * SoundTouchJS で TTS のピッチを維持したまま速度変更可能に
+ * BGM/SE は IndexedDB + localStorage 直接アクセス (mixer 経由をやめて確実化)
+ * 合成音 SE フォールバック (カスタム SE 未登録の preset でも音が出るように)
  */
 
 import { getCachedAudio } from './audioCache';
@@ -16,7 +16,7 @@ import { PitchShifter } from 'soundtouchjs';
 import { groupBySpeaker } from './scriptGrouping';
 
 /**
- * ★v5.15.4★ 合成音 SE のプリセット定義 (mixer.js と同期)
+ * 合成音 SE のプリセット定義 (mixer.js と同期)
  * カスタム SE が未登録の場合、これらの合成音を OfflineAudioContext で再現する。
  */
 const SYNTHETIC_SE_PRESETS = {
@@ -33,7 +33,7 @@ const SYNTHETIC_SE_PRESETS = {
 };
 
 /**
- * ★v5.15.4★ 合成音 SE を OfflineAudioContext にスケジュール
+ * 合成音 SE を OfflineAudioContext にスケジュール
  * mixer.js の playSe の合成音ロジックを移植。
  */
 function scheduleSyntheticSe(offlineCtx, seId, startSec, seVolume) {
@@ -61,7 +61,7 @@ function scheduleSyntheticSe(offlineCtx, seId, startSec, seVolume) {
  * AudioBuffer を WAV blob に変換 (16bit PCM)
  */
 /**
- * AudioBuffer を WAV blob に変換 (★v5.18.10★ export して mixer でも使えるように)
+ * AudioBuffer を WAV blob に変換 (export して mixer でも使えるように)
  */
 export function audioBufferToWav(audioBuffer) {
   const numChannels = audioBuffer.numberOfChannels;
@@ -119,7 +119,7 @@ async function fetchAsBlob(url) {
 }
 
 /**
- * ★v5.15.2★ SoundTouchJS で AudioBuffer をピッチ維持しつつ速度変更
+ * SoundTouchJS で AudioBuffer をピッチ維持しつつ速度変更
  *
  * @param {AudioBuffer} sourceBuffer - 元の音声
  * @param {number} tempo - 速度倍率 (1.0=変えない, 1.3=1.3倍速, 0.8=0.8倍)
@@ -142,7 +142,7 @@ async function timeStretchPreservingPitch(sourceBuffer, tempo, ctx) {
 
   // PitchShifter は AudioBufferSourceNode 互換の API を持つので、
   // OfflineAudioContext で接続して render する
-  // ★v1.1.1★ buffer size を 1024 → 4096 に拡大 (音質劣化を最小化)
+  // buffer size を 1024 → 4096 に拡大 (音質劣化を最小化)
   //   小さい窓だと TTS のような短いフレーズではイントネーションが歪む。
   //   4096 で TTS の自然な抑揚を保ったまま時間伸縮可能。
   const offlineCtx = new OfflineAudioContext(numChannels, outputLength, sampleRate);
@@ -183,7 +183,7 @@ export async function exportProjectAudio({
     console.log('[audioExporter]', msg);
   };
 
-  // ★v5.15.5★ localStorage から音量レベルを取得 (BGMPanel で設定された最新値)
+  // localStorage から音量レベルを取得 (BGMPanel で設定された最新値)
   // projectData.audio (固定値) よりも localStorage を優先
   let mixerLevels = { voice: 1.0, bgm: 0.15, se: 0.6, master: 1.0 };
   try {
@@ -195,13 +195,13 @@ export async function exportProjectAudio({
   const sampleRate = 48000;
   const numChannels = 2;
 
-  // ★v5.15.2★ 速度反映: applySpeechRate=true なら SoundTouchJS でピッチ維持時間伸縮
+  // 速度反映: applySpeechRate=true なら SoundTouchJS でピッチ維持時間伸縮
   // false なら speechRate を無視して 1.0倍 (自然な速度)
   const targetTempo = applySpeechRate ? speechRate : 1.0;
   log(`applySpeechRate=${applySpeechRate}, targetTempo=${targetTempo} (SoundTouchJS pitch-preserving)`);
 
   // === Phase 1: TTS 音声を全部 decode してから duration を計算する ===
-  // ★v5.18.3★ 共通ヘルパー groupBySpeaker でグループ化 (usePlaybackEngine, ttsAdapter と完全同期)
+  // 共通ヘルパー groupBySpeaker でグループ化 (usePlaybackEngine, ttsAdapter と完全同期)
   //   旧版はスペース連結だったため、句点連結のキャッシュキーと不一致 → 全部「未生成」誤判定バグ
   onProgress('TTS グループ化中...', 5);
   const speakerGroups = groupBySpeaker(scripts);
@@ -239,7 +239,7 @@ export async function exportProjectAudio({
         const arrayBuffer = await blob.arrayBuffer();
         let audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer.slice(0));
 
-        // ★v5.15.2★ 速度反映が ON なら SoundTouchJS でピッチ維持時間伸縮
+        // 速度反映が ON なら SoundTouchJS でピッチ維持時間伸縮
         if (targetTempo !== 1.0) {
           try {
             audioBuffer = await timeStretchPreservingPitch(audioBuffer, targetTempo, decodeCtx);
@@ -267,7 +267,7 @@ export async function exportProjectAudio({
   log(`TTS 取得済み: ${ttsItems.filter(t => t.audioBuffer).length}件 / 未生成: ${missingScripts.length}件`);
 
   // === Phase 3: 各グループの実 duration からタイムラインを構築 ===
-  // ★v5.15.2★ audioBuffer は既に時間伸縮済みなので duration をそのまま使う
+  // audioBuffer は既に時間伸縮済みなので duration をそのまま使う
   const charSec = 0.16;
   const ttsTimings = [];
   let cursor = 0;
@@ -297,7 +297,7 @@ export async function exportProjectAudio({
     sampleRate
   );
 
-  // 4-A: TTS をスケジュール (★v5.15.2★ audioBuffer は既に SoundTouch で時間伸縮済み)
+  // 4-A: TTS をスケジュール (audioBuffer は既に SoundTouch で時間伸縮済み)
   for (const t of ttsTimings) {
     if (!t.audioBuffer) continue;
     const source = offlineCtx.createBufferSource();
@@ -312,7 +312,7 @@ export async function exportProjectAudio({
   }
 
   // === Phase 5: BGM/SE を IndexedDB から直接取得 ===
-  // ★v5.15.3★ mixer 経由ではなく IndexedDB に直接アクセス
+  // mixer 経由ではなく IndexedDB に直接アクセス
   //   - mixer は React state なので、コンポーネントアンマウントや再マウントで揮発する可能性
   //   - IndexedDB なら永続的、確実に取得できる
   onProgress('BGM/SE を読み込み中...', 60);
@@ -384,7 +384,7 @@ export async function exportProjectAudio({
     const seList = await listSes();  // IndexedDB から SE 一覧取得
     log(`SE 一覧: ${seList.length} 件登録済み`);
 
-    // ★v5.15.3★ assignedPresetId は localStorage の "se-assignments" map に保存されてる
+    // assignedPresetId は localStorage の "se-assignments" map に保存されてる
     let assignments = {};
     try {
       const raw = localStorage.getItem('se-assignments');
@@ -392,7 +392,7 @@ export async function exportProjectAudio({
     } catch (e) {}
     log(`SE assignment マップ: ${Object.keys(assignments).length} 件`);
 
-    // ★v5.15.4★ カスタム SE 0件でも合成音 fallback を実行する
+    // カスタム SE 0件でも合成音 fallback を実行する
     // preset id → blob のマップを構築 (空ならカスタムは使わず全部合成音)
     const presetToBlob = new Map();
     if (seList.length === 0) {
@@ -417,11 +417,11 @@ export async function exportProjectAudio({
     }
 
     {
-      // scripts を順次たどって SE を配置 (★v5.15.4★ カスタムなければ合成音 fallback)
+      // scripts を順次たどって SE を配置 (カスタムなければ合成音 fallback)
       let syntheticCount = 0;
       const seVolume = mixerLevels.se * mixerLevels.master;
 
-      // ★v5.18.0★ 冒頭フック (id:0) で hook_impact を自動配置 (Gemini提言: 打撃音/ミット音)
+      // 冒頭フック (id:0) で hook_impact を自動配置 (Gemini提言: 打撃音/ミット音)
       // 最初の script に明示的な se が指定されていなければ自動的に hook_impact を入れる
       const firstScript = scripts[0];
       if (firstScript && !firstScript.se) {
@@ -486,7 +486,7 @@ export async function exportProjectAudio({
                 }
               }
             } else {
-              // ★v5.15.4★ カスタム SE 未登録 → 合成音 fallback
+              // カスタム SE 未登録 → 合成音 fallback
               if (SYNTHETIC_SE_PRESETS[seId]) {
                 scheduleSyntheticSe(offlineCtx, seId, scriptCursor, seVolume);
                 syntheticCount++;
