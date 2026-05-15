@@ -241,13 +241,17 @@ export function TTSPanel({
   }, [showAllScripts, projectData?.scripts]);
 
   /**
-   * ★v5.14.2 新規: 任意 id を個別に試聴 (キャッシュから即時再生)★
+   * ★v5.21.11★ 任意 id を試聴 — 本番再生と完全に同じグループ連結 TTS を使う
+   *
+   * 旧版: 単一 script の text を単独 speak → 本番と微妙に違う(ぶつ切り、キャッシュキー不一致)
+   * 新版: その id が属する speaker グループ全体を `。` 連結して 1 回 speak
+   *      → 本番再生の joinedSpeech と完全一致 → キャッシュヒットで即再生、聞こえ方も統一
    */
   const handlePreviewOne = async (id) => {
-    const script = projectData.scripts.find(s => s.id === id);
-    if (!script) return;
-    const text = script.speech || script.text;
-    if (!text) return;
+    const scripts = projectData?.scripts || [];
+    const idx = scripts.findIndex(s => s.id === id);
+    if (idx < 0) return;
+    const script = scripts[idx];
 
     // 既に試聴中なら停止
     if (previewingId === id) {
@@ -256,11 +260,26 @@ export function TTSPanel({
       return;
     }
 
+    // ★同 speaker グループの範囲を特定★(本番再生と同じロジック)
+    let groupStart = idx;
+    while (groupStart > 0 && scripts[groupStart - 1].speaker === script.speaker) groupStart--;
+    let groupEnd = idx;
+    while (groupEnd < scripts.length - 1 && scripts[groupEnd + 1].speaker === script.speaker) groupEnd++;
+    const groupScripts = scripts.slice(groupStart, groupEnd + 1);
+
+    // ★本番再生と完全一致の連結ロジック(usePlaybackEngine 行 182-185)★
+    const joinedSpeech = groupScripts.map(s => {
+      const t = s.speech || s.text || '';
+      return /[。！？.!?]$/.test(t) ? t : t + '。';
+    }).join('');
+
+    if (!joinedSpeech) return;
+
     setPreviewingId(id);
     try {
       const adapter = getAdapter('gemini');
       if (adapter.unlock) await adapter.unlock();
-      await adapter.speak(text, script.speaker || 'A', {
+      await adapter.speak(joinedSpeech, script.speaker || 'A', {
         rate: speechRate,
         onEnd: () => setPreviewingId(null),
         onError: () => setPreviewingId(null),

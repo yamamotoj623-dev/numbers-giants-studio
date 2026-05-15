@@ -32,8 +32,11 @@
 | ファイル | 用途 |
 |---|---|
 | `json-schema-rules.md` | スキーマ / 列挙値 / 数値整形 / 配分 / emoji 指定 15 種 / 出力前チェック |
-| `layout-templates.md` | 8 レイアウトの完全テンプレート |
+| `layout-templates.md` | 8 レイアウトの完全テンプレート(★avg 等の数値型必須フィールド明記★) |
+| `layout-direction.md` | 各レイアウトが動画 60 秒のどこで何を担うか(レイアウト選択の判断基準) |
+| `structure-playbook.md` | scripts 全体構造 / 連続ルール / アウトロ正典 |
 | `moeka-voice-samples.md` | もえか口調サンプル / ヤバい運用詳細 |
+| `character-bible.md` | A 数原・B もえか キャラクター設計の正典 |
 | `composition-rules.md` | 縦長(9:16)構成原則 / id:1 戦略 / 文字量ルール |
 | `composition-landscape-rules.md` | 横長(16:9)章立て構造 / 文字量ルール |
 | `audience-and-language.md` | 事象→数字原則 / 自分ごと化 |

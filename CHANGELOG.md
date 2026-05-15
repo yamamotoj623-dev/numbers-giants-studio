@@ -2,6 +2,43 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.11] - 2026-05-15 - ★Knowledge 整合性回復 + アプリプロンプト強化 + TTS アコーディオン統一★
+
+**①Knowledge Files の網羅と整合性回復:**
+- ★v11 instruction の参照表に 3 ファイル追加★:
+  - `layout-direction.md`(各レイアウトが動画 60 秒で何を担うか)
+  - `structure-playbook.md`(scripts 全体構造・連続ルール・アウトロ正典)
+  - `character-bible.md`(キャラ設計の正典)
+- ★旧 2 Gem 言及を全 Knowledge から除去★(`composition-rules.md` / `composition-landscape-rules.md` / `json-schema-rules.md` / `layout-templates.md` / `hook-design.md`):
+  - 「JSON Gem の Knowledge File」→「Gem の Knowledge File」(冒頭主体表記統一)
+  - 「構成 Gem の入力」→「Grok リサーチ」「構成 Gem の指示」→「本書の規定」「JSON Gem への申し送り」→「Gem の中間判断」(機械的置換)
+  - `composition-rules.md` §「★ 構成 Gem は視覚値を一切書かない ★」セクション(行 108-168)を ★削除★ — 単一 Gem 設計では完全に誤指示(視覚値を書かないと表示崩壊)
+- ★`structure-playbook.md` の古い「総 scripts 数 28〜30個固定」を更新★ — 縦長 60 秒以内で柔軟(20-30 目安)+ 横長動画長に応じて(30-50)に v11 整合化
+
+**② アプリプロンプト強化(buildDataJsonPrompt):**
+- 旧版が薄すぎて Gemini が推測で `ratio/speed` や文字列 `.205` を出していた(v5.21.10 で出た問題の再発防止)
+- ★現在の layoutType に応じた layoutData スキーマ例を直接埋め込み★ — Gemini が推測する余地をなくす
+- 8 レイアウト分の正確なスキーマ例を整備(pitch_arsenal / batter_heatmap / radar_compare / timeline / versus_card / player_spotlight / ranking / team_context)
+- 数値型 vs 文字列型の判別を明文化(comparisons の valMain は文字列、layoutData の avg/pct/velocity は数値)
+
+**③ TTS アコーディオン再生の統一(handlePreviewOne):**
+- 旧版: 単一 script の text を単独 `adapter.speak(text)` → 本番再生(グループ連結)と微妙に違う、ぶつ切り、キャッシュキー不一致
+- ★新版: その id が属する **同 speaker グループ全体** を `。` 連結して 1 回 speak★ — 本番再生(usePlaybackEngine 行 182-185)と完全一致
+- 効果:
+  - 聞こえ方が本番と統一
+  - キャッシュキー一致で**即再生**(本番用に pregenerate 済みなら API コール不要)
+  - 文脈が連続して自然
+- 構造上の限界: A↔B 切替境界では TTS が必ず分割される(話者を変える以上避けられない)
+
+**TTS の誤認解消:**
+- 「本番モードに切り替えてるだけでも生成されてる?」→ ★No★。pregenerate は手動ボタンのみで走る(TTSPanel の 5 箇所すべてユーザー操作起点)
+- 再生中に「気づかないうちに生成」と感じる場合は、`usePlaybackEngine` の **prefetch(次グループ先読み)** が原因(これは仕様)
+
+**ペンディング(継続):**
+- ⑥ ぬるっと型(戦略 D)の実機台本テスト ← ★最優先(本来の本筋、ずっと未着手)★
+- ① TTS バックグラウンド継続(Android Firefox)
+- 過去動画 NotebookLM の構築(別途実施)
+
 ## [5.21.10] - 2026-05-15 - ★pitch_arsenal 表示崩壊 fix + Knowledge / 実装の型不一致是正★
 
 **問題:**

@@ -1,6 +1,6 @@
 # 横長動画(16:9)専用ルール (composition-landscape-rules.md)
 
-★ 構成 Gem が動画タイプ「横長 16:9」を選定した時に参照する。
+★ Gem が動画タイプ「横長 16:9」を選定した時に参照する。
 ★ ショート(9:16)用 `composition-rules.md` とは設計思想が **根本的に違う**。
 
 ---
@@ -92,7 +92,7 @@
 | 根本原因 | `pitch_arsenal` / `batter_heatmap` |
 | エンディング | `player_spotlight` |
 
-★ ただし projectData.layoutType は単一値。章ごとのレイアウト切替は JSON Gem が判断する範囲外なので、構成 Gem では「主役レイアウト」1 つを推奨するに留める。
+★ ただし projectData.layoutType は単一値。章ごとのレイアウト切替は Gem が判断する範囲外なので、Gem では「主役レイアウト」1 つを推奨するに留める。
 
 ---
 
@@ -123,7 +123,7 @@
 
 ---
 
-## 8. 構成 Gem の出力 — 横長時の JSON Gem 申し送り例
+## 8. Gem の横長設計時の中間判断例
 
 ```
 【横長 16:9・5 章構造・角度: 矛盾深掘り+起用事情ハイブリッド】
@@ -140,7 +140,7 @@
 - Location+ 95.4(制球課題)
 - 5/12 広島戦 5回 110球
 
-JSON Gem への指示:
+Gem の指示:
 1. 5 章構造(オープニング + 状況設定/核心データ/深掘り/根本原因 + エンディング)
 2. 章切替に transition_swoosh、章ヘッダー ID は textSize: l / scenePreset: mono_drama
 3. 主役レイアウト: player_spotlight (projectData.layoutType)

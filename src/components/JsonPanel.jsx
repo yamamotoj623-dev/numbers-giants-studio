@@ -383,6 +383,79 @@ ${JSON.stringify(templateData, null, 2)}
 function buildDataJsonPrompt(currentData, templateData) {
   const playerTypeLabel = currentData.playerType === 'batter' ? '野手' : currentData.playerType === 'pitcher' ? '投手' : 'チーム';
   const { data: existingData } = splitProjectData(currentData);
+  const currentLayout = currentData.layoutType || 'radar_compare';
+
+  // ★v5.21.10★ layoutData の正確なスキーマ例(レイアウト別)
+  // これがないと Gemini が推測で ratio/speed や ".375" 文字列を出してしまう
+  const layoutDataExamples = {
+    pitch_arsenal: `"layoutData": {
+  "arsenal": {
+    "mode": "single",           // 省略可: "single" / "compare" / "vs_batter"
+    "pitches": [
+      { "name": "ストレート", "pct": 48, "avg": 0.205, "velocity": 152, "color": "#ef4444" },
+      { "name": "フォーク",   "pct": 22, "avg": 0.150, "velocity": 138, "color": "#3b82f6" }
+    ]
+  }
+}
+★重要★ avg / pct / velocity は **数値型**(0.205 / 48 / 152)。文字列 ".205" / "48%" は NG(アプリで toFixed() エラー)`,
+
+    batter_heatmap: `"layoutData": {
+  "heatmap": {
+    "mode": "single",  // または "vs_handedness"
+    "zones": [0.180, 0.240, 0.290, 0.220, 0.310, 0.340, 0.150, 0.220, 0.260]  // 数値推奨
+  }
+}`,
+
+    radar_compare: `"layoutData": {}  // radarStats を使うのでここは空 OK`,
+
+    timeline: `"layoutData": {
+  "timeline": {
+    "label": "月別打率",
+    "points": [
+      { "x": "4月", "value": 0.250 },
+      { "x": "5月", "value": 0.320 }
+    ]
+  }
+}
+★avg/value は数値型★`,
+
+    versus_card: `"layoutData": {
+  "versus": {
+    "headerLabel": "対戦成績",
+    "rows": [
+      { "label": "打率", "valA": ".333", "valB": ".280" },
+      { "label": "防御率", "valA": "2.10", "valB": "3.50" }
+    ]
+  }
+}`,
+
+    player_spotlight: `"layoutData": {
+  "spotlight": {
+    "primaryStat": { "label": "打率", "value": ".345" },
+    "stats": [ { "label": "OPS", "value": ".945" } ],
+    "quotes": [ { "text": "...", "source": "..." } ]
+  }
+}`,
+
+    ranking: `"layoutData": {
+  "ranking": {
+    "label": "セ・リーグ打率トップ",
+    "entries": [
+      { "rank": 1, "name": "選手A", "value": ".345" },
+      { "rank": 2, "name": "選手B", "value": ".333" }
+    ]
+  }
+}`,
+
+    team_context: `"layoutData": {
+  "context": {
+    "title": "チーム順位推移",
+    "rows": [ { "label": "...", "value": "..." } ]
+  }
+}`,
+  };
+
+  const layoutExample = layoutDataExamples[currentLayout] || layoutDataExamples.radar_compare;
 
   return `# タスク
 
@@ -391,12 +464,13 @@ function buildDataJsonPrompt(currentData, templateData) {
 ## 動画基本情報
 - aspectRatio: ${currentData.aspectRatio || '9:16'}(出力 JSON には含めない)
 - playerType: "${currentData.playerType}"(${playerTypeLabel})
+- 現在の layoutType: "${currentLayout}"(変えても OK)
 
 ## 出力形式(★以下のいずれかで出力★、アプリは両方を自動認識)
 \`\`\`json
 // 形式 A: フラット(推奨)
 {
-  "layoutType": "...",
+  "layoutType": "${currentLayout}",
   "playerType": "${currentData.playerType}",
   "teamPreset": "...",
   "mainPlayer": { ... },
@@ -409,18 +483,25 @@ function buildDataJsonPrompt(currentData, templateData) {
 { "projectData": { ...上記と同じ中身... } }
 \`\`\`
 
+## ★現在の layoutType "${currentLayout}" の layoutData スキーマ例★(★ここから外れた構造は NG★)
+\`\`\`json
+${layoutExample}
+\`\`\`
+
 ## 重点チェック項目
-1. layoutType がデータに最適か検証(timeline / radar_compare / versus_card / spotlight 等)
+1. layoutType がデータに最適か検証(timeline / radar_compare / versus_card / spotlight 等)。変更時は ★その layoutType 専用の layoutData スキーマ★ を Knowledge \`layout-templates.md\` で確認
 2. comparisons 5-10 個、radarMatch=true は 1-5 個、variants[] でスコープ切替を活用
-3. 「-」項目を可能なら埋める(web 検索で最新値)、無理なら "-" 明示
-4. radarStats は NPB 平均 50 ベースの偏差値(優秀 70+ / 突出 85+)
+3. comparisons の valMain / valSub は **文字列**(打率 ".345" / 防御率 "0.97" / 整数 "13")
+4. layoutData 内の avg / pct / velocity / value / value 系は **数値型**(0.205 / 48 / 152)、文字列 ".205" は NG
+5. 「-」項目を可能なら埋める(web 検索で最新値)、無理なら "-" 明示
+6. radarStats は NPB 平均 50 ベースの偏差値(優秀 70+ / 突出 85+)
 
 ## 既存データ(参考、フィールド名と形式を揃える)
 \`\`\`json
 ${JSON.stringify(existingData, null, 2).slice(0, 3500)}
 \`\`\`
 
-★ Gem instruction と Knowledge Files(特に json-schema-rules.md)の全ルール厳守。出力前チェック必須。★
+★ Gem instruction と Knowledge Files(\`json-schema-rules.md\` §3 数値整形 / \`layout-templates.md\` レイアウト別)の全ルール厳守。出力前チェック必須。違反時は完全再生成。★
 `;
 }
 

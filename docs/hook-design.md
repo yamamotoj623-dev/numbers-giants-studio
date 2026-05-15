@@ -2,7 +2,7 @@
 
 > id:1 = **動画タイトル** の独自視点(インサイト vs 願望、speech 短縮、ギャップ作り、stats 一致)。
 > 基本原則(4 原則・4 戦略・タイトル型)は `composition-rules.md` 参照。
-> 構成 Gem の Knowledge File として補完的に参照される。
+> Gem の Knowledge File として補完的に参照される。
 
 ---
 

@@ -1,6 +1,6 @@
 # レイアウトテンプレート集『数字で見るG党』
 
-> ★ JSON Gem の Knowledge File として参照される。
+> ★ Gem の Knowledge File として参照される。
 > 各レイアウトの完全な JSON テンプレートと入力ガイドを集約。
 > JSON 生成時、選んだ layoutType の節を参照して構造をそのまま埋めること。
 > トップレベルスキーマ / 列挙値 / 配分ルール / 数値整形は `json-schema-rules.md` 参照。
