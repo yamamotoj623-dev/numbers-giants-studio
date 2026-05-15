@@ -313,7 +313,12 @@ export function TimelineLayout({ projectData, currentScript, animationKey, phase
                     fontWeight="900"
                     style={{ filter: `drop-shadow(0 0 3px rgba(0,0,0,0.9))` }}
                   >
-                    {p.value < 10 ? p.value.toFixed(3).replace(/^0/, '') : p.value.toFixed(0)}
+                    {(() => {
+                      // ★v5.21.10★ 文字列 ".333" でも数値 0.333 でも動くよう Number 正規化
+                      const v = Number(p.value);
+                      if (!isFinite(v)) return '-';
+                      return v < 10 ? v.toFixed(3).replace(/^0/, '') : v.toFixed(0);
+                    })()}
                   </text>
                 )}
               </g>

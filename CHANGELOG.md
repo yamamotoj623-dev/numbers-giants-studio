@@ -2,6 +2,35 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.10] - 2026-05-15 - ★pitch_arsenal 表示崩壊 fix + Knowledge / 実装の型不一致是正★
+
+**問題:**
+- `pitch_arsenal` レイアウトで「`i.avg.toFixed is not a function`」エラー、画面が崩壊
+- 原因の階層分け:
+  1. **Knowledge と実装が真逆**: Knowledge ファイル `layout-templates.md` が `"avg": ".205"` という **文字列** 形式を指示していたが、アプリの `PitchArsenalLayout.jsx` 行 135 は `avg.toFixed(3)` で **数値** を期待
+  2. **アプリ側に防御がない**: 文字列が来ると `.toFixed()` が無いため即クラッシュ
+  3. **Knowledge ガイドの罠**: 「★0始まり小数は `.205` 表記★」という指示は `mainPlayer.stats.avg` 等の表示専用フィールドの規約だが、`layoutData.arsenal.pitches[].avg` のような計算対象フィールドにも誤適用されていた
+
+**修正:**
+- ★`PitchArsenalLayout.jsx`★: `pitch.avg` を `Number()` で正規化、`Math.min`・比較・`toFixed` の各箇所で防御。文字列 `".375"` でも数値 `0.375` でも動作
+- ★`PitchArsenalLandscape.jsx`★: 表示を `{p.avg}` 直書きから `(Number(p.avg) || 0).toFixed(3).replace(/^0/, '')` に変更(Portrait と表示統一)
+- ★`TimelineLayout.jsx`★: 予防的に `p.value` も Number 正規化(同じバグの可能性)
+- ★`docs/layout-templates.md`★ §7 pitch_arsenal: example の `avg` を数値リテラル(`0.205` 等)に統一、ガイドに「★avg は数値で出力、`".205"` のような文字列は NG(アプリで toFixed() エラー)★」を明記
+- ★`docs/layout-templates.md`★: pitch_arsenal の compare モード / vs_batter モード用フィールド構造も完全 example として追加(Gemini が推測で出さなくて済むように)
+- ★`docs/json-schema-rules.md` §3 数値整形★: 例外ルール明記
+  - 表示専用フィールド(`mainPlayer.stats` / `comparisons[].valMain` 等)→ 文字列 `.345` / `0.97` 形式
+  - 計算対象フィールド(`layoutData.arsenal.pitches[].avg` 等)→ 数値型
+  - 判別ルール「アプリが計算・整形に使うフィールドは数値、そのまま表示されるフィールドは文字列」
+
+**検証:**
+- 実際の中川皓太データ(文字列 `".375"` と数値 `0.375`)両方で、修正後アプリが正しく `.375` と表示することを Node スクリプトで実証
+
+**他レイアウト確認(同じ型不一致の網羅チェック):**
+- ✅ `BatterHeatmapLayout`: 既に `typeof avg === 'number'` ガード済み
+- ✅ `PitchArsenalLayout/Landscape`: 今回修正
+- ✅ `TimelineLayout`: 予防的に修正
+- その他 `RankingLayout` / `RadarCompareLayout` 等は内部計算値が中心で、入力データ型の影響なし
+
 ## [5.21.9] - 2026-05-15 - ★projectData ラッパー fix★(data モード反映バグ修正)
 
 **問題:**

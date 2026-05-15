@@ -109,7 +109,7 @@ export function PitchArsenalLandscape({ projectData, currentScript, animationKey
                 {p.velocity}<span className="text-[8px] text-zinc-500">km/h</span>
               </div>
               <div className={`text-[12px] font-impact text-right ${themeClass.text}`}>
-                {p.avg}
+                {(Number(p.avg) || 0).toFixed(3).replace(/^0/, '')}
               </div>
             </div>
           ))}

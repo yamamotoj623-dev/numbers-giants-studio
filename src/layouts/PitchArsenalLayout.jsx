@@ -36,7 +36,7 @@ function PieChart({ pitches, size = 140 }) {
   let angleAcc = -Math.PI / 2;
 
   const slices = pitches.map(pitch => {
-    const angle = (pitch.pct / 100) * Math.PI * 2;
+    const angle = (Number(pitch.pct) / 100) * Math.PI * 2;
     const startAngle = angleAcc;
     const endAngle = angleAcc + angle;
     angleAcc = endAngle;
@@ -98,9 +98,13 @@ function SingleOrCompareView({ data, themeClass }) {
           <span className="text-[12px] font-black text-zinc-500 tracking-widest text-right">被打率</span>
         </div>
         {pitches.map((pitch, i) => {
-          const isBest = pitch.avg === Math.min(...pitches.map(p => p.avg));
+          // ★v5.21.10★ avg が文字列 ".375" でも数値 0.375 でも動くよう、ここで正規化
+          const pitchAvgNum = Number(pitch.avg) || 0;
+          const minAvgNum = Math.min(...pitches.map(p => Number(p.avg) || 0));
+          const isBest = pitchAvgNum === minAvgNum;
           const cmp = data.comparePitches?.find(p => p.name === pitch.name);
-          const pctDelta = cmp ? pitch.pct - cmp.pct : null;
+          const cmpAvgNum = cmp ? (Number(cmp.avg) || 0) : null;
+          const pctDelta = cmp ? Number(pitch.pct) - Number(cmp.pct) : null;
           return (
             // ★isBest なら行全体に背景色 (テーマ色のうっすら)、武器バッジ廃止★
             <div key={i} className={`px-2.5 py-2 border-b border-zinc-800 last:border-b-0 grid grid-cols-[1.7fr_44px_44px_44px] gap-1.5 items-center ${
@@ -130,11 +134,11 @@ function SingleOrCompareView({ data, themeClass }) {
               </div>
               <div className="text-right">
                 <div className={`text-[12px] font-mono font-black ${
-                  isBest ? themeClass.text : pitch.avg > 0.280 ? 'text-red-400' : 'text-zinc-300'
+                  isBest ? themeClass.text : pitchAvgNum > 0.280 ? 'text-red-400' : 'text-zinc-300'
                 }`}>
-                  {pitch.avg.toFixed(3).replace(/^0/, '')}
+                  {pitchAvgNum.toFixed(3).replace(/^0/, '')}
                 </div>
-                {cmp && <div className="text-[10px] font-mono text-zinc-500 leading-none">→{cmp.avg.toFixed(3).replace(/^0/, '')}</div>}
+                {cmp && cmpAvgNum !== null && <div className="text-[10px] font-mono text-zinc-500 leading-none">→{cmpAvgNum.toFixed(3).replace(/^0/, '')}</div>}
               </div>
             </div>
           );

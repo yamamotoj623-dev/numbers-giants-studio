@@ -232,21 +232,47 @@
   "arsenal": {
     "mode": "single",
     "pitches": [
-      { "name": "ストレート", "pct": 48, "avg": ".205", "velocity": 152, "color": "#ef4444" },
-      { "name": "スプリット", "pct": 22, "avg": ".150", "velocity": 138, "color": "#3b82f6" },
-      { "name": "スライダー", "pct": 18, "avg": ".180", "velocity": 132, "color": "#10b981" },
-      { "name": "カーブ",     "pct": 8,  "avg": ".250", "velocity": 118, "color": "#f59e0b" },
-      { "name": "チェンジアップ", "pct": 4, "avg": ".200", "velocity": 128, "color": "#8b5cf6" }
+      { "name": "ストレート",   "pct": 48, "avg": 0.205, "velocity": 152, "color": "#ef4444" },
+      { "name": "スプリット",   "pct": 22, "avg": 0.150, "velocity": 138, "color": "#3b82f6" },
+      { "name": "スライダー",   "pct": 18, "avg": 0.180, "velocity": 132, "color": "#10b981" },
+      { "name": "カーブ",       "pct": 8,  "avg": 0.250, "velocity": 118, "color": "#f59e0b" },
+      { "name": "チェンジアップ","pct": 4,  "avg": 0.200, "velocity": 128, "color": "#8b5cf6" }
     ]
   }
 }
 ```
 入力ガイド (★投手専用★):
 - mode: "single" (1投手) / "compare" (今季vs昨季の球種変化) / "vs_batter" (対打者別)
-- pitches: **4-6 種類**。pct は割合% (合計100%)
-- avg: 被打率 (★0始まり小数は ".205" 表記★)
-- velocity: 球速 km/h (整数)
-- color: 16進カラー、視認性確保のため明度差つける
+  - 省略可: pitches のみなら "single" / comparePitches あれば "compare" / vsBatter あれば "vs_batter" と自動推定
+- pitches: **4-6 種類**。pct は割合% の整数または小数(合計 100% にする)
+- ★avg は数値で出力★(0.205 のような数値リテラル)。**`".205"` のような文字列は NG(アプリで表示崩壊)**
+- velocity: 球速 km/h(数値、整数推奨)
+- color: 16 進カラー文字列、視認性確保のため明度差つける。省略時はテーマ既定色
+
+compare モード用の追加フィールド:
+```json
+"layoutData": {
+  "arsenal": {
+    "mode": "compare",
+    "compareLabel": "昨季",
+    "pitches":        [ { "name": "ストレート", "pct": 48, "avg": 0.205, "velocity": 152, "color": "#ef4444" }, ... ],
+    "comparePitches": [ { "name": "ストレート", "pct": 52, "avg": 0.240, "velocity": 150, "color": "#ef4444" }, ... ]
+  }
+}
+```
+
+vs_batter モード用の追加フィールド:
+```json
+"layoutData": {
+  "arsenal": {
+    "mode": "vs_batter",
+    "vsBatter": {
+      "vsRight": [ { "name": "ストレート", "pct": 50, "avg": 0.220, "color": "#ef4444" }, ... ],
+      "vsLeft":  [ { "name": "ストレート", "pct": 45, "avg": 0.180, "color": "#ef4444" }, ... ]
+    }
+  }
+}
+```
 
 ────────────────────────────────────────
 ### 8. batter_heatmap (打者ゾーン打率)

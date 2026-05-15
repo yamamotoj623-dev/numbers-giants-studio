@@ -165,8 +165,8 @@
 
 | 系統 | 表記 | 該当指標 |
 |---|---|---|
-| **打率系** | `.333` 形式(先頭 0 省略) | avg / obp / slg / OPS / 被打率 / BABIP / IsoP |
-| **防御率系** | `0.97` 形式(先頭 0 残す) | ERA / WHIP / FIP / K/9 / BB/9 |
+| **打率系** | `.333` 形式(先頭 0 省略、★文字列★) | avg / obp / slg / OPS / 被打率 / BABIP / IsoP |
+| **防御率系** | `0.97` 形式(先頭 0 残す、★文字列★) | ERA / WHIP / FIP / K/9 / BB/9 |
 
 整数 0 → `"0"` / 不明 → `"-"`
 
@@ -176,6 +176,18 @@
 | OPS | `0.945` | `.945` |
 | WHIP | `.97` | `0.97` |
 | 防御率 | `1.9` | `1.90` |
+
+★上記は `mainPlayer.stats` / `subPlayer.stats` / `comparisons[].valMain` / `comparisons[].valSub` のような**画面に文字列としてそのまま表示される値**のルール。
+
+★例外: `layoutData` 内の **計算・整形対象の数値フィールド**は **数値(number)型** で出力すること★
+
+| レイアウト | 数値型必須フィールド | 例 |
+|---|---|---|
+| `pitch_arsenal` | `arsenal.pitches[].avg` `arsenal.pitches[].pct` `arsenal.pitches[].velocity` | `"avg": 0.205`(★文字列 `".205"` は NG、アプリで toFixed() エラー★) |
+| `batter_heatmap` | `heatmap.zones[]` `heatmap.vsRight[]` `heatmap.vsLeft[]` | 元仕様は文字列 `.205` だが、新規データは数値推奨 |
+| `radarStats` | 各キーの `main` / `sub` | `"main": 75`(偏差値、数値) |
+
+判別ルール: **「アプリが計算・整形に使う」フィールドは数値**、**「そのまま表示される」フィールドは文字列**。迷ったら `layout-templates.md` のレイアウト別 example を見る。
 
 ---
 
