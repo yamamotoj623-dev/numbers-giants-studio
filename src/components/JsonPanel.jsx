@@ -57,7 +57,21 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
    */
   const tryApply = (text) => {
     try {
-      const parsed = JSON.parse(text);
+      let parsed = JSON.parse(text);
+
+      // ★v5.21.8 FIX★ Gemini が { "projectData": {...} } 形式で出力した場合、ラッパーを剥がす
+      //   - data モード: { projectData: {...} } → projectData の中身に正規化
+      //   - whole モード: { projectData: {...}, scripts: [...] } → projectData の中身 + scripts に正規化
+      //   - script モード: { scripts: [...] } はラッパーなしなのでそのまま
+      // これがないと「データだけ反映押しても画面に出ない」問題が起きる(projectData ネストのままで mergeProjectData が中身を見つけられない)
+      if (parsed && typeof parsed === 'object' && parsed.projectData && typeof parsed.projectData === 'object') {
+        const scriptsOutside = Array.isArray(parsed.scripts) ? parsed.scripts : null;
+        parsed = { ...parsed.projectData };
+        if (scriptsOutside) {
+          parsed.scripts = scriptsOutside;
+        }
+      }
+
       let merged;
       if (mode === 'data') {
         // データのみ更新 (scripts は既存維持)
@@ -258,10 +272,10 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
         <Sparkles size={16}/> 🤖 AIプロンプトを作成＆コピー
       </button>
 
-      {/* ★v5.21.5★ AI でチェック系プロンプト(新運用 = Grok v2 → 構成 Gem → JSON Gem の各段階でのレビュー機能) */}
+      {/* ★v5.21.8★ AI でチェック系プロンプト(v10.2-patched 単一 Gem 運用、Grok リサーチ + 各種チェック) */}
       <details className="mb-3 bg-amber-50 border border-amber-200 rounded-lg overflow-hidden" open={false}>
         <summary className="text-[11px] font-bold text-amber-900 px-3 py-2 cursor-pointer hover:bg-amber-100 select-none flex items-center gap-1">
-          🔍 AI でチェック (Grok v2 / 構成 Gem / JSON Gem の出力をレビュー)
+          🔍 AI でチェック (Grok / Gem の出力をレビュー)
         </summary>
         <div className="p-2 grid grid-cols-2 gap-1.5">
           <button
@@ -326,15 +340,15 @@ export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
 
 
 /**
- * ★v5.21.7★ JSON Gem 全体モード用プロンプト (whole)
+ * ★v5.21.8★ Gem 全体モード用プロンプト (whole)
  *
- * JSON Gem の Knowledge Files(json-schema-rules.md / layout-templates.md 等)を前提とした、
- * 初回ベース作成用の全体 JSON 生成プロンプト。構成 Gem からのプロンプトを上に貼り付ける運用。
+ * v10.2-patched 単一 Gem 向け、初回ベース作成用の全体 JSON 生成プロンプト。
  *
  * 推奨運用:
- * 1. 構成 Gem で STEP 1-3 を完了し「JSON Gem 用プロンプト一式」を取得
- * 2. このボタンで生成したプロンプトの【上】にそれを貼り付け
- * 3. JSON Gem に渡す
+ * 1. Grok でリサーチ → FULL_AUTO 出力をユーザーに提示
+ * 2. このボタンで生成した「アプリ側プロンプト」をコピー
+ * 3. Grok 出力 + アプリ側プロンプトを Gem に貼り付け
+ * 4. Gem が初回ベース JSON を出力
  */
 function buildAIPrompt(currentData, templateData) {
   const playerTypeLabel =
@@ -342,53 +356,21 @@ function buildAIPrompt(currentData, templateData) {
     currentData.playerType === 'pitcher' ? '投手' :
     'チーム';
 
-  return `# JSON Gem 用タスク
+  return `# タスク
 
-★モード: 全体(初回ベース作成 = projectData + scripts 一括出力)★
-
-★この上に構成 Gem からの「JSON Gem 用プロンプト一式」を貼り付けてから JSON Gem に送ること★
-
----
+★モード: 全体(初回ベース作成 = projectData + scripts 一括)★
 
 ## 動画基本情報
-- aspectRatio: ${currentData.aspectRatio || '9:16'} (出力 JSON には含めない、設計判断のみに使用)
-- playerType: "${currentData.playerType}" (${playerTypeLabel})
-- silhouetteType: "${currentData.silhouetteType || '未指定'}" (出力には含めない)
-- theme: "${currentData.theme || 'orange'}" (出力には含めない)
+- aspectRatio: ${currentData.aspectRatio || '9:16'}(出力 JSON には含めない、設計判断のみ)
+- playerType: "${currentData.playerType}"(${playerTypeLabel})
+- theme: "${currentData.theme || 'orange'}"(出力には含めない)
 
-## 出力形式
-\`\`\`json
-{
-  "projectData": { mainPlayer, subPlayer, radarStats, comparisons, layoutData, ... },
-  "scripts": [ ... ]
-}
-\`\`\`
-
-## ★絶対遵守(json-schema-rules.md と整合)
-- ルートキー: \`"scripts"\` (複数形)、\`"script"\` は NG
-- projectData に \`theme\` \`layouts\` \`aspectRatio\` を含めない
-- comparisons は \`label\` \`valMain\` \`valSub\` \`winner\` キー使用(\`name\` \`targetA\` \`valueA\` は NG)
-- \`mainPlayer\` 必須、絶対省略しない
-- \`layoutType\` は単一文字列、\`layouts\` 配列は存在しないキー
-- se は定義 18 種から(\`title_call\` \`pop_up\` \`action\` \`analytical\` \`emotional\` は NG)
-- emoji: A 固定 \`👨‍🏫\` / B は 15 種(😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅)から
-- zoomBoost: 文字列 \`"zoom"\`/\`"shake"\` のみ(boolean NG)
-- criteria: 数値表現のみ(\`lower_is_better\` 等 NG)
-
-## ★text と speech のルール
-- 文章内容は完全一致(表記のみ違い OK: text \`75%\` ⇄ speech \`ななじゅうごぱーせんと\`)
-- 改行 \`\\n\` は text のみ / 句点「。」は text 省略
-- ★speech 内「、」は極力削る — 間は全角スペース「　」代用★
-- 1 ID あたり: ${currentData.aspectRatio === '16:9' ? '横長 text 8-20 字×1-2 行' : '縦長 text 3-12 字×3-4 行(合計 12-30 字)'}
-- 超える場合は ID 分割
-
-## ${playerTypeLabel}用スキーマテンプレート(これを型として出力)
+## ${playerTypeLabel}用スキーマテンプレート(これを型として projectData を埋め、scripts を生成)
 \`\`\`json
 ${JSON.stringify(templateData, null, 2)}
 \`\`\`
 
-## 出力前チェック(必須セルフチェック)
-json-schema-rules.md §出力前チェックを全項目確認。違反時は **完全再生成**(部分修正禁止)。
+★ Gem instruction と Knowledge Files(特に json-schema-rules.md / layout-templates.md)の全ルール厳守。出力前チェック必須。★
 `;
 }
 
@@ -402,58 +384,43 @@ function buildDataJsonPrompt(currentData, templateData) {
   const playerTypeLabel = currentData.playerType === 'batter' ? '野手' : currentData.playerType === 'pitcher' ? '投手' : 'チーム';
   const { data: existingData } = splitProjectData(currentData);
 
-  return `# JSON Gem 用タスク
+  return `# タスク
 
-★モード: データ単体(projectData のみ出力、scripts は出力しない)★
-
-★この上に構成 Gem からの「JSON Gem 用プロンプト一式」を貼り付けてから JSON Gem に送ること★
-
----
-
-## 重点チェック項目(データ単体モードの肝)
-1. **layoutType がデータに最適か検証** — timeline 向きデータなら timeline、レーダー向きなら radar_compare 等を提案
-2. **comparisons 5-10 個** — radarMatch=true は 1-5 個
-3. **variants[] 活用** — 対左/対右/通季/対○○のスコープ切替がある指標は variants 化
-4. **「-」項目を可能なら埋める** — web 検索で最新値を取得、無理なら "-" 明示
-5. **radarStats** — NPB 平均 50 ベースの偏差値(優秀 70+ / 突出 85+)
-6. **criteria は数値表現** — \`"0.97以下が優秀"\` 等(lower_is_better 等は NG)
+★モード: データ単体(scripts は出力しない、データ部分のみ)★
 
 ## 動画基本情報
-- aspectRatio: ${currentData.aspectRatio || '9:16'} (出力 JSON には含めない)
-- playerType: "${currentData.playerType}" (${playerTypeLabel})
+- aspectRatio: ${currentData.aspectRatio || '9:16'}(出力 JSON には含めない)
+- playerType: "${currentData.playerType}"(${playerTypeLabel})
 
-## 出力形式
+## 出力形式(★以下のいずれかで出力★、アプリは両方を自動認識)
 \`\`\`json
+// 形式 A: フラット(推奨)
 {
-  "projectData": {
-    "layoutType": "<8 種から選定>",
-    "playerType": "${currentData.playerType}",
-    "teamPreset": "<選定>",
-    "mainPlayer": { ... },
-    "subPlayer": { ... },
-    "radarStats": { key1: {label, main, sub}, ... 5 個 },
-    "comparisons": [ ... 5-10 個 ... ],
-    "layoutData": { ... 選んだ layoutType のデータ ... }
-  }
+  "layoutType": "...",
+  "playerType": "${currentData.playerType}",
+  "teamPreset": "...",
+  "mainPlayer": { ... },
+  "subPlayer": { ... },
+  "radarStats": { ... },
+  "comparisons": [ ... ],
+  "layoutData": { ... }
 }
+// 形式 B: projectData ラッパー(OK)
+{ "projectData": { ...上記と同じ中身... } }
 \`\`\`
-※ scripts は含めない。
 
-## ★絶対遵守(json-schema-rules.md と整合)
-- comparisons は \`label\` / \`valMain\` / \`valSub\` / \`winner\` キー使用(\`name\` / \`targetA\` / \`valueA\` は NG)
-- \`mainPlayer\` 必須、絶対省略しない
-- \`layouts\` 配列は存在しないキー、\`layoutType\` 単一文字列のみ
-- projectData に \`theme\` \`aspectRatio\` を含めない
-- criteria は数値表現のみ(\`lower_is_better\` 等 NG)
-- 打率系は \`.345\` 形式 / 防御率系は \`0.97\` 形式 / すべて文字列
+## 重点チェック項目
+1. layoutType がデータに最適か検証(timeline / radar_compare / versus_card / spotlight 等)
+2. comparisons 5-10 個、radarMatch=true は 1-5 個、variants[] でスコープ切替を活用
+3. 「-」項目を可能なら埋める(web 検索で最新値)、無理なら "-" 明示
+4. radarStats は NPB 平均 50 ベースの偏差値(優秀 70+ / 突出 85+)
 
 ## 既存データ(参考、フィールド名と形式を揃える)
 \`\`\`json
 ${JSON.stringify(existingData, null, 2).slice(0, 3500)}
 \`\`\`
 
-## 出力前チェック
-json-schema-rules.md §出力前チェックを全項目確認。違反時は **完全再生成**。
+★ Gem instruction と Knowledge Files(特に json-schema-rules.md)の全ルール厳守。出力前チェック必須。★
 `;
 }
 
@@ -467,70 +434,33 @@ function buildScriptJsonPrompt(currentData, templateData) {
     .map(p => `${p.id || p.name} (${p.name}${p.team ? `, ${p.team}` : ''})`)
     .join(', ') || '(未定義)';
 
-  return `# JSON Gem 用タスク
+  return `# タスク
 
 ★モード: 台本単体(scripts 配列のみ出力、projectData は出力しない)★
 
-★この上に構成 Gem からの「JSON Gem 用プロンプト一式」を貼り付けてから JSON Gem に送ること★
-
----
-
-## 重点チェック項目(台本単体モードの肝)
-1. **既存 projectData を完全に尊重** — mainPlayer / subPlayer / comparisons / layoutData は変えない、参照のみ
-2. **script.highlight** には既存 comparisons の id を指定(参照ズレ NG)
-3. **キャラ役割厳守** — A 数原は絶対敬語 / B もえかは敬語ベース+感情で崩す
-4. **id ルール厳守** — 同 speaker 連続最大 4 回 / 同 scenePreset 連続最大 4 ID / 同 se 連続最大 4 ID
-5. **id:2-5 で A↔B 呼び合い両方向必須** (A→B「もえかちゃん」/ B→A「数原さん」)
-6. **id:1 は動画タイトル(分割しない)** — text = タイトル / speech は短くフックの 1-2 秒
-7. **「ヤバい」運用** — B のみ、1 動画 1-2 回、疑問形+敬語、直前に冷静観察文
-
 ## 動画基本情報
-- aspectRatio: ${currentData.aspectRatio || '9:16'} (出力 JSON には含めない)
-- playerType: "${currentData.playerType}" (${playerTypeLabel})
+- aspectRatio: ${currentData.aspectRatio || '9:16'}(出力 JSON には含めない)
+- playerType: "${currentData.playerType}"(${playerTypeLabel})
 - mainPlayer: ${existingData.mainPlayer?.name || '(未指定)'}
 - subPlayer: ${existingData.subPlayer?.name || '(未指定)'}
-- 利用可能な比較指標 (script.highlight に指定): ${compIds}
-- 利用可能なフォーカス選手 (script.focusEntry に指定): ${playerIds}
+- script.highlight に指定可能な比較 ID: ${compIds}
+- script.focusEntry に指定可能な選手 ID: ${playerIds}
 
-## 出力形式
-\`\`\`json
-{
-  "scripts": [ ... 動画長 60 秒以内(目安 20-30 個)、内容に応じて柔軟に ... ]
-}
-\`\`\`
-※ projectData は出力に **含めない**(既存データを保持するため)。
+## 重点
+- 既存 projectData を完全尊重(変えない、参照のみ)
+- script.highlight には既存 comparisons の id を指定(参照ズレ NG)
 
-## ★絶対遵守(json-schema-rules.md と整合)
-- ルートキー: \`"scripts"\` (複数形)、\`"script"\` は NG
-- se は定義 18 種から(\`title_call\` \`pop_up\` \`action\` \`analytical\` \`emotional\` は NG)
-- emoji: A 固定 \`👨‍🏫\` / B は 15 種(😲🤔🤯😨😯🧐😆🥹🥰😌🤩🥺😭😤😅)から
-- zoomBoost: 文字列 \`"zoom"\`/\`"shake"\` のみ(boolean NG)
-- 列挙値: textSize=xl/l/m/s、scenePreset=指定 7 種
-
-## ★text と speech のルール
-- 文章内容は完全一致(表記のみ違い OK: text \`75%\` ⇄ speech \`ななじゅうごぱーせんと\`)
-- 改行 \`\\n\` は text のみ / 句点「。」は text 省略
-- ★speech 内「、」は極力削る — 間は全角スペース「　」代用★
-- 1 ID あたり: ${currentData.aspectRatio === '16:9' ? '横長 text 8-20 字×1-2 行' : '縦長 text 3-12 字×3-4 行(合計 12-30 字)'}
-- 超える場合は ID 分割
-
-## 配分(scripts 数に応じて調整)
-- textSize: xl=1 (id:1) / l 5-7 / m 18-22 / s 2-4
-- scenePreset: default を半数以上、連続最大 4 ID
-- se: 12-15 箇所、id:1 必須(hook_impact / stat_reveal 等)、id 最終に outro_fade
-
-## 既存データ JSON(参照のみ、変更しない)
+## 既存 projectData(参照のみ、変更しない)
 \`\`\`json
 ${JSON.stringify(existingData, null, 2).slice(0, 4000)}
 \`\`\`
 
-## 出力前チェック
-json-schema-rules.md §出力前チェックを全項目確認。違反時は **完全再生成**(部分修正禁止)。
+★ Gem instruction と Knowledge Files の全ルール厳守(キャラ口調 / id ルール / text-speech 一致 / 出力前チェック)。違反時は完全再生成。★
 `;
 }
 // ============================================================================
-// ★v5.21.5★ AI チェック系プロンプト (4 種)
-// 新運用の 3 分業フロー (Grok v2 → 構成 Gem → JSON Gem) の各段階で
+// ★v5.21.8★ AI チェック系プロンプト (4 種)
+// v10.2-patched 単一 Gem 運用 (Grok リサーチ → Gem 単独で生成) の各段階で
 // 「見落とし発見」「ファクトチェック」「整合確認」をするためのプロンプト集。
 // ============================================================================
 

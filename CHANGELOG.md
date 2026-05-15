@@ -2,6 +2,89 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.9] - 2026-05-15 - ★projectData ラッパー fix★(data モード反映バグ修正)
+
+**問題:**
+- アプリのデータ JSON プロンプトを Gemini に渡すと `{ "projectData": { ... } }` 形式で出力されるが、貼り付け後「反映」を押しても画面に出ない
+- 原因: `tryApply` の `mode === 'data'` 分岐で、`{ projectData: {...} }` ラッパーを剥がさずに `mergeProjectData(parsed, ...)` に渡していた
+- 結果: merged の中で `mainPlayer` 等が `projectData` ネスト下に埋もれ、UI が認識できなかった
+- whole モードでは Gemini が偶然フラット形式を出していたため発覚が遅れた(知識ファイル / NotebookLM 両方で同じ問題)
+
+**修正:**
+- ★`JsonPanel.jsx` の `tryApply`★: JSON.parse 直後に `parsed.projectData` ラッパー剥がし処理を追加
+  - data モード: `{ projectData: {...} }` → projectData の中身に正規化
+  - whole モード: `{ projectData: {...}, scripts: [...] }` → projectData の中身 + scripts に正規化
+  - script モード: ラッパーなし(`{ scripts: [...] }`)なので影響なし
+- ★`buildDataJsonPrompt`★: 出力形式を明示(形式 A フラット推奨 / 形式 B projectData ラッパーも OK)、アプリは両対応
+
+**検証:**
+- 中川皓太 pitch_arsenal JSON で動作確認: 修正前は `merged.mainPlayer === undefined`、修正後は正しく `{ name: '中川皓太', ... }` を取得
+- 知識ファイル運用 / NotebookLM 運用いずれでも有効
+
+## [5.21.8] - 2026-05-14 - ★v11 軽量化設計★(instruction を 80% 削減、Knowledge / NotebookLM 連携前提)
+
+**経緯と根本問題:**
+- v5.21.7 の 2 Gem 分業設計を廃止 → v10.2 単一 Gem 復帰を判断
+- v10.2 (15K字) に最小パッチを当てた v10.2-patched (20K字) を作成したが、ユーザー指摘「重くない?これがベスト?NotebookLM 連携相性は?改修履歴いる?これまでの失敗を活かせ」で再検討
+- 調査結果(Zenn 等): Gemini Custom Gem の instruction 公式推奨は 500-2000 字、20K字は完全に過大設計
+- 「Knowledge を読まない」のではなく、**instruction が長すぎて Gem が混乱**していた可能性が高い
+- **★正しい設計★**: instruction は人格・役割定義のみ短く、詳細は Knowledge / NotebookLM に分離(「役割と知識の分離」)
+
+**新ファイル:**
+- ★`gemini-custom-gem-instruction-v11.md` (3,053 字)★ — v10.2 比 80% 削減
+  - 役割 / モード切替 / キャラ / 絶対不変ルール / Knowledge Files 参照表のみ
+  - 改修履歴記述を完全削除(AI に過去変遷を教える意味なし)
+  - 詳細(スキーマ違反例、emoji NG リスト、出力前チェック全項目、数値整形ルール等)は Knowledge / NotebookLM に集約
+- `gemini-custom-gem-instruction-v10.2-patched.md` は廃棄(設計が間違っていたため)
+
+**v11 で残した「絶対不変ルール」(Gem instruction 直書きが必須なもの):**
+- 出力は JSON のみ、入力にない数字を作らない、出力前 web search で今日の日付確認
+- id:1 分割禁止(タイトル独立、speech は短いフック 1-2 秒)
+- id:2 以降は text と speech 完全一致
+- speech「、」削除 → 全角スペース「　」代用
+- 同 speaker / scenePreset / se 連続最大 4 回
+- scripts 個数は 60 秒以内で柔軟(固定指定なし)
+- A 絶対敬語 / B 鋭いコアファン枠 / A↔B 呼び合い必須
+
+**Knowledge Files に委譲した詳細:**
+- スキーマ全項目 / 列挙値 / 数値整形 / 配分 / emoji 指定 15 種 / 出力前チェック → `json-schema-rules.md`
+- 8 レイアウト完全テンプレ → `layout-templates.md`
+- もえか口調サンプル / ヤバい運用詳細 → `moeka-voice-samples.md`
+- 縦横の構成原則 → `composition-rules.md` / `composition-landscape-rules.md`
+- 読み仮名辞書 → `yomigana-dictionary.csv`
+
+**ディレクトリ整理(archived/):**
+- `archived/gem-composition/`(旧 2 Gem 設計の構成 Gem 一式)
+- `archived/gem-json/`(旧 2 Gem 設計の JSON Gem 一式)
+- `archived/gemini-custom-gem-instruction-v10.3.1.md`(肥大化版、不採用)
+
+**JsonPanel.jsx の 3 モードプロンプト軽量化:**
+- ★`buildAIPrompt` (whole)★: 旧 50 行 → 新 17 行(Gem instruction が本体なのでアプリ側は最小限のタスク指示+テンプレ)
+- ★`buildDataJsonPrompt` (data)★: 旧 50 行 → 新 21 行
+- ★`buildScriptJsonPrompt` (script)★: 旧 60 行 → 新 22 行
+- 「構成 Gem からのプロンプト貼付」言及はすべて削除済
+- 「Gem instruction と Knowledge Files の全ルール厳守」を 1 行で参照
+
+**AI チェック系プロンプトの v10.2 整合化(v5.21.7 で実施済みを継続):**
+- buildScriptReviewPrompt: 連続最大 4 回・横長対応・text/speech 一致・speech「、」削除・id:1 分割禁止・emoji 指定 15 種・§9 JSON スキーマ違反検出
+
+**UI 文言修正:**
+- 「Grok v2 / 構成 Gem / JSON Gem の出力をレビュー」→ 「Grok / Gem の出力をレビュー」
+- 関数ドキュメンテーションを「単一 Gem 運用 (v11 軽量化)」前提に更新
+
+**NotebookLM 連携の準備完了(★将来実装、即実装可能★):**
+- v11 instruction(3K字)は NotebookLM 連携前提で設計
+- 連携手順: Gem 設定の「知識」で NotebookLM ノートブックを指定するだけ
+- 同じ Knowledge Files 10 個を NotebookLM ノートブックにアップロード → Gem 設定で参照先を NotebookLM に変更
+- メリット: 必要箇所瞬時特定で速度・精度両方向上、md/csv 直接対応、無料版 50 ソース余裕
+- 制約: Gem 共有不可(個人運用なら問題なし)、不安定報告あり(共有時 NotebookLM 消える)
+
+**ペンディング(継続):**
+- ⑥ ぬるっと型(戦略 D)の実機台本テスト ← ★最優先(本来の本筋、ずっと未着手)★
+- ① TTS バックグラウンド継続(Android Firefox)
+- ⑦ Phase 2 ranking 拡張
+- ⑩ RadarCompare / TeamContext エディタ未実装
+
 ## [5.21.7] - 2026-05-13 - Gem 役割大幅再設計 + JSON Gem 3 モード対応
 
 **Gem 役割の根本的再設計(添付サンプルの問題に対応):**
