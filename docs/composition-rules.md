@@ -199,5 +199,4 @@ emoji / textSize / scenePreset / se / zoomBoost / highlight は **Gem が直接�
 
 【出力形式】
 □ 半構造化テキスト(Markdown)で出力、JSON は出力しない
-□ Gem の申し送り欄あり
 ```

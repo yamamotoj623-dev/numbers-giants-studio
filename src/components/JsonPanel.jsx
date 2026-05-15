@@ -18,7 +18,7 @@ import { defaultPitcherData } from '../data/defaultPitcher';
 import { splitProjectData, mergeProjectData, normalizeProjectInput } from '../lib/projectSplit';
 // ★v5.21.7★ customPromptRaw の import 廃止
 // 旧版は docs/layout-templates.md を素 Gemini 向けプロンプトに埋め込んでいたが、
-// 新版は JSON Gem の Knowledge Files として運用するため、アプリ側で埋め込む必要なし。
+// 新版は Gem の Knowledge Files として運用するため、アプリ側で埋め込む必要なし。
 
 export function JsonPanel({ projectData, onApply, onLoadTemplate }) {
   // ★v5.18.12★ 「全体 / データ / 台本」の3モード切替
@@ -375,7 +375,7 @@ ${JSON.stringify(templateData, null, 2)}
 }
 
 /**
- * ★v5.21.7★ JSON Gem データ単体モード用プロンプト (data)
+ * ★v5.21.7-11★ Gem データ単体モード用プロンプト (data)
  *
  * 既存データ JSON を入力として渡し、レイアウト/ハイライト/表現の調整を依頼。
  * 出力は projectData のみ(scripts は出力しない)。
