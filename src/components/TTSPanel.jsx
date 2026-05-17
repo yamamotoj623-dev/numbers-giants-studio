@@ -30,14 +30,14 @@ export function TTSPanel({
   const [checkingMissing, setCheckingMissing] = useState(false);
   const [retryingId, setRetryingId] = useState(null);  // 個別再生成中の id
 
-  // const [showAllScripts, setShowAllScripts] = useState(false);
+  const [showAllScripts, setShowAllScripts] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);   // 一括再生成用
   const [cachedSet, setCachedSet] = useState(new Set()); // どの id がキャッシュ済か
   const [previewingId, setPreviewingId] = useState(null); // 個別試聴中の id
 
-  // const [diagnostic, setDiagnostic] = useState(null);
+  const [diagnostic, setDiagnostic] = useState(null);
 
-  // const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ msg: '', percent: 0 });
   const [exportResult, setExportResult] = useState(null);
   // SoundTouchJS でピッチ維持時間伸縮できるようになったため、デフォルト ON
