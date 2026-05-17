@@ -2,6 +2,241 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.18] - 2026-05-15 - ★戦略 D 強化 + 企画タイプ 3 分類 + 企画提案ターン導入★
+
+**経緯:**
+- 戦略 D(ぬるっと型)の Knowledge は「表 1 行 + 例 4 行」と薄く、Gem が再現できない懸念
+- ユーザー要望「野球関係ないテーマ(挨拶/ニュース/息抜き)にも対応したい」
+- ユーザー要望「Gem がいきなり JSON 出力する前に、企画提案ターンを挟んでほしい」
+
+**修正:**
+
+**① 戦略 D(ぬるっと型)の Knowledge 強化(composition-rules.md §1)**
+
+旧: 表 1 行 + 例 4 行(計 7 行)
+新: 表 + 本質特徴 + 話法ルール + speech のトーン + 視覚要素 + 適合テーマ + 成功パターン例 + 失敗パターン例 4 個(計 80 行超)
+
+戦略 D の本質的特徴を ★具体的に言語化★:
+- 話法: 断定しない / 「!」「!?」使わない / 「...」「?」「ですね」で静か
+- 強調記号(【】「」『』)使わない or 最小限
+- speaker パターン: B が「あれ?」と振る → A が「ええ、私も…」と相槌
+- emoji 控えめ(🤔 / 🧐 / 😯 / 😌、🤯/😆/🤩 は NG)
+- scenePreset は default 固定
+- se: 無し or soft_pop のみ
+- 適合テーマ表(数字の矛盾 / 違和感のある活躍不振 / ファンのモヤモヤ / 通好みの細部)
+- 不向きテーマも明示(派手な朗報 / 訃報 / ミーハー向け)
+- 成功パターン例 1 個・失敗パターン例 4 個(★これが Gem の学習素材★)
+
+**② 企画タイプ 3 分類(channel-strategy.md 末尾に新規セクション)**
+
+野球外題材への対応設計。データ分析動画だけが本流ではない、★3 タイプ全体を統括★:
+
+| タイプ | 概要 | キャラの使い方 | 推奨レイアウト | 頻度 |
+|---|---|---|---|---|
+| データ分析 | 選手・チーム数字解説(本流) | 数原=解説者 / もえか=代弁者 | 全 8 レイアウト | 週 3-5 |
+| フリートーク | 補強ニュース / 観戦記 / 雑談 / 球場グルメ | 数字でなく体験・観察を語る | player_spotlight / team_context | 週 1 |
+| 挨拶・固定 | 自己紹介 / 新年挨拶 / 登録感謝 | キャラ素のまま、野球外 OK | player_spotlight(キャラ焦点) | 不定期 |
+
+★全タイプ共通の遵守事項★:
+- A 敬語必須(野球外でもタメ口 NG)、B 鋭い敬語ベース必須
+- A↔B 呼び合い両方向必須
+- NG ワード集を全タイプで遵守
+- 監督中立姿勢を全タイプで維持
+- 定型句アウトロ NG
+
+★新レイアウトは追加しない設計★(player_spotlight をキャラ焦点モードで流用)。将来必要なら verdict_card 等の新規開発時に同時検討。
+
+**③ Gem に企画提案ターン導入(v11 instruction の冒頭)**
+
+★ゼロ依頼時の挙動を 2 ターンに分割★:
+- ターン 1: 企画提案(Markdown で表形式提示)
+  - 企画タイプ / 動画タイプ / 動画タイトル候補 / テーマ / id:1 戦略 / 主役レイアウト / 想定 scripts 数 / 章立て(横長のみ)
+  - 「★この企画案で進めてよろしいですか?★」で確認
+- ターン 2: ユーザー合意後に JSON 出力
+
+★スキップ条件★(企画提案を省略して即 JSON):
+- アプリプロンプトに data モード / script モード明記時(既存 projectData あり、調整依頼)
+- ユーザーが「企画提案不要」「即 JSON で」と明示
+- 修正版の依頼(「先ほどの id:5 を修正して」等)
+
+**v11 instruction サイズ変化:**
+4,225 → 7,520 字(+78%、企画提案フロー + 戦略 D 言及 + 企画タイプ 3 分類で増加)
+
+★これは ★Gem の挙動を変える重要指示★ で Knowledge への委譲不可なので、instruction 直書きが必須。許容範囲(Gem 上限内)。
+
+**NotebookLM 再アップロード対象(中身変更)**:
+- `gemini-custom-gem-instruction-v11.md`(企画提案フロー + 企画タイプ追加)
+- `composition-rules.md`(戦略 D 強化)
+- `channel-strategy.md`(企画タイプ 3 分類追加)
+
+**期待効果:**
+- 戦略 D の Gem 再現率が大幅向上(具体例で学習)
+- 野球外題材(挨拶/フリートーク)が ★チャンネル DNA を保ったまま★ 制作可能
+- 企画提案ターンにより「大外し」の事前回避、ユーザー意図とのズレ早期発見
+
+**ペンディング(継続):**
+- ★試行★: 戦略 D 実機台本テスト(本来の本筋)+ 企画提案フローの実機検証
+- TTS の試行結果待ち(複数回試行中)
+
+## [5.21.17] - 2026-05-15 - ★speech 感情演出ルール追加(プロンプト埋め込み禁止 + 記号活用)★
+
+**経緯:**
+- ユーザー実機経験「過去に speech へ感情指示を入れたら、Gemini Flash TTS がプロンプト自体を読み上げた事故」
+- LLM ベース TTS の構造的特性。Gemini TTS は入力テキストをそのまま音声化するため、`(明るく)` `[驚いた声で]` `<excited>` のような指示文字列が混入すると、★その文字列ごと読み上げる★
+
+**修正:**
+- ★`json-schema-rules.md` §4★ に「感情指示・状態指示の文字列を speech に埋め込まない」絶対禁止セクション追加
+  - NG パターン例: `(明るく)` `[驚いた声で]` `<excited>` `感情:興奮 /`
+  - 安全な感情演出方法: 記号(`!` `?` `...`)+ 感嘆詞(「えっ!?」「ええっ!」)+ 語尾(「〜なんですよ」「〜です!」)
+  - 感情ごとの speech 書き方の例集を追加(驚き / 興奮 / 困惑 / 落ち着き / 鋭い気づき / アハ体験)
+  - NG vs OK の具体例を 3 ペア追加
+- ★`gemini-custom-gem-instruction-v11.md`★ の絶対不変ルールに「感情指示文字列の埋め込み禁止」を追加(1 行)
+
+**現状の TTS 構造判明:**
+- アプリ → GAS(Google Apps Script)→ Gemini Flash TTS の 3 層構造
+- voiceName / voiceConfig / temperature 等の TTS パラメータ調整は **★GAS スクリプト側★** にあり、アプリから直接見えない
+- voice 固定が GAS 側でできているかは ★ユーザー確認待ち★
+
+**ペンディング(ユーザー確認事項):**
+- GAS スクリプトの voice 設定確認:
+  - A 数原 / B もえか で voiceName が固定されているか
+  - 固定されていなければ ★固定する★(声のブレ抑制の最重要ポイント)
+  - 推奨 voiceName(Gemini TTS): 男性=Charon / Algieba / Achernar、女性=Kore / Aoede / Leda 等(GAS 側で選択)
+
+## [5.21.16] - 2026-05-15 - ★YouTube 投稿情報テンプレートの復活 + structure-playbook 統合★
+
+**経緯:**
+- ユーザー指摘「youtube-template.md は知識ファイルになくていいんだっけ?」
+- 確認すると `archived/gem-composition/youtube-template.md`(7K)に存在、★v5.21.8 で旧 2 Gem 廃止時に参照を切ったまま★、忘れられていた
+- 中身は ★Gem が動画依頼時に必要★ な YouTube 投稿情報テンプレ集(動画タイトル / 概要欄 / ハッシュタグ / タグ / サムネ案 / 固定コメント)
+
+**修正:**
+- ★`archived/gem-composition/youtube-template.md` の中身を `structure-playbook.md` § 9 として統合★
+  - structure-playbook.md は「scripts 全体構造の正典」、動画の最終出力(投稿情報)まで含むのは設計的に一貫
+  - 統合後サイズ: 16K + 7K = 23,808 bytes(読める範囲)
+  - 中身クリーン化:「構成 Gem の STEP 5」→「Gem が動画依頼時に YouTube 投稿情報を出力するための正典(オプション機能)」
+  - 見出しレベルを 1 段下げて統合(## 1. → ### 9.1 等)
+- ★v11 instruction の structure-playbook 説明★ に「YouTube 投稿情報生成(オプション)」を追記
+
+**動作:**
+- ユーザー依頼「JSON だけ」 → YouTube 投稿情報は出力しない(従来通り)
+- ユーザー依頼「動画一式」「YouTube に投稿する情報も」 → JSON + YouTube 投稿情報を一括出力
+
+**Gem Knowledge 上限 10 個維持 ✅:**
+- channel-strategy.md / json-schema-rules.md / layout-templates.md / layout-direction.md / structure-playbook.md(YouTube 統合済み) / composition-rules.md / character-bible.md / moeka-voice-samples.md / audience-and-language.md / yomigana-dictionary.csv = 10 ファイル
+
+**NotebookLM 再アップロード対象(中身変更):**
+- `structure-playbook.md`(YouTube § 9 追加)
+- `gemini-custom-gem-instruction-v11.md`(参照表説明更新)
+
+## [5.21.15] - 2026-05-15 - ★speech ルール改定 + Knowledge 12 → 10 統合(Gem 上限対応)★
+
+**経緯:**
+- ユーザー指摘「TTS がカタコト化、NotebookLM は機能しない、Gem 知識ファイルは 10 個上限」
+- ★A1 speech ルール改定★ と ★A2 ファイル統合★ を同時実施
+
+**① A1: speech は自然な日本語(漢字混じり)を基本に**
+
+旧問題: Gem が speech を ★全文ひらがな化★ → TTS で単語境界・アクセント推定が崩れ、カタコト化
+
+新ルール(★全ひらがな化禁止★):
+- speech は ★自然な日本語(漢字混じり)で書く★
+- ひらがな化する箇所は **限定**:
+  1. 数値の読み(0.84 → れいてんはちよん)
+  2. 選手名・チーム名・球場名(漢字だと TTS が誤読する固有名詞)
+  3. 指標略語(WHIP → ダブリュエイチアイピー、BB/9 → ビービーナイン)
+  4. 誤読しやすい語(「実は」「凄い」「今季」の限定リスト)
+- ★それ以外の一般野球用語(防御率 / 奪三振 / 無失点 / 登板 / 連続 / 安打 / 武器 等)は全て漢字維持★
+
+NG vs OK 例(json-schema-rules.md §4 に新規追加):
+```
+❌ "speech": "なかがわこうた、じゅうさんしあいれんぞくむしってんのりゆう"
+✅ "speech": "中川皓太、13試合連続無失点の理由"
+
+❌ "speech": "ぼうぎょりつは、れいてんはちよん"
+✅ "speech": "防御率は、れいてんはちよん"
+```
+
+修正ファイル:
+- `gemini-custom-gem-instruction-v11.md`: 絶対不変ルールの speech 項目を強化
+- `json-schema-rules.md` §4: 「★絶対ルール: speech は自然な日本語(漢字混じり)で書く★」セクション + NG vs OK 例を追加、一般野球用語の漢字維持リストを拡張
+
+**② A2: Knowledge ファイル統合(12 → 10、Gem 上限対応)**
+
+経緯: NotebookLM が機能しない一方、Gem 知識ファイルは 10 個上限。統合が必要
+
+統合内容:
+- ★`composition-landscape-rules.md` → `composition-rules.md` §4★ に統合
+  - 縦長 9:16 と横長 16:9 を 1 ファイルで管理
+  - composition-rules.md 構造: §1-3 (縦長専用) + §4 (横長専用) + §5以降 (共通)
+  - 統合後サイズ: 14,311 bytes(縦 10K + 横 5K)
+- ★`hook-design.md` → `structure-playbook.md`★ に統合
+  - id:1 設計の独自視点(8 セクション)を構造的に統合
+  - structure-playbook の §1.2 フェーズA セクションを大幅拡充
+  - 統合後サイズ: 16,469 bytes(構造 10K + hook 8K)
+
+Knowledge 内の相互参照リンクを 5 ファイルで一括修正(統合で消滅したファイルへの参照を新ファイル名に):
+- `composition-landscape-rules.md` → `composition-rules.md §4`
+- `hook-design.md` → `structure-playbook.md`
+
+**v11 instruction 参照表更新(10 ファイル構成):**
+
+| ファイル | 役割 |
+|---|---|
+| channel-strategy.md | チャンネル DNA / NG ワード |
+| json-schema-rules.md | スキーマ / 数値整形 / **speech 読み変換** |
+| layout-templates.md | 8 レイアウトのテンプレ |
+| layout-direction.md | レイアウト選択判断 |
+| structure-playbook.md | scripts 構造 + **id:1 設計** |
+| composition-rules.md | 縦長 + **横長** 構成原則 |
+| character-bible.md | キャラ正典 |
+| moeka-voice-samples.md | もえか口調 |
+| audience-and-language.md | 事象→数字原則 |
+| yomigana-dictionary.csv | 読み仮名辞書 |
+
+参照外(意図的、3 ファイル):
+- `character-design-spec.md`(キャラ画像化、現状未使用)
+- `workflow.md`(人間用)
+- `gemini-custom-gem-instruction-v11.md`(中核、これ自体が Gem の本体)
+
+**NotebookLM 連携困難時の Gem 知識ファイル運用 OK ✅**:
+合計 10 ファイル(Gem 上限内)、speech 改善ルールも織り込み済み
+
+**実機での効果(期待値):**
+- speech のカタコト感が大幅改善(漢字混じりで TTS のイントネーション推定が改善)
+- Gem 知識ファイルが 10 個に収まり、NotebookLM 不要で運用可能
+
+**ペンディング(継続):**
+- B1: Google Cloud TTS 切替(品質・速度・安定性のさらなる改善)
+- B2: 5 系統テンプレ(診断/対決/謎解き/試合前攻略/物語)の Knowledge 追加
+- C1: 編集判断レイアウト(verdict_card)新規追加
+- ★C★: ぬるっと型(戦略 D)実機台本テスト(本来の本筋、未着手)
+
+## [5.21.14] - 2026-05-15 - ★channel-strategy.md の参照漏れ修正★
+
+**経緯:**
+- v5.21.13 までの可視化で `channel-strategy.md` が v11 instruction 参照外と判明
+- 中身を精査したところ、★Gem が JSON 生成時に絶対知るべき情報★(NG ワード集 / 監督への中立姿勢 / 視聴者層の DNA)が含まれており、★明確な漏れ★
+
+**修正:**
+- v11 instruction の Knowledge Files 参照表に `channel-strategy.md` を追加(参照ファイル 11 → 12 個)
+- v11 文字数: 3,409 → 3,541(+132 字、参照表 1 行追加のみ)
+
+**channel-strategy.md が担う情報(他ファイルに無いユニーク部分):**
+- NG ワード集(「本当の」「現在地」「驚愕の」「ヤバい」「コメントで教えて」等)
+- 阿部監督への中立姿勢(全肯定 NG / 全否定 NG / 「采配の意図 + データ裏付け」で語る)
+- 視聴者層の DNA(男性 93.3% / コアファン中心 / id:1 だけはミーハー考慮)
+- 視聴者が愛するもの・嫌うもの(具体例)
+- 「観察を肯定する」独自ポジション
+
+**v11 が参照しないままの 2 ファイル(意図的に参照外):**
+- `character-design-spec.md`(キャラ画像化用、現状未使用)
+- `workflow.md`(人間用の制作フロー)
+
+**NotebookLM 再アップロード対象:**
+- `gemini-custom-gem-instruction-v11.md`(参照表更新)
+- `channel-strategy.md`(中身は変更なしだが、未アップロードなら今回追加)
+
 ## [5.21.13] - 2026-05-15 - ★更新履歴ラベル全件除去 + structure-playbook 書き直し★
 
 **経緯:**

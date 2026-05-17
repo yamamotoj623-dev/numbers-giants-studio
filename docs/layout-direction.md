@@ -23,7 +23,7 @@
 
 - **channel-strategy.md** — チャンネル戦略・視聴者像・実証データ法則
 - **audience-and-language.md** — 「指標より事象→数字」原則・現象の定義・自分ごと化
-- **hook-design.md** — id:1 (動画タイトル) の作り方
+- **structure-playbook.md** — id:1 (動画タイトル) の作り方
 - **structure-playbook.md** — scripts 構成・連続ルール・レイアウト切替パターン
 - **character-bible.md** — A=数原さん / B=もえかちゃん の話し方
 
