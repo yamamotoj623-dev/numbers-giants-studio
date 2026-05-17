@@ -95,19 +95,18 @@ export function TTSPanel({
   const handlePregen = async () => {
     setPregenStatus('loading');
     setProgress({ current: 0, total: projectData.scripts.length });
-    setFallbackInfo({ count: 0, ids: [] });  // ★リセット★
+    setFallbackInfo({ count: 0, ids: [] });
     try {
       const adapter = getAdapter('gemini');
-      // if (adapter.unlock) await adapter.unlock();
       const result = await adapter.pregenerate(projectData.scripts, (p) => {
         setProgress(p);
-        // if (p.fallbackCount !== undefined) {
+        if (p.fallbackCount !== undefined) {
           setFallbackInfo({ count: p.fallbackCount, ids: p.fallbackIds || [] });
         }
       });
       setTotalCost(prev => prev + result.costUsd);
       setPregenStatus(result.errors > 0 ? 'partial' : 'done');
-      // setFallbackInfo({
+      setFallbackInfo({
         count: result.fallbackCount || 0,
         ids: result.fallbackIds || []
       });
