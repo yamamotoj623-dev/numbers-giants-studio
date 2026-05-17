@@ -27,6 +27,8 @@ export const LAYOUT_TYPES = {
   team_context:     { label: 'チーム文脈',     desc: 'チームの強み弱み (single/compare)', status: 'ready', emoji: '👥' },
   pitch_arsenal:    { label: '球種分析',       desc: '配球+対右左比較',               status: 'ready', emoji: '🎳' },
   batter_heatmap:   { label: '打者ゾーン',     desc: '9エリア打率ヒート (左右別)',    status: 'ready', emoji: '🔥' },
+  freetalk:         { label: 'フリートーク',   desc: '挨拶/雑談/観戦記 (stats なし)',  status: 'ready', emoji: '💬' },
+  verdict_card:     { label: '編集判断',       desc: '数原判定/もえか異議/結論/G党要点', status: 'ready', emoji: '⚖️' },
 };
 
 export const SE_PRESETS = [

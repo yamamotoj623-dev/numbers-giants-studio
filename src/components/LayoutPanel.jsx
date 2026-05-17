@@ -311,7 +311,7 @@ export function LayoutPanel({ projectData, onChange }) {
         {projectData.aspectRatio === '16:9' && (
           <div className="mt-2 text-[10px] bg-emerald-50 border border-emerald-200 rounded p-2 text-emerald-800">
             <div className="font-bold mb-1">📺 横長 (16:9) 完全対応</div>
-            <div>✅ 全 8 レイアウト専用版実装済み: radar / timeline / ranking / spotlight / versus / pitch_arsenal / team_context / batter_heatmap</div>
+            <div>✅ 縦長は全 10 レイアウト対応、横長は 8 レイアウト専用版実装済み: radar / timeline / ranking / spotlight / versus / pitch_arsenal / team_context / batter_heatmap(freetalk / verdict_card は横長スタブ)</div>
             <div className="text-emerald-700 mt-1">構図: 上半分=主役データ、下半分=テロップ大、A左下/B右下のアバター配置</div>
           </div>
         )}

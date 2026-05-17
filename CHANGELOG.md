@@ -2,6 +2,39 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.22] - 2026-05-17 - ★freetalk / verdict_card を LAYOUT_TYPES に登録(UI 反映)★
+
+**問題:**
+- v5.21.19 で freetalk / verdict_card レイアウトを実装したが、★UI に出てこない★(レイアウト切り替えで選択肢に表示されない、JSON で layoutType を変えても editor が反応しない)
+- 原因: `src/lib/config.js` の `LAYOUT_TYPES` 定数に freetalk / verdict_card が未登録
+- LayoutRouter には登録済みだったが、UI コンポーネント(`LayoutPanel.jsx` / `ScriptEditorPanel.jsx` / `JsonPanel.jsx`)は `LAYOUT_TYPES` から選択肢を生成するため、ここに無いと UI に出ない
+
+**Step 1 で見落とした項目:**
+v5.21.19 では LayoutRouter のみ更新で、★UI 側の選択肢を提供する LAYOUT_TYPES 定数の更新を忘れた★。設計時の「実装場所マトリクス」が甘かった反省点。
+
+**修正:**
+- ★`src/lib/config.js` の `LAYOUT_TYPES`★ に 2 つ追加(10 レイアウト体制):
+  ```js
+  freetalk:     { label: 'フリートーク', desc: '挨拶/雑談/観戦記 (stats なし)',  status: 'ready', emoji: '💬' },
+  verdict_card: { label: '編集判断',     desc: '数原判定/もえか異議/結論/G党要点', status: 'ready', emoji: '⚖️' },
+  ```
+- ★`src/components/LayoutPanel.jsx` の 横長対応表記★ を「全 8 レイアウト」→「縦長は全 10、横長は 8 専用版実装済み(freetalk / verdict_card は横長スタブ)」に更新
+
+**自動反映される箇所(LAYOUT_TYPES を参照しているので):**
+- LayoutPanel の layoutType プルダウン
+- ScriptEditorPanel の各 script の layoutType 切替
+- JsonPanel の `layoutCatalog`(レイアウト適合チェックプロンプトに自動反映)
+
+**動作確認可能な状態:**
+1. LayoutPanel でレイアウト選択 → 「💬 フリートーク」「⚖️ 編集判断」が選べる
+2. JSON 編集で `"layoutType": "freetalk"` → プレビューに freetalk レイアウトが表示
+3. JSON 編集で `"layoutType": "verdict_card"` → プレビューに verdict_card レイアウトが表示
+
+**Step 2/3 で必要な追加実装(まだ無いもの):**
+- freetalk 専用編集 UI(highlights, topic, tagline, background の GUI 編集)
+- verdict_card 専用編集 UI(mainCall, dissent, conclusion, fanInsight の GUI 編集)
+- 横長版の本実装(現状は縦長を流用するスタブ)
+
 ## [5.21.21] - 2026-05-17 - ★TTSPanel.jsx ビルドエラー修正(v5.21.13 残骸 2 箇所目)★
 
 **緊急修正:**
