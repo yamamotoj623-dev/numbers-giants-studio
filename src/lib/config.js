@@ -59,8 +59,8 @@ export const DEFAULT_MIXER_LEVELS = {
   duckingAmount: 0.5,
 };
 
-// // number/league/team を選択するとプレビューの選手色が自動で切り替わる
-// export const TEAM_PRESETS = [
+// number/league/team を選択するとプレビューの選手色が自動で切り替わる
+export const TEAM_PRESETS = [
   // NPB セ・リーグ
   { id: 'npb_giants',    league: 'NPB', team: 'G',     label: '巨人',       primary: '#f97316', secondary: '#c2410c', textColor: '#fb923c' },
   { id: 'npb_tigers',    league: 'NPB', team: 'T',     label: '阪神',       primary: '#facc15', secondary: '#a16207', textColor: '#fde047' },
