@@ -391,3 +391,91 @@ mode: "single" の場合:
 - **zoomBoost は 2-3 箇所のみ** (id:4 zoom, id:17 zoom)
 </schema_script>
 
+
+---
+
+### 9. freetalk(フリートーク / 挨拶)
+
+役割: **「データを見せる」のではなく「キャラが語る」ためのレイアウト**。フリートーク動画(補強ニュース / 観戦記 / 雑談)と挨拶・固定動画(自己紹介 / 新年挨拶 / 登録感謝)で使う。stats / comparisons は使わず、text と speech が画面を支配する。
+
+```json
+"layoutType": "freetalk",
+"layoutData": {
+  "freetalk": {
+    "mode": "duo",                          // "duo" (A↔B 会話) / "solo" (1 人独白)
+    "topic": "球場グルメ語り",                  // 動画テーマ表示(画面上部)
+    "tagline": "もえかの観戦記 vol.3",          // 補足テキスト(タイトル下、省略可)
+    "background": "stadium",                 // 背景: "stadium" / "office" / "cafe" / "studio" / "default"
+    "highlights": [                          // 強調キーワード(数字ではなく体験ワード、0-4 個)
+      { "label": "好きな球場食", "value": "東京ドームのカレー" },
+      { "label": "席種", "value": "1塁側内野" },
+      { "label": "観戦回数(今季)", "value": "6回" }
+    ]
+  }
+}
+```
+
+入力ガイド:
+- mode: "duo" (A↔B 会話形式、★企画タイプ「フリートーク」推奨★) / "solo" (1 人独白、★企画タイプ「挨拶」推奨★)
+- topic: ★必須★、動画の主題を 6-20 字で。「○○について」「○○のあの数字」「ご挨拶」のようなシンプルな表現
+- tagline: 任意、動画番号 or サブタイトル(「vol.3」「2026 新年挨拶」等)
+- background: 背景イメージ。stadium=球場、office=スタジオ、cafe=カフェ、studio=収録、default=無地。AI で画像生成しない限り、CSS グラデーション背景になる
+- highlights: 0-4 個の体験キーワード。stats のような数値ではなく ★「東京ドームのカレー」「1塁側内野」「6回」★ のような言葉
+
+主役の text + speech 中心にしたいので、画面の構造はシンプル:
+- 画面上 1/4: topic + tagline(タイトル帯)
+- 画面中 1/2: テロップ(text 主役)
+- 画面下 1/4: highlights カード(0-4 個、横並び)
+
+★scripts 構造の特徴(★データ分析と違う★)★:
+- comparisons / radarStats / stats を使わない → ID あたりの情報量が少なめ
+- 動画長 60 秒(縦長)なら scripts 数は ★15-20 個★ で OK(データ動画 20-30 より少ない)
+- A↔B 呼び合いは必須(挨拶動画でも維持)
+- highlights の参照を text に入れて「★1塁側内野で観るのが好き★」と言及 → 画面右下の highlights が脈動
+
+### 10. verdict_card(編集判断カード)
+
+役割: **「データを読み上げてる」→「★解釈している★」へ転換するレイアウト**。チャンネルの差別化の本丸。4 つの判断(数原判定 / もえか異議 / 今日の結論 / G党向け要点)を四象限で同時表示。
+
+```json
+"layoutType": "verdict_card",
+"layoutData": {
+  "verdict": {
+    "mainCall": {
+      "speaker": "数原判定",
+      "verdict": "起用継続でOK",
+      "reason": "ローテ穴埋め、平均球速も維持"
+    },
+    "dissent": {
+      "speaker": "もえか異議",
+      "verdict": "でも初球は怖い",
+      "reason": "初球被打率.380、捕手と噛み合ってない"
+    },
+    "conclusion": {
+      "label": "今日の結論",
+      "value": "問題は打率ではなく初球"
+    },
+    "fanInsight": {
+      "label": "G党向け要点",
+      "value": "明日見るべき数字は初球ストライク率"
+    }
+  }
+}
+```
+
+入力ガイド:
+- ★4 つの判断は全て必須★(部分指定 NG、★編集判断レイアウトとしての完成度が崩れる★)
+- mainCall / dissent: speaker は「数原判定」「もえか異議」固定推奨(別呼称も可だが、キャラ役割を明確に)
+- mainCall.verdict: 数原の判定 1 行(15 字以内推奨、「起用継続でOK」「打撃改善の兆し」等)
+- mainCall.reason: その根拠 1 行(★必ずデータで裏付けする★、感情論 NG)
+- dissent.verdict: もえかの異議・別視点 1 行(15 字以内推奨)
+- dissent.reason: 根拠 1 行(同上)
+- conclusion: 動画全体の ★結論★(20 字以内、二項対立を超える 1 つの真実)
+- fanInsight: ★G党視聴者向け「次に見るべきポイント」★(20 字以内、行動指針)
+
+★scripts 構造の特徴★:
+- 動画の終盤(★id 25-30 付近★)で出すレイアウト、序盤・中盤では使わない
+- 序盤・中盤は radar_compare や pitch_arsenal で「データ」を見せる
+- ★verdict_card で「データを踏まえた解釈」を可視化★、視聴者が「これがG党の見立てか」と納得
+- A 数原が mainCall を語る → B もえかが dissent を語る → conclusion → fanInsight の流れが鉄板
+- 4 つすべてに highlight を入れて、語っている時に該当カードが脈動

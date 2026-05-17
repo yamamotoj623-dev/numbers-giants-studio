@@ -453,6 +453,31 @@ function buildDataJsonPrompt(currentData, templateData) {
     "rows": [ { "label": "...", "value": "..." } ]
   }
 }`,
+
+    freetalk: `"layoutData": {
+  "freetalk": {
+    "mode": "duo",                   // "duo" (A↔B 会話) / "solo" (1 人独白)
+    "topic": "球場グルメ語り",         // 動画テーマ(必須、6-20 字)
+    "tagline": "もえかの観戦記",       // 補足テキスト(省略可)
+    "background": "stadium",           // "stadium" / "office" / "cafe" / "studio" / "default"
+    "highlights": [                    // 0-4 個、★数値ではなく体験ワード★
+      { "label": "好きな球場食", "value": "東京ドームのカレー" },
+      { "label": "席種", "value": "1塁側内野" }
+    ]
+  }
+}
+★stats / comparisons は使わない、text と speech が主役。挨拶/フリートーク専用★`,
+
+    verdict_card: `"layoutData": {
+  "verdict": {
+    "mainCall": { "speaker": "数原判定", "verdict": "起用継続でOK", "reason": "ローテ穴埋め、平均球速も維持" },
+    "dissent":  { "speaker": "もえか異議", "verdict": "でも初球は怖い", "reason": "初球被打率.380、捕手と噛み合ってない" },
+    "conclusion": { "label": "今日の結論", "value": "問題は打率ではなく初球" },
+    "fanInsight": { "label": "G党向け要点", "value": "明日見るべき数字は初球ストライク率" }
+  }
+}
+★全 4 フィールド必須★ / mainCall.reason と dissent.reason は ★必ずデータで裏付け★(感情論 NG)
+★動画終盤(id 25-30 付近)で使う、序盤・中盤では使わない★`,
   };
 
   const layoutExample = layoutDataExamples[currentLayout] || layoutDataExamples.radar_compare;

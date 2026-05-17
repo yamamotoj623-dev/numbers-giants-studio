@@ -1,7 +1,7 @@
 /**
  * layoutType に応じて適切なレイアウトコンポーネントを呼び分けるルータ (v2)
  *
- * 8レイアウト体制:
+ * 10レイアウト体制:
  * - radar_compare:    レーダー比較
  * - timeline:         時系列推移
  * - ranking:          順位表
@@ -9,7 +9,9 @@
  * - versus_card:      対決カード
  * - team_context:     チーム文脈
  * - pitch_arsenal:    球種パレット
- * - batter_heatmap:   打者ゾーン (旧 pitch_heatmap をリネーム)
+ * - batter_heatmap:   打者ゾーン
+ * - freetalk:         フリートーク / 挨拶(stats なし、text 主役)
+ * - verdict_card:     編集判断カード(数原判定 / もえか異議 / 結論 / G党要点)
  *
  * 削除済み (互換性のため radar_compare へリダイレクト + console警告):
  * - luck_dashboard
@@ -26,16 +28,19 @@ import { TeamContextLayout } from './TeamContextLayout.jsx';
 import { RankingLayout } from './RankingLayout.jsx';
 import { PlayerSpotlightLayout } from './PlayerSpotlightLayout.jsx';
 import { BatterHeatmapLayout } from './BatterHeatmapLayout.jsx';
+import { FreetalkLayout } from './FreetalkLayout.jsx';
+import { VerdictCardLayout } from './VerdictCardLayout.jsx';
 // 横長専用レイアウト
 import { RadarCompareLandscape } from './landscape/RadarCompareLandscape.jsx';
 import { RankingLandscape } from './landscape/RankingLandscape.jsx';
 import { PlayerSpotlightLandscape } from './landscape/PlayerSpotlightLandscape.jsx';
 import { VersusCardLandscape } from './landscape/VersusCardLandscape.jsx';
-// Phase 2 横長レイアウト
 import { TimelineLandscape } from './landscape/TimelineLandscape.jsx';
 import { PitchArsenalLandscape } from './landscape/PitchArsenalLandscape.jsx';
 import { BatterHeatmapLandscape } from './landscape/BatterHeatmapLandscape.jsx';
 import { TeamContextLandscape } from './landscape/TeamContextLandscape.jsx';
+import { FreetalkLandscape } from './landscape/FreetalkLandscape.jsx';
+import { VerdictCardLandscape } from './landscape/VerdictCardLandscape.jsx';
 import { LayoutErrorBoundary } from '../components/LayoutErrorBoundary.jsx';
 
 const LAYOUT_COMPONENTS = {
@@ -47,9 +52,11 @@ const LAYOUT_COMPONENTS = {
   ranking: RankingLayout,
   player_spotlight: PlayerSpotlightLayout,
   batter_heatmap: BatterHeatmapLayout,
+  freetalk: FreetalkLayout,
+  verdict_card: VerdictCardLayout,
 };
 
-// 横長 (16:9) 専用バリアント — 全 8 レイアウト対応完了
+// 横長 (16:9) 専用バリアント — 全 10 レイアウト対応
 const LAYOUT_COMPONENTS_LANDSCAPE = {
   radar_compare: RadarCompareLandscape,
   ranking: RankingLandscape,
@@ -59,6 +66,8 @@ const LAYOUT_COMPONENTS_LANDSCAPE = {
   pitch_arsenal: PitchArsenalLandscape,
   team_context: TeamContextLandscape,
   batter_heatmap: BatterHeatmapLandscape,
+  freetalk: FreetalkLandscape,
+  verdict_card: VerdictCardLandscape,
 };
 
 // 削除/リネーム対応

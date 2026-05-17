@@ -2,6 +2,69 @@
 
 『数字で見るG党 Studio』 のバージョン履歴。
 
+## [5.21.19] - 2026-05-17 - ★Step 1: freetalk + verdict_card レイアウト追加(10 レイアウト体制)★
+
+**経緯:**
+- 企画タイプ 3 分類(データ分析 / フリートーク / 挨拶)を v5.21.18 で設計したが、フリートーク・挨拶用は player_spotlight 流用の妥協案だった
+- ユーザー指摘「企画用のレイアウト欲しくならないか?」を受け、★専用レイアウト 2 個を新規追加★
+
+**追加レイアウト 1: freetalk(フリートーク + 挨拶兼用)**
+- 役割: 「データを見せる」のではなく ★「キャラが語る」★ ためのレイアウト
+- 構造: 上 1/4 トピックバー / 中 1/2 テロップ領域(空けてテロップ重ね) / 下 1/4 highlights(0-4 個)
+- `layoutData.freetalk`:
+  - `mode`: "duo"(A↔B 会話)/ "solo"(独白)
+  - `topic`: 動画テーマ(必須、6-20 字)
+  - `tagline`: 補足(省略可)
+  - `background`: "stadium" / "office" / "cafe" / "studio" / "default"(CSS グラデーション)
+  - `highlights`: 0-4 個、★数値ではなく体験ワード★(「東京ドームのカレー」「1塁側内野」等)
+- stats / comparisons / radarStats は ★使わない★(text と speech が主役)
+- 動画長: 縦長 30-60 秒 / scripts 15-20 個(データ動画 20-30 より少ない)
+
+**追加レイアウト 2: verdict_card(編集判断カード)**
+- 役割: 「データを読み上げてる」→「★G党が解釈している★」を視覚化(チャンネル差別化の本丸)
+- 構造: 4 段積み(縦長)/ 2x2 グリッド(横長は Step 2/3 で本実装)
+- `layoutData.verdict`:
+  - `mainCall`: { speaker, verdict, reason } — 数原判定(緑系強調)
+  - `dissent`: { speaker, verdict, reason } — もえか異議(赤系強調)
+  - `conclusion`: { label, value } — 今日の結論(琥珀)
+  - `fanInsight`: { label, value } — G党向け要点(橙)
+- 動画内位置: ★終盤 id 25-30★ で使う(序盤・中盤で使うと「結論先出し」で離脱誘発)
+- highlight 機能: "mainCall" / "dissent" / "conclusion" / "fanInsight" 指定で該当カードが脈動
+
+**実装内容(Step 1):**
+
+1. **Knowledge 更新**:
+   - `json-schema-rules.md`: layoutType enum 8 → 10 種
+   - `layout-templates.md`: §9 freetalk + §10 verdict_card テンプレ追加(入力ガイド・scripts 構造の特徴も)
+   - `layout-direction.md`: レイアウト 9-10 の役割・動画内位置・適合/非適合を追加
+
+2. **アプリ React 実装**:
+   - `src/layouts/FreetalkLayout.jsx`: 縦長(9:16)最小実装(動く)
+   - `src/layouts/VerdictCardLayout.jsx`: 縦長(9:16)最小実装(highlight 連動)
+   - `src/layouts/landscape/FreetalkLandscape.jsx`: スタブ(縦長版を流用、Step 2/3 で本実装)
+   - `src/layouts/landscape/VerdictCardLandscape.jsx`: スタブ(同上)
+   - `src/layouts/LayoutRouter.jsx`: 10 レイアウト体制に拡張、新規 2 つを LAYOUT_COMPONENTS / LAYOUT_COMPONENTS_LANDSCAPE 両方に登録
+
+3. **アプリプロンプト更新**:
+   - `JsonPanel.jsx` の `buildDataJsonPrompt` の `layoutDataExamples` に freetalk / verdict_card のスキーマ例追加
+
+**動作確認:**
+- JSX 構文チェック: 全 5 ファイル(新規 2 + landscape 2 + LayoutRouter 更新)括弧整合 OK ✅
+- THEMES は既存の `lib/config.js` から import(架空フック useTheme は誤りで修正済み)
+
+**NotebookLM 再アップロード対象(中身変更)**:
+- `json-schema-rules.md`(enum 拡張)
+- `layout-templates.md`(§9-10 追加)
+- `layout-direction.md`(レイアウト 9-10 追加)
+
+**ペンディング(Step 2 以降):**
+- ★Step 2★: `FreetalkLandscape` 本実装(横長 16:9 専用デザイン、スタジオ収録風の左右レイアウト)
+- ★Step 3★: `VerdictCardLandscape` 本実装(横長 16:9 専用デザイン、2x2 グリッド)
+- ★Step 4★: Gem に新レイアウトを認識させる試行(実機で freetalk / verdict_card 出力チェック)
+- 並行ペンディング:
+  - 戦略 D 実機台本テスト
+  - TTS 試行結果待ち
+
 ## [5.21.18] - 2026-05-15 - ★戦略 D 強化 + 企画タイプ 3 分類 + 企画提案ターン導入★
 
 **経緯:**
